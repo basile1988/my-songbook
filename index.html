@@ -389,6 +389,15 @@ html[data-eff=dark] .parseinfo .warn{color:#f0b54a}
 .dbody{padding:4px 20px 12px;overflow:auto;min-height:0;display:flex;flex-direction:column;gap:12px}
 .dfoot{display:flex;gap:8px;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--line)}
 .dfoot .left{margin-right:auto}
+/* a dialog never grows wider than the screen because of its content (long titles, long buttons) */
+#modal{grid-template-columns:minmax(0,1fr)}
+.dlg{min-width:0;max-width:100%;overflow-x:hidden}
+.dlg .btn{max-width:100%;white-space:normal}
+.dlg .ck .main,.dlg .main{min-width:0}
+.dlg h3{min-width:0;overflow-wrap:anywhere}
+/* many buttons (Διαγραφή, Εξαγωγή, Άκυρο, Αποθήκευση) wrap onto a second row instead of spilling out of the dialog */
+.dfoot{flex-wrap:wrap;row-gap:8px}
+.dfoot>*{min-width:0}
 .ck{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:9px;cursor:pointer;min-height:46px}
 .ck:hover{background:var(--surface)}
 .ck input{width:20px;height:20px;accent-color:var(--accent);flex:none}
@@ -417,7 +426,14 @@ html[data-eff=dark] .parseinfo .warn{color:#f0b54a}
 .lslist .warnli{color:var(--note)}
 @media (max-width:420px){.lsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @keyframes fade{from{opacity:0}}
-@keyframes rise{from{opacity:0;transform:translateY(12px) scale(.98)}}
+@keyframes rise{from{opacity:0;transform:translateY(12px) scale(.97)}}
+@keyframes sheetup{from{transform:translateY(100%)}}
+:root{--ease-out:cubic-bezier(0.23, 1, 0.32, 1);--ease-in-out:cubic-bezier(0.77, 0, 0.175, 1);--ease-drawer:cubic-bezier(0.32, 0.72, 0, 1)}
+.dlg{animation:rise .2s var(--ease-out)}
+/* a closing dialog: a copy that fades/slides away while the real one is already gone */
+.modalghost{position:fixed;inset:0;z-index:49;display:grid;place-items:center;padding:20px;grid-template-columns:minmax(0,1fr);pointer-events:none}
+.modalghost .scrim{position:absolute;inset:0;background:rgba(10,12,16,.42)}
+.modalghost .dlg,.modalghost .scrim{animation:none}
 
 /* ---------- toast ---------- */
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:60;background:#1c1f25;color:#f2f4f7;padding:10px 16px;border-radius:10px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s,transform .25s cubic-bezier(.2,.8,.2,1);max-width:calc(100vw - 32px)}
@@ -445,13 +461,13 @@ body[data-size=s]:not([data-pane=detail]) #toast,body.perf #toast,body.editing #
   .dtitle h1{font-size:23px}
   .fgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .span6,.span3{grid-column:span 2}.span2,.span1{grid-column:span 1}
-  .dlg{width:100%;margin-top:auto;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:env(safe-area-inset-bottom)}
-  #modal{padding:0;place-items:end stretch}
+  .dlg{width:100%;margin-top:auto;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:env(safe-area-inset-bottom);animation:sheetup .28s var(--ease-drawer)}
+  #modal,.modalghost{padding:0;place-items:end stretch}
   .tools .tgroup .lab{display:none}
   .dacts .ibtn{width:36px}
   .ctxedit{padding:0 8px}
 }
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.modalghost{display:none}}
 
 /* =====================================================================
    LOOK: dark, content-first music app (inspired by Spotify's design language)
@@ -1378,7 +1394,9 @@ function itemsOf(c){
   if(c.items.some(x=>typeof x==='string')) c.items=c.items.map(x=>typeof x==='string'?{i:x,s:x}:x);
   return c.items;
 }
-const songItems=c=>itemsOf(c).filter(x=>x.s&&Store.songs.has(x.s));
+// the songs of a list in the order they are played: as arranged, or A–Ω for a list without order (as it is shown)
+const songItems=c=>{const a=itemsOf(c).filter(x=>x.s&&Store.songs.has(x.s));
+  return c.ordered?a:a.sort((x,y)=>collator.compare(Store.songs.get(x.s).title||'',Store.songs.get(y.s).title||''))};
 const hasSong=(c,sid)=>itemsOf(c).some(x=>x.s===sid);
 const itemKey=(it,s)=>(it&&it.key)||(s&&s.key)||'';
 // entries for the list pane: {s:song, it:item|null} or {sec:item}
@@ -1685,6 +1703,12 @@ function emptyList(col,filtered){
    ===================================================================== */
 // S.ctx = {list:[{s:songId, it:itemId|null}], colId, pos}: the list the current song was opened from
 function ctxEntry(){return S.ctx?S.ctx.list[S.ctx.pos]||null:null}
+// the open song's list changed (moved, added, synced from another device): follow the list's new order
+function syncCtx(){
+  if(!S.ctx||!S.ctx.colId)return;const c=Store.cols.get(S.ctx.colId);if(!c)return;
+  const cur=ctxEntry();if(!cur||!cur.it)return;const sl=songItems(c),p=sl.findIndex(x=>x.i===cur.it);if(p<0)return;
+  S.ctx={...S.ctx,list:sl.map(x=>({s:x.s,it:x.i})),pos:p};
+}
 function itemById(colId,iid){const c=colId&&Store.cols.get(colId);return c&&iid?itemsOf(c).find(x=>x.i===iid)||null:null}
 function ctxItem(){const e=ctxEntry();return e&&e.s===S.songId?itemById(S.ctx.colId,e.it):null}
 // transposition is remembered per list position (a list may want another key) or per song
@@ -1883,7 +1907,9 @@ function renderAll(){renderSide();renderList(true);renderDetail(true);renderTabb
    ===================================================================== */
 function openEditor(song,preset){
   const s=song?clone(song):{id:null,title:(preset&&preset.title)||'',artist:'',key:'',genres:[],rhythm:'',timeSig:'',capo:'',notes:'',lines:[]};
-  S.edit={id:s.id,orig:song?clone(song):null,draft:s,text:linesToText(s.lines),dirty:false,showPrev:false,touchedKey:!!s.key};
+  // intoCol: the list that was open when «Νέο» was pressed (a new song goes there, even if you browse elsewhere meanwhile)
+  const oc=colOf(S.sec);
+  S.edit={id:s.id,orig:song?clone(song):null,draft:s,text:linesToText(s.lines),dirty:false,showPrev:false,touchedKey:!!s.key,intoCol:!song&&oc&&!isFolder(oc)?oc.id:null};
   if(document.body.dataset.size!=='l') setPane('detail');
   document.body.classList.add('editing');
   renderEditor();
@@ -1985,9 +2011,10 @@ async function saveEditor(){
   try{
     if(!isNew&&E.orig) await Store.addVersion(E.orig).catch(()=>{});
     const p=Store.saveSong(s);
+    const intoCol=S.edit&&S.edit.intoCol;
     S.edit=null;S.songId=s.id;
-    // a new song goes into the open list (a folder holds lists, not songs)
-    if(isNew){const col=colOf(S.sec);if(col&&!isFolder(col)&&!hasSong(col,s.id)){const c=clone(col);c.items=itemsOf(c).concat({i:uid(),s:s.id});Store.saveCol(c)}}
+    // a new song goes into the list that was open when it was started (a folder holds lists, not songs)
+    if(isNew){const col=intoCol&&Store.cols.get(intoCol);if(col&&!isFolder(col)&&!hasSong(col,s.id)){const c=clone(col);c.items=itemsOf(c).concat({i:uid(),s:s.id});Store.saveCol(c)}}
     if(!S.ctx||!S.ctx.list.some(x=>x.s===s.id)){const list=playList();S.ctx={list,colId:colOf(S.sec)?S.sec.slice(4):null,pos:Math.max(0,list.findIndex(x=>x.s===s.id))}}
     renderList(false);renderDetail(true);
     await p;toast(isNew?'Το τραγούδι προστέθηκε':'Αποθηκεύτηκε');
@@ -2016,7 +2043,19 @@ function openModal(html,onMount){
   modalCleanup=onMount?onMount(m):null;
   const f=m.querySelector('[autofocus]')||m.querySelector('input,button.primary');if(f)setTimeout(()=>f.focus(),30);
 }
-function closeModal(){const m=$('#modal');m.hidden=true;m.innerHTML='';if(typeof modalCleanup==='function')modalCleanup();modalCleanup=null}
+const reduceMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+// the dialog leaves the way it came (sheet slides down on phones, fades on larger screens).
+// A copy animates out; the real #modal is cleared at once, so nothing else has to wait for it.
+function modalExit(m){
+  if(m.hidden||reduceMotion()||!m.querySelector('.dlg'))return;
+  const g=m.cloneNode(true);g.removeAttribute('id');g.hidden=false;g.className='modalghost';g.setAttribute('aria-hidden','true');g.inert=true;
+  g.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));document.body.appendChild(g);
+  const d=g.querySelector('.dlg'),s=g.querySelector('.scrim'),sheet=matchMedia('(max-width:759px)').matches,ms=sheet?220:150;
+  d.animate(sheet?[{transform:'translateY(0)'},{transform:'translateY(100%)'}]:[{opacity:1,transform:'none'},{opacity:0,transform:'scale(.97)'}],{duration:ms,easing:'cubic-bezier(0.23, 1, 0.32, 1)',fill:'forwards'});
+  const a=s?s.animate([{opacity:1},{opacity:0}],{duration:ms,easing:'ease-out',fill:'forwards'}):null;
+  setTimeout(()=>g.remove(),ms+40);
+}
+function closeModal(){const m=$('#modal');modalExit(m);m.hidden=true;m.innerHTML='';if(typeof modalCleanup==='function')modalCleanup();modalCleanup=null}
 const dhead=t=>`<div class="dhead"><h3>${t}</h3><button class="ibtn" data-act="closeModal" aria-label="Κλείσιμο">${ic('x')}</button></div>`;
 let confirmFn=null;
 function confirmDlg(title,text,okLabel,fn){
@@ -2036,7 +2075,7 @@ function colModal(col,opts={}){
       ${others.length?`<div class="field"><label for="cParent">Μέσα στον φάκελο</label><select id="cParent"><option value="">— Καμία (κορυφή) —</option>${others.map(({c:o,d})=>`<option value="${o.id}" ${c.parent===o.id?'selected':''}>${'— '.repeat(d)}${esc(o.name)}</option>`).join('')}</select></div>`:''}
       <span class="err" id="cErr"></span>
     </div>
-    <div class="dfoot">${col?`<button class="btn danger left" data-act="delcol">${ic('trash','sm')}Διαγραφή</button><button class="btn" data-act="exportcol">${ic('download','sm')}Εξαγωγή</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveColModal" data-id="${col?col.id:''}" data-add="${opts.addSong||''}" data-folder="${opts.folder?1:''}">${col?'Αποθήκευση':'Δημιουργία'}</button></div>`);
+    <div class="dfoot">${col?`<button class="btn danger left" data-act="delcol" data-col="${col.id}">${ic('trash','sm')}Διαγραφή</button><button class="btn" data-act="exportcol" data-col="${col.id}">${ic('download','sm')}Εξαγωγή</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveColModal" data-id="${col?col.id:''}" data-add="${opts.addSong||''}" data-folder="${opts.folder?1:''}">${col?'Αποθήκευση':'Δημιουργία'}</button></div>`);
   const inp=$('#cName');inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('[data-act=saveColModal]').click()}});
 }
 // a song's place in one list: its own key and note there
@@ -2132,11 +2171,9 @@ function toColModal(songId){
 function pickModal(colId,opts={}){
   const here=opts.after!=null;
   const afterIt=here&&opts.after?itemById(colId,opts.after):null;
-  const afterName=afterIt?(afterIt.sec!=null?'την αρχή του πακέτου «'+secShort(afterIt)+'»':'«'+((Store.songs.get(afterIt.s)||{}).title||'')+'»'):'';
   const col=Store.cols.get(colId);if(!col) return;
   const had=new Set(itemsOf(col).filter(x=>x.s).map(x=>x.s));
   const sel=new Set(had);const order=[];let q=''; // order: songs ticked now, in the order they were ticked
-  const secs=col.ordered?itemsOf(col).filter(x=>x.sec!=null):[];
   const draw=()=>{
     const nq=norm(q);
     const arr=[...Store.songs.values()].filter(s=>!nq||searchKey(s).meta.includes(nq)).sort((a,b)=>collator.compare(a.title,b.title));
@@ -2146,7 +2183,7 @@ function pickModal(colId,opts={}){
   openModal(`${dhead(here?'Πρόσθεσε εδώ':'Πρόσθεσε τραγούδια')}
     <div class="dbody" style="gap:8px">
       ${here?`<div class="pkhere">${ic('plus','sm')}<span>Μπαίνουν ${afterIt?(afterIt.sec!=null?'στην αρχή του πακέτου «'+esc(secShort(afterIt))+'»':'μετά από «'+esc((Store.songs.get(afterIt.s)||{}).title||'')+'»'):'στην αρχή της λίστας'}, με τη σειρά που τα πατάς</span></div>`:
-      secs.length?`<label class="pksec">Μπαίνουν στο πακέτο <select id="pkSec"><option value="">Στο τέλος της λίστας</option>${secs.map(x=>`<option value="${x.i}">${esc(secShort(x))}</option>`).join('')}</select></label>`:''}
+      col.ordered&&itemsOf(col).length?`<div class="pkhere">${ic('plus','sm')}<span>Μπαίνουν στο τέλος. Για άλλη θέση: <b>Επεξεργασία λίστας</b> και «+» εκεί που θες.</span></div>`:''}
       <div class="search">${ic('search')}<input id="pkQ" type="search" placeholder="Αναζήτηση" autofocus aria-label="Αναζήτηση"></div><div id="pkList"></div></div>
     <div class="dfoot">${here&&col.ordered?`<button class="btn left" data-act="secAt" data-col="${colId}" data-after="${opts.after}">${ic('section','sm')}Νέο πακέτο εδώ</button>`:''}<span class="${here?'':'left '}muted" id="pkCount" style="align-self:center;font-size:13.5px"></span><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="pkSave">Αποθήκευση</button></div>`,m=>{
       const onIn=e=>{if(e.target.id==='pkQ'){q=e.target.value;draw()}};
@@ -2157,7 +2194,7 @@ function pickModal(colId,opts={}){
       pickModal.save=async()=>{const c=clone(Store.cols.get(colId));const keep=itemsOf(c).filter(x=>x.sec!=null||sel.has(x.s));
         const add=order.filter(id=>!keep.some(x=>x.s===id)).map(s=>({i:uid(),s}));
         if(here){const k=opts.after?keep.findIndex(x=>x.i===opts.after):-1;keep.splice(k+1,0,...add);c.items=keep} // right at the «+» that was tapped
-        else c.items=insertInSection(keep,add,($('#pkSec')||{}).value||'');
+        else c.items=keep.concat(add);
         closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast(order.length?`Προστέθηκαν ${order.length}`:'Η λίστα ενημερώθηκε')};
       setTimeout(draw,0);
       return ()=>{m.removeEventListener('input',onIn);m.removeEventListener('change',onCh)};
@@ -2405,7 +2442,10 @@ const A={
   sidetoggle(){document.body.classList.toggle('sideopen')},
   sec(el){S.sec=el.dataset.sec;S.reorder=false;document.body.classList.remove('sideopen');
     // the open song stops following the old list's order (its «Επόμενο», position, arrow keys)
-    if(S.ctx&&S.ctx.colId&&S.sec!=='col:'+S.ctx.colId&&!S.perf){S.ctx=null;renderDetail(true)}S.f={genre:'',key:'',artist:''};S.q='';renderSide();renderList(true);if(document.body.dataset.size==='s')setPane('list');else if(document.body.dataset.size==='m'&&document.body.dataset.pane==='detail')setPane('list');renderTabbar()},
+    // another list or view: the song from before closes (unless it is being edited or played)
+    if(!S.perf&&!S.edit&&S.songId&&!(S.ctx&&S.ctx.colId&&S.sec==='col:'+S.ctx.colId)){S.songId=null;S.ctx=null;renderDetail(true)}
+    else if(S.ctx&&S.ctx.colId&&S.sec!=='col:'+S.ctx.colId&&!S.perf){S.ctx=null;renderDetail(true)}
+    S.f={genre:'',key:'',artist:''};S.q='';renderSide();renderList(true);if(document.body.dataset.size==='s')setPane('list');else if(document.body.dataset.size==='m'&&document.body.dataset.pane==='detail')setPane('list');renderTabbar()},
   // phone tabs: each one is a view of the list pane
   tab(el){const t={home:'home',search:'search',songs:'all'}[el.dataset.t]||'home';
     if(S.sec!==t||document.body.dataset.pane!=='list'){S.sec=t;S.q='';S.reorder=false;renderSide();renderList(true)}
@@ -2429,8 +2469,8 @@ const A={
   secHere(el){secModal(el.dataset.col,null,{before:el.dataset.item})},
   insat(el){const c=colOf(S.sec);if(c)pickModal(c.id,{after:el.dataset.after||''})},
   secAt(el){secModal(el.dataset.col,null,{after:el.dataset.after||''})},
-  mvup(el){moveItem(el.dataset.item,-1)},
-  mvdn(el){moveItem(el.dataset.item,1)},
+  mvup(el){flipMove(el.dataset.item,-1)},
+  mvdn(el){flipMove(el.dataset.item,1)},
   moveitem(el){moveModal(el.dataset.col,el.dataset.item)},
   async moveto(el){ // «Μετακίνηση…»: put the item right after the chosen target ('' = top of the list)
     const c=clone(Store.cols.get(el.dataset.col));let items=itemsOf(c);const it=items.find(x=>x.i===el.dataset.item);if(!it)return;
@@ -2477,7 +2517,9 @@ const A={
   perf(){const cx=ctxInfo();
     if(cx&&cx.col&&cx.it){const c=cx.col,sl=songItems(c),i=sl.findIndex(x=>x.i===cx.it.i);
       if(i>=0){S.lastCol=c.id;setCue(c.id,i);
-        if(window.innerWidth>=760){S.ctx={list:sl.map(x=>({s:x.s,it:x.i})),colId:c.id,pos:i};S.cueMode=true;S.fromCue=null;enterPerf();renderCueSheet();return}
+        // the whole list in its real order (not the search hits it was opened from)
+        S.ctx={list:sl.map(x=>({s:x.s,it:x.i})),colId:c.id,pos:i};
+        if(window.innerWidth>=760){S.cueMode=true;S.fromCue=null;enterPerf();renderCueSheet();return}
         S.fromCue=c.id;}}
     enterPerf()},
   perfx(){if(!$('#modal').hidden)closeModal();exitPerf()},
@@ -2534,6 +2576,8 @@ const A={
   stagepick(el){
     closeModal();
     if(!S.returnTo&&S.ctx) S.returnTo={ctx:clone(S.ctx),cueMode:S.cueMode,fromCue:S.fromCue};
+    // a searched song is shown on its own: leave the tablet's list+lyrics view («Πίσω» brings it back)
+    if(S.split){S.split=false;document.body.classList.remove('stagesplit')}
     S.fromCue=null;
     openSong(el.dataset.id,[{s:el.dataset.id,it:null}],null,0);
     if(!S.perf)enterPerf();else renderPbar();
@@ -2572,7 +2616,7 @@ const A={
   newsubcol(el){colModal(null,{parent:el.dataset.parent})},
   playsub(el){S.sec='col:'+el.dataset.col;S.q='';S.f={genre:'',key:'',artist:''};S.reorder=false;renderAll();if(document.body.dataset.size==='s')setPane('list');A.playcol()},
   foldtoggle(el){const id=el.dataset.id;const s=new Set(prefs.closed||[]);s.has(id)?s.delete(id):s.add(id);prefs.closed=[...s];savePrefs();renderSide();if(S.sec==='home')renderList(true)},
-  editcol(){const c=colOf(S.sec);if(c)colModal(c)},
+  editcol(el){const c=(el&&el.dataset.col&&Store.cols.get(el.dataset.col))||colOf(S.sec);if(c)colModal(c)},
   async saveColModal(el){
     const name=$('#cName').value.trim();if(!name){$('#cErr').textContent='Γράψε όνομα.';$('#cName').focus();return}
     const id=el.dataset.id;const was=id?Store.cols.get(id):null;
@@ -2587,8 +2631,8 @@ const A={
     await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));
     renderSide();renderList(true);if(document.body.dataset.size==='s')setPane('list');toast(id?'Αποθηκεύτηκε':'Η λίστα δημιουργήθηκε');
   },
-  delcol(){const c=colOf(S.sec);if(!c)return;confirmDlg('Διαγραφή;',`Η «${c.name}» θα σβηστεί. Τα τραγούδια μένουν στη βιβλιοθήκη.`,'Διαγραφή',async()=>{S.sec='home';await Store.deleteCol(c.id).catch(()=>toast('Δεν σβήστηκε.'));renderAll();toast('Διαγράφηκε')})},
-  async exportcol(){const c=colOf(S.sec);if(!c)return;
+  delcol(el){const c=(el&&el.dataset.col&&Store.cols.get(el.dataset.col))||colOf(S.sec);if(!c)return;confirmDlg('Διαγραφή;',`Η «${c.name}» θα σβηστεί. Τα τραγούδια μένουν στη βιβλιοθήκη.`,'Διαγραφή',async()=>{if(S.sec==='col:'+c.id)S.sec='home';await Store.deleteCol(c.id).catch(()=>toast('Δεν σβήστηκε.'));renderAll();toast('Διαγράφηκε')})},
+  async exportcol(el){const c=(el&&el.dataset.col&&Store.cols.get(el.dataset.col))||colOf(S.sec);if(!c)return;
     // a running order (title · key · note) followed by the full songs
     let num=0;const order=[],full=[];
     for(const it of itemsOf(c)){
@@ -2603,7 +2647,9 @@ const A={
   pkSave(){pickModal.save&&pickModal.save()},
   // Παίξιμο always opens the stage list (title + key); a tap on a song with lyrics opens them
   // one «Παίξιμο»: it starts from the song that is open (if it belongs to this list), otherwise where this list was left
-  playcol(){const c=colOf(S.sec);if(!c||!songItems(c).length)return;S.lastCol=c.id;
+  // an unsaved song edit is asked about first, never thrown away
+  playcol(){guardEdit(()=>A.playcolNow())},
+  playcolNow(){const c=colOf(S.sec);if(!c||!songItems(c).length)return;S.lastCol=c.id;
     const sl=songItems(c),open=S.songId&&S.ctx&&S.ctx.colId===c.id?ctxEntry():null;
     const from=open?sl.findIndex(x=>x.i===open.it):-1;if(from>=0)setCue(c.id,from);
     S.ctx={list:sl.map(x=>({s:x.s,it:x.i})),colId:c.id,pos:0};S.fromCue=null;S.returnTo=null;S.edit=null;S.cueMode=true;S.songId=null;
@@ -2615,7 +2661,8 @@ const A={
   cueopen(){const c=Store.cols.get(S.ctx&&S.ctx.colId);if(!c)return;const list=songItems(c).map(x=>({s:x.s,it:x.i}));const i=S.cueIdx[c.id]||0;if(!list[i])return;
     S.fromCue=c.id;openSong(list[i].s,list,c.id,i);document.body.classList.remove('uihidden')},
   cueback(){if(!$('#modal').hidden)closeModal();const c=Store.cols.get(S.fromCue);if(!c){S.fromCue=null;renderPbar();return}
-    setCue(c.id,S.ctx&&S.ctx.colId===c.id?S.ctx.pos:(S.cueIdx[c.id]||0));S.cueMode=true;S.songId=null;S.fromCue=null;document.body.classList.remove('uihidden');renderCueSheet();renderRows()},
+    const cur=S.ctx&&S.ctx.colId===c.id?ctxEntry():null,at=cur?songItems(c).findIndex(x=>x.i===cur.it):-1;
+    setCue(c.id,at>=0?at:(S.cueIdx[c.id]||0));S.cueMode=true;S.songId=null;S.fromCue=null;document.body.classList.remove('uihidden');renderCueSheet();renderRows()},
   cue(el){cueMove(+el.dataset.d)},
   settings(){backupModal()},
   settheme(el){prefs.theme=el.dataset.t;savePrefs();applyTheme();document.querySelectorAll('[data-act=settheme]').forEach(b=>b.classList.toggle('on',b===el))},
@@ -2705,7 +2752,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='/'){const q=$('#q');if(q&&q.offsetParent){e.preventDefault();q.focus()}return}
   // drag keyboard reorder
   if(t.classList&&t.classList.contains('handle')&&e.altKey&&(e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();moveItem(t.dataset.drag,e.key==='ArrowUp'?-1:1);return}
-  if(t.classList&&t.classList.contains('row')&&e.key==='Enter'){t.click();return}
+  if(t.matches&&t.matches('.row,[role=button][data-act]')&&e.key==='Enter'){t.click();return}
   // stage list: Enter opens the lyrics (a focused button keeps its own Enter), arrows/pedal move
   if(S.cueMode&&S.split){ // tablet: the pedal pages through the lyrics on the right, then goes on to the next song
     const R=$('.splitR');const dn=['PageDown','ArrowDown',' '].includes(e.key),upk=['PageUp','ArrowUp'].includes(e.key);
@@ -2744,10 +2791,30 @@ $('#detail').addEventListener('touchstart',e=>{if(!S.perf)return;const p=e.chang
 // swipe left/right on stage changes song only if turned on in Settings (on a music stand it fires by accident)
 $('#detail').addEventListener('touchend',e=>{if(!S.perf||!prefs.swipe)return;const p=e.changedTouches[0];const dx=p.clientX-tx,dy=p.clientY-ty;if(Date.now()-tt<600&&Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*1.6){S.cueMode?cueMove(dx<0?1:-1):go(dx<0?1:-1)}},{passive:true});
 // ---- drag to reorder ----
-function moveItem(id,delta){
-  const c=colOf(S.sec);if(!c) return;const n=clone(c);const items=itemsOf(n);const i=items.findIndex(x=>x.i===id);const j=i+delta;if(i<0||j<0||j>=items.length) return;
-  const [moved]=items.splice(i,1);items.splice(j,0,moved);Store.saveCol(n).then(()=>{const h=document.querySelector(`.handle[data-drag="${id}"]`);h&&h.focus()},()=>toast('Δεν αποθηκεύτηκε.'));
-  setTimeout(()=>{const h=document.querySelector(`.handle[data-drag="${id}"]`);h&&h.focus()},30);
+function moveItem(id,delta,quiet){
+  const c=colOf(S.sec);if(!c) return false;const n=clone(c);const items=itemsOf(n);const i=items.findIndex(x=>x.i===id);const j=i+delta;if(i<0||j<0||j>=items.length) return false;
+  const [moved]=items.splice(i,1);items.splice(j,0,moved);
+  // keyboard (Alt+↑/↓) keeps focus on the drag handle; ▲▼ taps (quiet) handle focus and scroll themselves
+  const fh=()=>{if(quiet)return;const h=document.querySelector(`.handle[data-drag="${id}"]`);h&&h.focus()};
+  Store.saveCol(n).then(fh,()=>toast('Δεν αποθηκεύτηκε.'));
+  setTimeout(fh,30);return true;
+}
+// ▲▼: the song you are moving stays under your finger (the list scrolls by the same amount),
+// so tapping ▲ again keeps moving the same song; the neighbour it swapped with slides to its new place.
+function flipMove(id,delta){
+  const list0=$('#list');if(!list0){moveItem(id,delta);return}
+  // every row that carries an item id (songs and pack headers), by its position on screen
+  const rowOf=(L,k)=>[...L.querySelectorAll(`[data-item="${k}"]`)].find(e=>e.classList.contains('row')||!e.closest('button,.insgap'));
+  const tops=L=>{const m=new Map();for(const e of L.querySelectorAll('[data-item]')){if(e.closest('button,.insgap')&&!e.classList.contains('row'))continue;const k=e.dataset.item;if(!m.has(k))m.set(k,e.getBoundingClientRect().top)}return m};
+  const before=tops(list0),st=list0.scrollTop;
+  if(!moveItem(id,delta,true))return;
+  // the save redraws the list right away (as a new element that starts at the top)
+  const L=$('#list');if(!L)return;L.scrollTop=st;
+  const me=rowOf(L,id);if(me&&before.has(id))L.scrollTop+=me.getBoundingClientRect().top-before.get(id);
+  const b=L.querySelector(`[data-act=${delta<0?'mvup':'mvdn'}][data-item="${id}"]`);b&&b.focus({preventScroll:true});
+  if(reduceMotion())return;
+  for(const [k,top] of before){if(k===id)continue;const e=rowOf(L,k);if(!e)continue;
+    const d=top-e.getBoundingClientRect().top;if(Math.abs(d)>1)e.animate([{transform:`translateY(${d}px)`},{transform:'none'}],{duration:200,easing:'cubic-bezier(0.77, 0, 0.175, 1)'})}
 }
 let drag=null;
 document.addEventListener('pointerdown',e=>{
@@ -2787,6 +2854,7 @@ document.addEventListener('pointercancel',e=>{
 Store.onChange=what=>{
   if(drag) return;
   if(what==='status'){renderSide();return}
+  if(what==='cols'||what==='all')syncCtx();
   renderSide();
   if(what==='cols'||what==='all'){
     const q=document.activeElement&&document.activeElement.id==='q';
