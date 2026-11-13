@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#121212">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121212">
+<meta name="color-scheme" content="dark light">
 <title>My Songbook</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon.png">
@@ -1422,7 +1424,9 @@ const mq=window.matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){
   const eff=prefs.theme==='auto'?(mq.matches?'dark':'light'):prefs.theme;
   document.documentElement.dataset.eff=eff;
-  document.querySelector('meta[name=theme-color]').content=(S.perf&&prefs.perfDark)||eff==='dark'?'#121212':'#ffffff';
+  // the phone's status bar follows the theme chosen in Ρυθμίσεις (both tags, so the OS setting doesn't override it); always dark on stage
+  const bar=(S.perf&&prefs.perfDark)||eff==='dark'?'#121212':'#ffffff';
+  document.querySelectorAll('meta[name=theme-color]').forEach(m=>m.content=bar);
 }
 mq.addEventListener&&mq.addEventListener('change',applyTheme);
 function layout(){
