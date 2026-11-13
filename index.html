@@ -1335,7 +1335,7 @@ const idxCache=new Map();
 function searchKey(s){
   const k=s.updatedAt+'|'+s.id;const c=idxCache.get(s.id);
   if(c&&c.k===k) return c.v;
-  const v=norm([s.title,s.artist,(s.genres||[]).join(' ')].join(' '));
+  const v=norm([s.title,s.artist,s.rhythm||'',(s.genres||[]).join(' ')].join(' '));
   const ly=norm(songLyrics(s));
   const o={meta:v,ly};idxCache.set(s.id,{k,v:o});return o;
 }
@@ -1378,6 +1378,7 @@ function currentEntries(){
     arr=scored.sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
   }
   if(S.f.genre) arr=arr.filter(e=>(e.s.genres||[]).includes(S.f.genre));
+  if(S.f.rhythm) arr=arr.filter(e=>(e.s.rhythm||'')===S.f.rhythm);
   if(S.f.key) arr=arr.filter(e=>itemKey(e.it,e.s)===S.f.key);
   if(S.f.artist) arr=arr.filter(e=>(e.s.artist||'')===S.f.artist);
   if(!col&&S.sec!=='recent'&&!q){
@@ -1499,9 +1500,12 @@ function renderList(full=true){
         ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}</div>`:''}
         <div class="searchrow">
           <div class="search">${ic('search')}<input id="q" type="search" placeholder="Τίτλος, καλλιτέχνης ή στίχος" value="${esc(S.q)}" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση"><button class="ibtn clr" data-act="clearq" aria-label="Καθαρισμός" ${S.q?'':'hidden'}>${ic('x','sm')}</button></div>
-          ${(()=>{const nf=['genre','key','artist'].filter(k=>S.f[k]).length;return `<button class="ibtn ftoggle ${S.showF||nf?'on':''}" data-act="togglef" aria-expanded="${!!(S.showF||nf)}" aria-label="Φίλτρα" title="Φίλτρα">${ic('settings')}${nf?`<span class="fbadge">${nf}</span>`:''}</button>`})()}
+          ${(()=>{const nf=['rhythm','genre','key','artist'].filter(k=>S.f[k]).length;return `<button class="ibtn ftoggle ${S.showF||nf?'on':''}" data-act="togglef" aria-expanded="${!!(S.showF||nf)}" aria-label="Φίλτρα" title="Φίλτρα">${ic('settings')}${nf?`<span class="fbadge">${nf}</span>`:''}</button>`})()}
         </div>
         <div class="filters" ${S.showF||S.f.genre||S.f.key||S.f.artist?'':'hidden'}>
+          ${(()=>{const rh=distinct('rhythm');
+            // the rhythm is the category the lists are built on (Ζεϊμπέκικο, Ρούμπα, Τσιφτετέλι…)
+            return rh.length?`<select class="sel ${S.f.rhythm?'on':''}" data-f="rhythm" aria-label="Ρυθμός"><option value="">Ρυθμός</option>${rh.map(r=>`<option ${S.f.rhythm===r?'selected':''}>${esc(r)}</option>`).join('')}</select>`:''})()}
           ${(()=>{const used=genres.filter(g=>[...Store.songs.values()].some(s=>(s.genres||[]).includes(g)));
             // a filter is offered only when it can find something (the artist is found by typing in the search)
             return used.length?`<select class="sel ${S.f.genre?'on':''}" data-f="genre" aria-label="Είδος"><option value="">Είδος</option>${used.map(g=>`<option ${S.f.genre===g?'selected':''}>${esc(g)}</option>`).join('')}</select>`:''})()}
@@ -1608,7 +1612,7 @@ function renderRows(){
   const arr=currentEntries();
   // in the library each row says in how many lists the song is
   const inLists=new Map();if(!col)for(const c of Store.cols.values())for(const x of itemsOf(c))if(x.s)inLists.set(x.s,(inLists.get(x.s)||0)+1);
-  const filtered=S.q||S.f.genre||S.f.key||S.f.artist;
+  const filtered=S.q||S.f.genre||S.f.rhythm||S.f.key||S.f.artist;
   const canDrag=col&&col.ordered&&!filtered&&S.reorder;
   const cue=false; // one kind of list: the stage always opens the title–key list
   el.classList.toggle('cue',!!cue);
@@ -1859,8 +1863,7 @@ function renderEditor(){
       <div class="field span3"><label for="edArtist">Καλλιτέχνης</label><input id="edArtist" data-k="artist" value="${esc(s.artist)}" list="dlArtists" autocomplete="off"><datalist id="dlArtists">${distinct('artist').map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
       <div class="field span1"><label for="edKey">Τόνος</label><select id="edKey" data-k="key"><option value="">—</option>${ALLKEYS.map(k=>`<option ${s.key===k?'selected':''}>${k}</option>`).join('')}</select></div>
       <div class="field span1"><label for="edCapo">Κάπο</label><input id="edCapo" data-k="capo" value="${esc(s.capo)}" inputmode="numeric" placeholder="—"></div>
-      <div class="field span4"><label for="edRhythm">Ρυθμός</label><input id="edRhythm" data-k="rhythm" value="${esc(s.rhythm)}" list="dlRhythm" placeholder="π.χ. Χασάπικο"><datalist id="dlRhythm">${['Ζεϊμπέκικο','Χασάπικο','Χασαποσέρβικο','Τσιφτετέλι','Καλαματιανό','Συρτό','Μπάλος','Καρσιλαμάς','Βαλς','Ταγκό','Ballad','Rock'].concat(distinct('rhythm')).filter((v,i,a)=>a.indexOf(v)===i).map(r=>`<option value="${esc(r)}">`).join('')}</datalist></div>
-      <div class="field span6"><label>Είδος</label><div class="chips" id="edGenres">${genres.map(g=>`<button type="button" class="tog ${(s.genres||[]).includes(g)?'on':''}" data-act="tgGenre" data-g="${esc(g)}" aria-pressed="${(s.genres||[]).includes(g)}">${esc(g)}</button>`).join('')}<input class="addg" id="edNewGenre" placeholder="+ Άλλο είδος" aria-label="Νέο είδος"></div></div>
+      <div class="field span4"><label for="edRhythm">Ρυθμός</label><input id="edRhythm" data-k="rhythm" value="${esc(s.rhythm)}" list="dlRhythm" placeholder="π.χ. Χασάπικο"><datalist id="dlRhythm">${['Ζεϊμπέκικο','Ρούμπα','Τσιφτετέλι','Χασάπικο','Χασαποσέρβικο','Καμηλιέρικο','Μπαλάντα','Νησιώτικο','Λαϊκοδημοτικό','Καλαματιανό','Συρτό','Μπάλος','Καρσιλαμάς','Βαλς','Ταγκό'].concat(distinct('rhythm')).filter((v,i,a)=>a.indexOf(v)===i).map(r=>`<option value="${esc(r)}">`).join('')}</datalist></div>
       <div class="field span6"><label for="edNotes">Σημειώσεις</label><input id="edNotes" data-k="notes" value="${esc(s.notes)}" placeholder="π.χ. αργά στην αρχή, κάπο στο 2"></div>
     </div>
     <div class="edtabs"><div class="seg"><button class="${E.showPrev?'':'on'}" data-act="edtab" data-p="0">Κείμενο</button><button class="${E.showPrev?'on':''}" data-act="edtab" data-p="1">Προεπισκόπηση</button></div></div>
@@ -2154,6 +2157,9 @@ function backupModal(){
   const th=(t,label)=>`<button class="${prefs.theme===t?'on':''}" data-act="settheme" data-t="${t}">${label}</button>`;
   openModal(`${dhead('Ρυθμίσεις')}<div class="dbody setbody">
     <section><h4>Εμφάνιση</h4><div class="seg" role="group" aria-label="Θέμα">${th('dark','Σκούρο')}${th('light','Φωτεινό')}${th('auto','Όπως η συσκευή')}</div></section>
+    <section><h4>Σκηνή</h4>
+      <label class="ck" style="padding-left:0"><input type="checkbox" data-pref="swipe" ${prefs.swipe?'checked':''}><div class="main"><div class="tt">Αλλαγή τραγουδιού με σύρσιμο</div><div class="ar">Σύρε αριστερά ή δεξιά για επόμενο ή προηγούμενο. Κλειστό, για να μην αλλάζει κατά λάθος στο αναλόγιο.</div></div></label>
+    </section>
     <section><h4>Αποθήκευση</h4>
       <p class="muted">${Store.songs.size} τραγούδια · ${Store.cols.size} λίστες. ${Store.mode==='github'?`Όλα είναι στο repo <b>${esc(GH.cfg.owner)}/${esc(GH.cfg.repo)}</b> στο GitHub, με κάθε παλιά μορφή στο ιστορικό του.`:`Δεν είσαι συνδεδεμένος με το GitHub σε αυτή τη συσκευή, οπότε τίποτα δεν αποθηκεύεται ακόμα.`}</p>
       <button class="btn" data-act="ghsetup">${ic('cloud','sm')}${Store.mode==='github'?'Σύνδεση με GitHub':'Σύνδεση με GitHub…'}</button>
@@ -2612,6 +2618,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   const t=e.target;
+  if(t.dataset.pref){prefs[t.dataset.pref]=t.checked;savePrefs();return} // device preferences (Ρυθμίσεις)
   if(t.dataset.f){S.f[t.dataset.f]=t.value;renderList(true);return}
   if(t.hasAttribute('data-sort')){S.sort=t.value;renderRows();return}
   if(S.edit&&t.id==='edKey') editorInput(e);
@@ -2662,7 +2669,8 @@ $('#lsIn').addEventListener('change',async e=>{
 // swipe in perf
 let tx=0,ty=0,tt=0;
 $('#detail').addEventListener('touchstart',e=>{if(!S.perf)return;const p=e.changedTouches[0];tx=p.clientX;ty=p.clientY;tt=Date.now()},{passive:true});
-$('#detail').addEventListener('touchend',e=>{if(!S.perf)return;const p=e.changedTouches[0];const dx=p.clientX-tx,dy=p.clientY-ty;if(Date.now()-tt<600&&Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*1.6){S.cueMode?cueMove(dx<0?1:-1):go(dx<0?1:-1)}},{passive:true});
+// swipe left/right on stage changes song only if turned on in Settings (on a music stand it fires by accident)
+$('#detail').addEventListener('touchend',e=>{if(!S.perf||!prefs.swipe)return;const p=e.changedTouches[0];const dx=p.clientX-tx,dy=p.clientY-ty;if(Date.now()-tt<600&&Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*1.6){S.cueMode?cueMove(dx<0?1:-1):go(dx<0?1:-1)}},{passive:true});
 // ---- drag to reorder ----
 function moveItem(id,delta){
   const c=colOf(S.sec);if(!c) return;const n=clone(c);const items=itemsOf(n);const i=items.findIndex(x=>x.i===id);const j=i+delta;if(i<0||j<0||j>=items.length) return;
