@@ -32,7 +32,7 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 [hidden]{display:none!important}
 
 /* ---------- layout ---------- */
-#app{display:grid;grid-template-columns:248px 360px minmax(0,1fr);height:100vh;height:100dvh}
+#app{display:grid;grid-template-columns:264px 360px minmax(0,1fr);height:100vh;height:100dvh}
 #side{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding-top:env(safe-area-inset-top)}
 #listPane{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--bg);padding-top:env(safe-area-inset-top)}
 #detail{min-width:0;min-height:0;overflow:auto;background:var(--bg);color:var(--text);position:relative;overscroll-behavior:contain;padding-top:env(safe-area-inset-top)}
@@ -45,7 +45,7 @@ body[data-size=m].sideopen::after{content:"";position:fixed;inset:0;z-index:39;b
 .ibtn.sidetog{display:none}
 body[data-size=m] .ibtn.sidetog{display:inline-grid}
 /* home on a laptop: the cards use all the width instead of half a screen saying «Διάλεξε τραγούδι» */
-body[data-size=l][data-home] #app{grid-template-columns:248px minmax(0,1fr)}
+body[data-size=l][data-home] #app{grid-template-columns:264px minmax(0,1fr)}
 body[data-size=m][data-home] #app{grid-template-columns:minmax(0,1fr)}
 body:not([data-size=s])[data-home] #detail{display:none}
 /* laptop: the list is right there beside the song, so the song page does not repeat it */
@@ -73,7 +73,7 @@ body.perf #detail{display:block!important}
 .sidescroll{flex:1;overflow:auto;padding:4px 10px 12px;min-height:0}
 .navitem{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:9px 10px;border-radius:8px;text-align:left;color:var(--text);min-height:40px}
 .navitem.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
-.navitem .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25;overflow-wrap:anywhere}
+.navitem .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25}
 .navrow{display:flex;align-items:center}
 .navrow .navitem{flex:1;min-width:0}
 .fold{width:24px;height:32px;flex:none;border:0;background:none;color:var(--faint);display:grid;place-items:center;border-radius:6px;padding:0}
@@ -92,7 +92,7 @@ body.perf #detail{display:block!important}
 .addsub{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;border:1px dashed var(--line2);border-radius:12px;background:none;color:var(--muted);font-weight:600;margin-top:4px}
 @media (hover:hover) and (pointer:fine){.addsub:hover{color:var(--accent);border-color:var(--accent)}}
 @media (max-width:420px){.fplay span{display:none}.fplay{width:40px;padding:0}}
-.navitem .cnt{font-size:12.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.navitem .cnt{font-size:12.5px;color:var(--faint);font-variant-numeric:tabular-nums;margin-left:auto;text-align:right;min-width:2.2em}
 .navitem.on .cnt{color:var(--accent)}
 .sidehead{display:flex;align-items:center;justify-content:space-between;margin:18px 4px 4px 10px;font-size:12.5px;font-weight:600;color:var(--muted)}
 .sidefoot{border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
@@ -769,6 +769,29 @@ body.perf.swipeon #detail{touch-action:pan-y}
 .setrow{padding:10px 0}
 .setbody .menulist{display:flex;flex-direction:column;gap:2px}
 .mitem.danger b{color:var(--danger)}
+/* ---- polish (§5) ---- */
+/* cards 12, small things 8, chips and badges round */
+.lcard,.frow,.resume,.nextup,.ghcard,.note,.colsum .note{border-radius:12px}
+.colnotes,.keyb,.mitem{border-radius:8px}
+/* the song on stage comes in with a short fade (180ms) */
+@keyframes songin{from{opacity:0;transform:translateY(8px)}}
+body.perf .sheet.enter{animation:songin .18s var(--ease-out)}
+/* pack chips: the current one filled, the rest outlined */
+.secjump button{background:transparent;border:1px solid var(--line2);color:var(--text)}
+.secjump button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+/* song page on phones: one top line (‹ title ⋯), one thin bar (− Gm + · Aa · … · Παίξιμο), lyrics right after */
+.tools .aabtn{display:none}
+@media (max-width:640px){
+  .dacts [data-act=edit]{display:none}
+  .dtop h1{font-size:22px}
+  .meta{margin:6px 0 0;gap:4px}
+  .meta .chip{font-size:12px;padding:2px 8px}
+  .tools{flex-wrap:nowrap;gap:6px;padding:6px 0;margin:6px 0 4px}
+  .tools .fsgroup{display:none}
+  .tools .aabtn{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:40px;border:0;color:var(--text);font:inherit}
+  .tools .tspacer{flex:1}
+  .tools .btn.sm{white-space:nowrap}
+}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -1925,7 +1948,8 @@ function renderDetail(force=false){
     </div>`:''}
     ${(s.lines||[]).length?`<div class="tools">
       ${hasC?`<div class="tgroup"><span class="lab">Τόνος</span><button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus','sm')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus','sm')}</button>${n!==defShift(s)?`<button class="ibtn" data-act="tr0" title="${it&&it.key?'Πίσω στον τόνο της λίστας':'Επαναφορά τόνου'}" aria-label="Επαναφορά τόνου">${ic('undo','sm')}</button>`:''}</div>`:''}
-      <div class="tgroup"><span class="lab">Γράμματα</span><button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus','sm')}</button><span class="val">${prefs.fs}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus','sm')}</button></div>
+      <div class="tgroup fsgroup"><span class="lab">Γράμματα</span><button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus','sm')}</button><span class="val">${prefs.fs}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus','sm')}</button></div>
+      <button class="tgroup aabtn" data-act="stagepop" data-sheet="fs" aria-label="Μέγεθος γραμμάτων" aria-haspopup="true"><b class="ptxt">Aa</b></button>
       <span class="tspacer"></span>
       ${hasC&&n!==defShift(s)?`<button class="btn sm" data-act="keeptr" title="${it?'Αυτή η λίστα θα ανοίγει το τραγούδι σε αυτόν τον τόνο':'Γράφει τα ακόρντα στον νέο τόνο'}">${it?'Κράτα τον τόνο στη λίστα':'Κράτα αυτόν τον τόνο'}</button>`:''}
       <button class="btn sm primary" data-act="perf">${ic('max','sm')}Παίξιμο</button>
@@ -1933,7 +1957,7 @@ function renderDetail(force=false){
     <div class="sheet" style="--fs:${prefs.fs}px">${sheetHTML(s,n)}</div>`:''}
     ${cx&&cx.next?`<div class="nextup" data-act="next">${ic('right')}<div class="main"><div class="l">Επόμενο</div><div class="tt">${esc(cx.next.title)}</div></div><span class="keyb ${cx.nextKey?'':'none'}">${esc(cx.nextKey||'—')}</span></div>`:''}
   </div>`;
-  if(S.perf)fitStage(d.querySelector('.sheet'));
+  if(S.perf){const sh=d.querySelector('.sheet');fitStage(sh);if(sh&&!sameSong&&!reduceMotion())sh.classList.add('enter')}
   if(sameSong) d.scrollTop=keep; else d.scrollTop=0;
   renderPbar();
 }
@@ -2005,14 +2029,14 @@ let popKind=null;
 function stagePop(kind){if(popKind===kind){closePop();return}popKind=kind;drawPop()}
 function closePop(){popKind=null;const p=$('#pop');if(p){p.hidden=true;p.innerHTML=''}document.querySelectorAll('[data-act=stagepop][aria-expanded]').forEach(b=>b.setAttribute('aria-expanded','false'))}
 function drawPop(){
-  if(!popKind)return;if(!S.perf){closePop();return}
+  if(!popKind)return;
   const s=Store.songs.get(S.songId);let p=$('#pop');
   if(!p){p=document.createElement('div');p.id='pop';p.className='pop';p.setAttribute('role','dialog');document.body.appendChild(p)}
   let body='';
   if(popKind==='fs'){
-    const fitOn=prefs.fit!==false&&innerWidth>=768;
+    const fitOn=S.perf&&prefs.fit!==false&&innerWidth>=768;
     body=`<div class="poplab">Γράμματα</div>${stepper('fs',-2,2,fitOn&&fitFs?fitFs:prefs.fs,'',' γράμματα')}
-      ${innerWidth>=768?`<label class="poptog"><input type="checkbox" data-pref="fit" ${fitOn?'checked':''}><span>Προσαρμογή στην οθόνη</span></label>`:''}`;
+      ${S.perf&&innerWidth>=768?`<label class="poptog"><input type="checkbox" data-pref="fit" ${fitOn?'checked':''}><span>Προσαρμογή στην οθόνη</span></label>`:''}`;
   }else if(popKind==='key'&&s){
     const n=curShift(s),flat=preferFlat(s,n),cx=ctxInfo();
     body=`<div class="poplab">Τόνος</div>${stepper('tr',-1,1,esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n)),'k',' (μισό τόνο)')}
@@ -2021,7 +2045,7 @@ function drawPop(){
   }else{closePop();return}
   p.innerHTML=body;p.hidden=false;p.setAttribute('aria-label',popKind==='fs'?'Μέγεθος γραμμάτων':'Τόνος');
   // place it right above its button (or below the key at the top of the screen), inside the screen
-  const a=document.querySelector(`#pbar [data-act=stagepop][data-sheet="${popKind}"]`)||document.querySelector('#detail .shkey');
+  const a=document.querySelector(`#pbar [data-act=stagepop][data-sheet="${popKind}"]`)||document.querySelector(`#detail .tools [data-act=stagepop][data-sheet="${popKind}"]`)||document.querySelector('#detail .shkey');
   if(a)a.setAttribute('aria-expanded','true');
   const r=a?a.getBoundingClientRect():{left:innerWidth/2,width:0,top:innerHeight-80,bottom:innerHeight-80};
   const pw=p.offsetWidth,ph=p.offsetHeight;
@@ -2133,7 +2157,7 @@ function renderEditor(){
   const genres=allGenres();
   d.innerHTML=`<div class="ed">
     <div class="dtop"><button class="ibtn back" data-act="cancelEdit" aria-label="Πίσω">${ic('left')}</button><h1>${E.id?'Επεξεργασία τραγουδιού':'Νέο τραγούδι'}</h1></div>
-    <div class="edcols ${!E.id&&!E.text.trim()&&document.body.dataset.size==='s'?'pastefirst':''}">
+    <div class="edcols ${document.body.dataset.size==='s'?'pastefirst':''}">
     <div class="fgrid">
       <div class="field span3"><label for="edTitle">Τίτλος</label><input id="edTitle" data-k="title" value="${esc(s.title)}" placeholder="π.χ. Φραγκοσυριανή" autocomplete="off"></div>
       <div class="field span3"><label for="edArtist">Καλλιτέχνης</label><input id="edArtist" data-k="artist" value="${esc(s.artist)}" list="dlArtists" autocomplete="off"><datalist id="dlArtists">${distinct('artist').map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
@@ -2157,12 +2181,14 @@ E                         Am
       <div class="prev" id="edPrev" aria-label="Προεπισκόπηση"></div>
     </div>
     </div>
-    <div class="edfoot"><span class="err" id="edErr"></span><button class="btn" data-act="cancelEdit">Άκυρο</button><button class="btn primary" data-act="saveEdit">${ic('check','sm')}Αποθήκευση</button></div>
+    <div class="edfoot"><span class="err" id="edErr"></span><button class="btn" data-act="cancelEdit">Άκυρο</button><button class="btn primary" data-act="saveEdit" ${E.dirty?'':'disabled'}>${ic('check','sm')}Αποθήκευση</button></div>
   </div>`;
   d.scrollTop=0;
   updatePreview();
 }
 let prevT;
+// «Αποθήκευση» wakes up with the first change
+function edDirty(){const b=document.querySelector('[data-act=saveEdit]');if(b)b.disabled=false}
 function updatePreview(){
   const E=S.edit;if(!E) return;
   const r=parseText(E.text);
@@ -2184,9 +2210,9 @@ function updatePreview(){
 }
 function editorInput(e){
   const E=S.edit;if(!E) return;const t=e.target;
-  if(t.id==='edBody'){E.text=t.value;E.dirty=true;clearTimeout(prevT);prevT=setTimeout(updatePreview,140);return}
+  if(t.id==='edBody'){E.text=t.value;E.dirty=true;edDirty();clearTimeout(prevT);prevT=setTimeout(updatePreview,140);return}
   const k=t.dataset.k;if(!k) return;
-  E.dirty=true;
+  E.dirty=true;edDirty();
   if(k==='key'){E.draft.key=t.value;E.touchedKey=true}
   else E.draft[k]=t.value;
 }
@@ -2194,7 +2220,7 @@ function editorPaste(e){
   const E=S.edit;if(!E||e.target.id!=='edBody') return;
   const wasEmpty=!E.text.trim();
   setTimeout(()=>{
-    const ta=$('#edBody');E.text=ta.value;E.dirty=true;
+    const ta=$('#edBody');E.text=ta.value;E.dirty=true;edDirty();
     if(wasEmpty){
       const {meta,body}=extractMeta(E.text);const filled=[];
       if(meta.title&&!E.draft.title){E.draft.title=meta.title;$('#edTitle').value=meta.title;filled.push('τίτλο')}
@@ -2233,7 +2259,7 @@ async function saveEditor(){
     await p;toast(isNew?'Το τραγούδι προστέθηκε':'Αποθηκεύτηκε');
   }catch(e){toast(e&&e.code==='quota_exceeded'?'Η βάση γέμισε. Σβήσε παλιές εκδόσεις ή τραγούδια.':'Δεν αποθηκεύτηκε. Δοκίμασε ξανά.');console.warn(e)}
 }
-function addGenre(g){const E=S.edit;if(!E) return;E.draft.genres=E.draft.genres||[];if(!E.draft.genres.includes(g))E.draft.genres.push(g);E.dirty=true}
+function addGenre(g){const E=S.edit;if(!E) return;E.draft.genres=E.draft.genres||[];if(!E.draft.genres.includes(g))E.draft.genres.push(g);E.dirty=true;edDirty()}
 // run fn only once an unsaved editor draft has been dealt with (asked, not silently thrown away)
 function guardEdit(fn){
   const E=S.edit;if(!E||!E.dirty){fn();return}
@@ -2717,7 +2743,7 @@ const A={
   cancelEdit(){cancelEditor(false)},
   saveEdit(){saveEditor()},
   edtab(el){S.edit.showPrev=el.dataset.p==='1';$('.edbody').classList.toggle('showprev',S.edit.showPrev);document.querySelectorAll('.edtabs button').forEach(b=>b.classList.toggle('on',b===el));if(S.edit.showPrev)updatePreview()},
-  tgGenre(el){const E=S.edit;const g=el.dataset.g;E.draft.genres=E.draft.genres||[];const on=E.draft.genres.includes(g);E.draft.genres=on?E.draft.genres.filter(x=>x!==g):E.draft.genres.concat(g);el.classList.toggle('on',!on);el.setAttribute('aria-pressed',!on);E.dirty=true},
+  tgGenre(el){const E=S.edit;const g=el.dataset.g;E.draft.genres=E.draft.genres||[];const on=E.draft.genres.includes(g);E.draft.genres=on?E.draft.genres.filter(x=>x!==g):E.draft.genres.concat(g);el.classList.toggle('on',!on);el.setAttribute('aria-pressed',!on);E.dirty=true;edDirty()},
   tr(el){const s=Store.songs.get(S.songId);if(!s)return;let n=curShift(s)+(+el.dataset.d);if(n>11)n-=12;if(n<-11)n+=12;S.tr[trSlot(s)]=n;S.cueMode?renderCueSheet():renderDetail(true);refreshSheet()},
   tr0(){const s=Store.songs.get(S.songId);if(!s)return;delete S.tr[trSlot(s)];S.cueMode?renderCueSheet():renderDetail(true);refreshSheet()},
   stagesheet(el){stageSheet(el.dataset.sheet)},
@@ -2827,6 +2853,7 @@ const A={
     const b=(act,icon,label,sub,cls='')=>`<button class="mitem ${cls}" data-act="${act}">${ic(icon)}<span><b>${label}</b>${sub?`<small>${sub}</small>`:''}</span></button>`;
     const inCols=[...Store.cols.values()].filter(c=>hasSong(c,s.id)).length;
     openModal(`${dhead(esc(s.title))}<div class="dbody menulist">
+      ${b('edit','pencil','Επεξεργασία','Στίχοι, ακόρντα, τίτλος, τόνος')}
       ${b('tocol','folderplus','Σε λίστες',inCols?`Είναι σε ${inCols} λίστ${inCols===1?'α':'ες'}`:'Δεν είναι σε καμία λίστα')}
       ${b('versions','history','Ιστορικό εκδόσεων','Προηγούμενες μορφές και επαναφορά')}
       ${b('exportsong','share','Εξαγωγή','Αντιγραφή κειμένου, .txt ή ChordPro')}
