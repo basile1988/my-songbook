@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>My Songbook</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Songbook">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root{
   --bg:#ffffff;--side:#f4f5f7;--surface:#f6f7f9;--raise:#ffffff;--line:#e3e6eb;--line2:#cfd4dc;
@@ -2000,6 +2007,10 @@ layout();applyTheme();
 if(window.innerWidth<760) document.body.dataset.pane='list';
 renderAll();
 Store.init().then(()=>{renderAll();if(Store.mode==='setup')ghModal()});
+// offline start: sw.js keeps a copy of the app (not of the songs: those stay with Store)
+if('serviceWorker' in navigator&&window.isSecureContext&&/^https?:$/.test(location.protocol)){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(e=>console.warn('sw',e)));
+}
 </script>
 </body>
 </html>

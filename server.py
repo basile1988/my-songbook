@@ -150,6 +150,20 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             return self.wfile.write(body)
+        static = {"manifest.webmanifest": "application/manifest+json", "sw.js": "text/javascript; charset=utf-8"}
+        rel = "/".join(parts)
+        if rel in static or (len(parts) == 2 and parts[0] == "icons" and re.match(r"^[\w-]+\.png$", parts[1])):
+            try:
+                with open(os.path.join(HERE, *parts), "rb") as f:
+                    body = f.read()
+            except OSError:
+                return self.fail(404, "not found")
+            self.send_response(200)
+            self.send_header("Content-Type", static.get(rel, "image/png"))
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            return self.wfile.write(body)
         if parts[0] != "api":
             return self.fail(404, "not found")
         if parts[1:] == ["sync"]:
