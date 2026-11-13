@@ -1,0 +1,5 @@
+﻿songbook.db
+songbook.db-*
+backups/
+__pycache__/
+.claude/

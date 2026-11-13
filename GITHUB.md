@@ -1,0 +1,52 @@
+# My Songbook στο GitHub
+
+Δύο repos στον δωρεάν λογαριασμό σου:
+
+| Repo | Ορατότητα | Τι έχει |
+|---|---|---|
+| `my-songbook` | **Public** | Μόνο την εφαρμογή (`index.html`). Το GitHub Pages τη σερβίρει στο `https://<χρήστης>.github.io/my-songbook/` |
+| `my-songbook-data` | **Private** | Τα τραγούδια και τις λίστες σου, ένα αρχείο ανά τραγούδι. Κάθε αλλαγή είναι ένα commit, με όλο το ιστορικό. |
+
+Δεν χρειάζεται git στον υπολογιστή. Όλα γίνονται από τη σελίδα του GitHub.
+
+## 1. Repo δεδομένων (ιδιωτικό)
+
+1. github.com → **+** (πάνω δεξιά) → **New repository**
+2. Repository name: `my-songbook-data`
+3. Επίλεξε **Private**
+4. Τσέκαρε **Add a README file**. Αυτό είναι απαραίτητο, γιατί ένα εντελώς άδειο repo δεν δέχεται αλλαγές από την εφαρμογή.
+5. **Create repository**
+
+## 2. Repo εφαρμογής (δημόσιο) και GitHub Pages
+
+1. **New repository** → name: `my-songbook` → **Public** → **Create repository**
+2. Στη σελίδα του repo: **Add file → Upload files** → σύρε το `index.html` από τον φάκελο `My Songbook` → **Commit changes**
+3. **Settings → Pages**. Στο «Build and deployment»: Source **Deploy from a branch**, Branch **main**, φάκελος **/ (root)** → **Save**
+4. Σε 1-2 λεπτά η εφαρμογή ανοίγει στο `https://<χρήστης>.github.io/my-songbook/`
+
+Όταν αλλάζει το `index.html`, ξανακάνεις το «Upload files» με το νέο αρχείο, και αντικαθίσταται.
+
+## 3. Token (το «κλειδί» της εφαρμογής)
+
+1. github.com → φωτογραφία σου → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**
+2. Token name: `My Songbook`
+3. Expiration: όσο μεγαλύτερο σου επιτρέπει. Όταν λήξει, φτιάχνεις καινούργιο και το ξαναβάζεις στην εφαρμογή.
+4. Repository access: **Only select repositories** → διάλεξε **μόνο** το `my-songbook-data`
+5. Permissions → Repository permissions → **Contents: Read and write**. Τα υπόλοιπα μένουν «No access», εκτός από το «Metadata: Read», που μπαίνει μόνο του.
+6. **Generate token** και αντίγραψέ το. Το GitHub το δείχνει μόνο μία φορά.
+
+## 4. Σύνδεση σε κάθε συσκευή
+
+1. Άνοιξε `https://<χρήστης>.github.io/my-songbook/`
+2. Το παράθυρο «Σύνδεση με GitHub» ανοίγει μόνο του. Αν δεν ανοίξει, πάτα **GitHub** κάτω αριστερά.
+3. Χρήστης: το όνομά σου στο GitHub · Repo: `my-songbook-data` · Token: αυτό που αντέγραψες → **Σύνδεση**
+4. Στο κινητό ή στο tablet: μενού του browser → **Προσθήκη στην αρχική οθόνη**
+
+Την πρώτη φορά σε κάθε συσκευή κατεβαίνουν όλα τα τραγούδια, που παίρνει μερικά δευτερόλεπτα. Μετά κατεβαίνουν μόνο οι αλλαγές.
+
+## Καλό να ξέρεις
+
+- **Χωρίς internet** η σελίδα που είναι ήδη ανοιχτή συνεχίζει να δουλεύει. Οι αλλαγές περιμένουν και ανεβαίνουν όταν ξαναβρεί σύνδεση. Για να ανοίξει η εφαρμογή από την αρχή χωρίς internet χρειάζεται ακόμα ένα βήμα (PWA), που δεν το έχουμε φτιάξει.
+- **Ιστορικό**: στο GitHub, στο `my-songbook-data`, βλέπεις κάθε αλλαγή κάθε τραγουδιού. Από την εφαρμογή: τραγούδι → εικονίδιο ιστορικού → «Επαναφορά».
+- **Ασφάλεια**: το token μένει μόνο στον browser της κάθε συσκευής. Αν χάσεις μια συσκευή, σβήσε το token στο GitHub και φτιάξε καινούργιο.
+- Ο τοπικός server (`Start My Songbook.bat`) δουλεύει ακόμα, αλλά κρατά **ξεχωριστή** βιβλιοθήκη από το GitHub.

@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="el" data-eff="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>My Songbook</title>
+<style>
+:root{
+  --bg:#ffffff;--side:#f4f5f7;--surface:#f6f7f9;--raise:#ffffff;--line:#e3e6eb;--line2:#cfd4dc;
+  --text:#16181d;--muted:#596170;--faint:#7d8594;--accent:#1d5bd6;--accent-ink:#ffffff;--accent-weak:#e8effd;
+  --chord:#1a56cc;--danger:#c3352e;--danger-weak:#fbeceb;--ok:#1f7a4d;--note:#a15c00;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 6px 18px rgba(16,24,40,.08);
+  --r:10px;--fs:20px;color-scheme:light;
+}
+html[data-eff=dark],body.perf #detail,body.perf .pbar,body.perf .pnext,.darkvars{
+  --bg:#111215;--side:#16171b;--surface:#1b1d22;--raise:#22252a;--line:#2c2f36;--line2:#3b3f48;
+  --text:#eceef2;--muted:#a6adb8;--faint:#858c98;--accent:#7ea9ff;--accent-ink:#0b1426;--accent-weak:#1c2944;
+  --chord:#8fb7ff;--danger:#ff7d73;--danger-weak:#3a1f1d;--ok:#5fd39a;--note:#ffc76b;
+  --shadow:0 1px 2px rgba(0,0,0,.45),0 8px 22px rgba(0,0,0,.4);color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;overflow:hidden}
+::selection{background:var(--accent-weak);color:var(--text)}
+input,textarea,select,button{font:inherit;color:inherit;caret-color:var(--accent)}
+button{cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+*{scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:10px;border:3px solid transparent;background-clip:content-box}
+svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sm svg.i,svg.i.sm{width:16px;height:16px}
+[hidden]{display:none!important}
+
+/* ---------- layout ---------- */
+#app{display:grid;grid-template-columns:248px 360px minmax(0,1fr);height:100vh;height:100dvh}
+#side{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding-top:env(safe-area-inset-top)}
+#listPane{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--bg);padding-top:env(safe-area-inset-top)}
+#detail{min-width:0;min-height:0;overflow:auto;background:var(--bg);color:var(--text);position:relative;overscroll-behavior:contain;padding-top:env(safe-area-inset-top)}
+#tabbar{display:none}
+body[data-size=m] #app{grid-template-columns:232px minmax(0,1fr)}
+body[data-size=m][data-pane=detail] #listPane{display:none}
+body[data-size=m]:not([data-pane=detail]) #detail{display:none}
+body[data-size=s] #app{grid-template-columns:minmax(0,1fr);height:calc(100dvh - 60px - env(safe-area-inset-bottom))}
+body[data-size=s][data-pane=detail] #app{height:100dvh}
+body[data-size=s] #side,body[data-size=s] #listPane,body[data-size=s] #detail{display:none;border:0}
+body[data-size=s][data-pane=side] #side,body[data-size=s][data-pane=list] #listPane,body[data-size=s][data-pane=detail] #detail{display:flex}
+body[data-size=s][data-pane=detail] #detail{display:block}
+body[data-size=s]:not([data-pane=detail]) #tabbar{display:flex}
+body.perf #app{grid-template-columns:minmax(0,1fr)!important;height:100dvh!important}
+body.perf #side,body.perf #listPane,body.perf #tabbar{display:none!important}
+body.perf #detail{display:block!important}
+
+/* ---------- sidebar ---------- */
+.brand{display:flex;align-items:center;gap:10px;padding:18px 18px 12px;font-weight:700;font-size:17px;letter-spacing:-.01em}
+.brand .logo{width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.brand .logo svg{width:18px;height:18px}
+.sidescroll{flex:1;overflow:auto;padding:4px 10px 12px;min-height:0}
+.navitem{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:9px 10px;border-radius:8px;text-align:left;color:var(--text);min-height:40px}
+.navitem:hover{background:color-mix(in srgb,var(--text) 6%,transparent)}
+.navitem.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
+.navitem .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navitem .cnt{font-size:12.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.navitem.on .cnt{color:var(--accent)}
+.sidehead{display:flex;align-items:center;justify-content:space-between;margin:18px 4px 4px 10px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.sidefoot{border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+.status{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.dot.live{background:var(--ok)}.dot.warn{background:#d69a1f}.dot.err{background:var(--danger)}
+.footrow{display:flex;gap:2px 4px;flex-wrap:wrap}
+.footrow .btn{padding:0 8px}
+.ghsteps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--muted)}
+.ghsteps b{color:var(--text)}
+.ghok{color:var(--ok);font-size:13.5px}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 14px;border-radius:9px;border:1px solid var(--line2);background:var(--raise);color:var(--text);font-weight:550;white-space:nowrap;transition:background .15s,border-color .15s,transform .1s}
+.btn:hover{background:var(--surface)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:color-mix(in srgb,var(--accent) 88%,#000)}
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--line2))}
+.btn.danger.solid{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn.ghost{border-color:transparent;background:none}
+.btn.ghost:hover{background:color-mix(in srgb,var(--text) 7%,transparent)}
+.btn:disabled{opacity:.45;pointer-events:none}
+.ibtn{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:9px;border:0;background:none;color:var(--muted);flex:none;transition:background .15s,color .15s}
+.ibtn:hover{background:color-mix(in srgb,var(--text) 7%,transparent);color:var(--text)}
+.ibtn.on{color:var(--accent)}
+.ibtn.fav.on svg{fill:currentColor}
+.btn.sm{min-height:32px;padding:0 10px;font-size:13.5px}
+
+/* ---------- list pane ---------- */
+.lhead{padding:16px 16px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line)}
+.ltitle{display:flex;align-items:center;gap:8px;min-height:38px}
+.ltitle h2{flex:1;margin:0;font-size:20px;letter-spacing:-.015em;line-height:1.2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ltitle .sub{font-size:12.5px;color:var(--faint);font-weight:500}
+.search{position:relative}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--faint);width:18px;height:18px}
+.search input{width:100%;height:42px;border-radius:10px;border:1px solid var(--line2);background:var(--raise);padding:0 36px 0 38px;font-size:16px}
+.search input::placeholder{color:var(--faint)}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+.search .clr{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:34px;height:34px}
+.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.sel{appearance:none;-webkit-appearance:none;height:32px;border-radius:999px;border:1px solid var(--line2);background:var(--raise) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237d8594' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;padding:0 28px 0 12px;font-size:13.5px;flex:none;max-width:170px}
+.sel.on{border-color:var(--accent);color:var(--accent);background-color:var(--accent-weak)}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:9px;padding:2px;background:var(--surface);flex:none}
+.seg button{border:0;background:none;border-radius:7px;padding:5px 10px;font-size:13px;color:var(--muted);min-height:30px}
+.seg button.on{background:var(--raise);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.list{flex:1;overflow:auto;min-height:0;padding:6px 8px 20px}
+.row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;min-height:56px;cursor:pointer;position:relative}
+.row:hover{background:var(--surface)}
+.row.on{background:var(--accent-weak)}
+.row .num{width:22px;text-align:right;color:var(--faint);font-size:13px;font-variant-numeric:tabular-nums;flex:none}
+.row .main{flex:1;min-width:0}
+.row .tt{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .ar{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .ar:empty{display:none}
+.row .favmark{color:#d69a1f;width:14px;height:14px;fill:currentColor;stroke:none}
+.row .handle{cursor:grab;touch-action:none;color:var(--faint);width:30px;height:40px;display:grid;place-items:center;border:0;background:none;flex:none;margin-left:-6px}
+.row.dragging{background:var(--raise);box-shadow:var(--shadow);z-index:2}
+.keyb{flex:none;min-width:40px;padding:3px 8px;border-radius:7px;background:var(--surface);border:1px solid var(--line);font-weight:700;font-size:13px;text-align:center;color:var(--chord);font-variant-numeric:tabular-nums}
+.keyb.none{color:var(--faint);font-weight:500}
+.row.on .keyb{background:var(--raise)}
+.empty{padding:36px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:12px}
+.empty h3{margin:0;color:var(--text);font-size:17px}
+.empty p{margin:0;max-width:34ch}
+.empty .acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.loading{padding:28px;color:var(--muted);text-align:center}
+.row .inote{font-size:13px;color:var(--note);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.keyb.own{border-color:var(--chord);border-style:dashed}
+.row .imenu{width:32px;height:32px;margin-right:-6px;opacity:.55}
+.row:hover .imenu,.row.on .imenu,.row .imenu:focus-visible{opacity:1}
+.secrow{min-height:0;padding:14px 10px 4px;cursor:default;border-radius:0}
+.secrow:hover{background:none}
+.secrow:not(:first-child){margin-top:6px;border-top:1px solid var(--line)}
+.sechead{flex:1;display:flex;align-items:baseline;gap:8px;border:0;background:none;padding:2px 0;text-align:left;min-width:0;color:var(--text)}
+.sechead .sn{font-weight:700;font-size:13px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted)}
+.sechead .ss{font-size:12px;color:var(--faint);font-weight:600}
+.sechead:hover .sn{color:var(--accent)}
+.colnotes{font-size:13px;color:var(--muted);white-space:pre-wrap;background:var(--surface);border-radius:9px;padding:8px 10px;max-height:6.5em;overflow:auto}
+.cue .row{min-height:68px}
+.cue .row .tt{font-size:19px}
+.cue .row .keyb{font-size:17px;min-width:54px;padding:6px 10px}
+
+/* ---------- detail / song ---------- */
+.dwrap{max-width:920px;margin:0 auto;padding:22px 28px 120px}
+.dtop{display:flex;align-items:flex-start;gap:4px 12px;flex-wrap:wrap}
+.dtop .back{display:none;margin-left:-8px}
+body[data-size=m] .dtop .back,body[data-size=s] .dtop .back{display:inline-grid}
+.dtitle{flex:1 1 240px;min-width:0}
+.dtitle .cr{color:var(--faint);font-size:13px;margin-top:2px}
+body.perf .dtitle .cr{display:none}
+.dtitle h1{margin:2px 0 2px;font-size:28px;line-height:1.18;letter-spacing:-.02em;overflow-wrap:anywhere;text-wrap:balance}
+.dtitle .ar{color:var(--muted);font-size:16px}
+.dacts{display:flex;gap:2px;flex-wrap:wrap;justify-content:flex-end}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 4px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:13px;color:var(--muted)}
+.chip b{color:var(--text);font-weight:650}
+.chip.key b{color:var(--chord)}
+.note{margin:14px 0 0;padding:10px 14px;border-radius:10px;background:var(--surface);color:var(--text);font-size:15px;white-space:pre-wrap}
+.note .nl{font-size:12px;font-weight:650;color:var(--muted);display:block;margin-bottom:2px}
+.note.inl{background:color-mix(in srgb,var(--note) 12%,var(--bg));box-shadow:inset 3px 0 0 var(--note);font-weight:600}
+.note.inl .nl{color:var(--note)}
+.ctxbar .btn{margin-left:auto;color:var(--muted)}
+.tools{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 0;margin:10px 0 6px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.tgroup{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line2);border-radius:10px;padding:2px;background:var(--raise)}
+.tgroup .lab{font-size:12px;color:var(--faint);padding:0 6px 0 8px}
+.tgroup .val{min-width:44px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;font-size:14px}
+.tgroup .val.k{color:var(--chord)}
+.tgroup .ibtn{width:34px;height:34px}
+.tspacer{flex:1}
+.sheet{font-size:var(--fs);line-height:1.25;padding-top:8px}
+.ln{display:flex;flex-wrap:wrap;align-items:flex-end;margin:0 0 .28em}
+.ln .w{display:inline-flex;white-space:pre}
+.ln .p{display:inline-flex;flex-direction:column}
+.ln .c{display:block;min-height:1.15em;line-height:1.15;font-weight:700;color:var(--chord);font-size:.84em;padding-right:.32em;white-space:pre;font-variant-numeric:tabular-nums}
+.ln .t{white-space:pre;line-height:1.3}
+.ln.plain .t{white-space:pre-wrap}
+.ln.conly{gap:.2em 1.1em}
+.ln.conly .c{font-size:.92em;padding:0}
+.ln .rep{margin-left:.6em;margin-bottom:.15em;align-self:flex-end;font-size:.66em;line-height:1.5;padding:0 .5em;border-radius:999px;background:var(--accent-weak);color:var(--accent);font-weight:700;white-space:nowrap}
+.sheet .gap{height:.8em}
+.sheet .sec{font-weight:700;color:var(--muted);font-size:.72em;margin:.9em 0 .35em;letter-spacing:.02em}
+.sheet .cmt{color:var(--muted);font-style:italic;font-size:.8em;margin:.2em 0 .4em}
+.nochords{color:var(--faint);font-size:14px;margin:18px 0}
+.nextup{margin-top:40px;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer}
+.nextup:hover{border-color:var(--line2)}
+.nextup .l{font-size:12.5px;color:var(--muted)}
+.nextup .tt{font-weight:650;font-size:17px}
+.nextup .main{flex:1;min-width:0}
+.dempty{height:100%;display:grid;place-items:center}
+.ctxbar{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:6px}
+.ctxbar .pos{font-variant-numeric:tabular-nums}
+
+/* ---------- perf ---------- */
+body.perf #detail{background:var(--bg)}
+body.perf .dwrap{max-width:none;padding:18px clamp(16px,4vw,56px) 160px}
+body.perf .dacts,body.perf .dtop .back,body.perf .tools,body.perf .ctxbar{display:none!important}
+body.perf .dtitle h1{font-size:calc(var(--fs) * 1.15)}
+body.perf .dtitle .ar{font-size:calc(var(--fs) * .7)}
+body.perf .meta{margin-top:8px}
+.pbar{color:var(--text);position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30;display:none;align-items:center;gap:6px;padding:6px;border-radius:16px;background:color-mix(in srgb,var(--raise) 94%,transparent);border:1px solid var(--line2);box-shadow:var(--shadow);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);max-width:calc(100vw - 16px);overflow-x:auto;transition:opacity .25s ease,transform .25s cubic-bezier(.2,.8,.2,1)}
+body.perf .pbar{display:flex}
+body.perf.uihidden .pbar{opacity:0;transform:translate(-50%,24px);pointer-events:none}
+.pbar .ibtn{width:44px;height:44px;color:var(--text)}
+.pbar .sep{width:1px;height:28px;background:var(--line2);flex:none}
+.pbar .val{min-width:40px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.pbar .val.k{color:var(--chord)}
+.pnext{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));z-index:30;display:none;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--raise) 90%,transparent);border:1px solid var(--line);border-radius:999px;padding:5px 12px;max-width:min(60vw,420px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .25s}
+body.perf .pnext.show{display:block}
+body.perf.uihidden .pnext{opacity:.6;bottom:calc(14px + env(safe-area-inset-bottom))}
+.cuesheet .row{min-height:calc(var(--fs) * 3);border-radius:12px}
+.cuesheet .row .tt{font-size:calc(var(--fs) * 1.1)}
+.cuesheet .row .ar{font-size:calc(var(--fs) * .65)}
+.cuesheet .row .num{font-size:calc(var(--fs) * .7);width:2em}
+.cuesheet .row .keyb{font-size:calc(var(--fs) * .95);min-width:3em;padding:.25em .5em}
+.cuesheet .row.cur{background:var(--accent-weak);outline:2px solid var(--accent)}
+.cuesheet .row.done{opacity:.5}
+.cuesheet .row .inote{font-size:calc(var(--fs) * .62)}
+.cuesec{font-weight:800;color:var(--muted);font-size:calc(var(--fs) * .62);letter-spacing:.04em;text-transform:uppercase;margin:1.2em 0 .3em;padding:0 10px}
+.cuesec span{font-weight:600;color:var(--faint)}
+.cuesec:first-child{margin-top:0}
+
+/* ---------- editor ---------- */
+.ed{max-width:1200px;margin:0 auto;padding:22px 28px 110px}
+.ed h1{font-size:24px;margin:0;letter-spacing:-.015em;flex:1}
+.fgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px 14px;margin-top:18px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:12.5px;font-weight:600;color:var(--muted)}
+.field input,.field select,.field textarea{border:1px solid var(--line2);background:var(--raise);border-radius:9px;padding:9px 11px;min-height:42px;font-size:16px;width:100%}
+.field select{appearance:auto}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+.span6{grid-column:span 6}.span3{grid-column:span 3}.span2{grid-column:span 2}.span1{grid-column:span 1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.tog{border:1px solid var(--line2);background:var(--raise);border-radius:999px;padding:5px 12px;font-size:13.5px;min-height:34px;color:var(--muted)}
+.tog.on{background:var(--accent-weak);border-color:var(--accent);color:var(--accent);font-weight:600}
+.addg{border:1px dashed var(--line2);background:none;border-radius:999px;padding:5px 12px;font-size:13.5px;width:150px;min-height:34px}
+.edbody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:18px}
+.edbody textarea{font-family:ui-monospace,"Cascadia Mono","SF Mono",Consolas,"Liberation Mono",monospace;font-size:15px;line-height:1.45;min-height:460px;resize:vertical;white-space:pre;overflow:auto;tab-size:4}
+.prev{border:1px solid var(--line);border-radius:10px;padding:14px 18px;min-height:460px;background:var(--bg);overflow:auto;max-height:70vh}
+.prev .sheet{--fs:17px}
+.hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+.hint code{font-family:ui-monospace,Consolas,monospace;background:var(--surface);border:1px solid var(--line);padding:0 4px;border-radius:4px;font-size:12px}
+.parseinfo{font-size:13px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.parseinfo .warn{color:#b07400}
+html[data-eff=dark] .parseinfo .warn{color:#f0b54a}
+.edtabs{display:none;margin-top:16px}
+.edfoot{position:sticky;bottom:0;z-index:5;display:flex;gap:8px;justify-content:flex-end;padding:12px 0 calc(12px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid var(--line);margin-top:20px}
+.err{color:var(--danger);font-size:13px;margin-right:auto;align-self:center}
+
+/* ---------- modal ---------- */
+#modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px}
+#modal .scrim{position:absolute;inset:0;background:rgba(10,12,16,.42);animation:fade .18s ease-out}
+.dlg{position:relative;width:min(480px,100%);max-height:min(86vh,720px);display:flex;flex-direction:column;background:var(--raise);color:var(--text);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.28);animation:rise .22s cubic-bezier(.2,.8,.2,1)}
+.dlg h3{margin:0;font-size:18px;letter-spacing:-.01em;flex:1}
+.dhead{display:flex;align-items:center;gap:8px;padding:16px 16px 8px 20px}
+.dbody{padding:4px 20px 12px;overflow:auto;min-height:0;display:flex;flex-direction:column;gap:12px}
+.dfoot{display:flex;gap:8px;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--line)}
+.dfoot .left{margin-right:auto}
+.ck{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:9px;cursor:pointer;min-height:46px}
+.ck:hover{background:var(--surface)}
+.ck input{width:20px;height:20px;accent-color:var(--accent);flex:none}
+.ck .main{flex:1;min-width:0}
+.ck .tt{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ck .ar{font-size:12.5px;color:var(--muted)}
+.radios{display:flex;flex-direction:column;gap:6px}
+.radio{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;cursor:pointer}
+.radio input{margin-top:3px;accent-color:var(--accent)}
+.radio .d{font-size:12.5px;color:var(--muted)}
+.radio:has(input:checked){border-color:var(--accent);background:var(--accent-weak)}
+.vrow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.vrow:last-child{border-bottom:0}
+.vrow .main{flex:1;min-width:0}
+.vrow .d{font-weight:600;font-variant-numeric:tabular-nums}
+.vrow .s{font-size:12.5px;color:var(--muted)}
+.codebox{width:100%;min-height:200px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;border:1px solid var(--line2);border-radius:9px;padding:10px;background:var(--surface)}
+.muted{color:var(--muted)}
+.lsgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.lsgrid div{background:var(--surface);border-radius:10px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.lsgrid b{font-size:22px;font-variant-numeric:tabular-nums}
+.lsgrid span{font-size:12px;color:var(--muted);line-height:1.25}
+.lslist{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.lslist .warnli{color:var(--note)}
+@media (max-width:420px){.lsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(12px) scale(.98)}}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:60;background:#1c1f25;color:#f2f4f7;padding:10px 16px;border-radius:10px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s,transform .25s cubic-bezier(.2,.8,.2,1);max-width:calc(100vw - 32px)}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+body[data-size=s]:not([data-pane=detail]) #toast,body.perf #toast,body.editing #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
+@media (max-width:640px){.pbar{left:8px;right:8px;transform:none;flex-wrap:wrap;justify-content:center;max-width:none;overflow:visible}body.perf.uihidden .pbar{transform:translateY(24px)}.pbar .ibtn{width:42px;height:42px}.pnext{bottom:calc(132px + env(safe-area-inset-bottom))}}
+.edcols{display:flex;flex-direction:column}.edcols.pastefirst .edtabs,.edcols.pastefirst .edbody{order:-1}.edcols.pastefirst .edbody{margin-bottom:6px}
+
+/* ---------- small screens ---------- */
+#tabbar{position:fixed;left:0;right:0;bottom:0;height:calc(60px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--raise);border-top:1px solid var(--line);z-index:20}
+#tabbar button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;color:var(--muted)}
+#tabbar button.on{color:var(--accent);font-weight:600}
+@media (max-width:1099px){.edbody{grid-template-columns:minmax(0,1fr)}.edtabs{display:flex}.edbody .prev{display:none}.edbody.showprev textarea{display:none}.edbody.showprev .prev{display:block}}
+@media (max-width:759px){
+  .dwrap{padding:14px 16px 120px}.ed{padding:14px 16px 100px}
+  .dtitle h1{font-size:23px}
+  .fgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .span6,.span3{grid-column:span 2}.span2,.span1{grid-column:span 1}
+  .dlg{width:100%;margin-top:auto;border-radius:16px 16px 0 0;max-height:88vh;padding-bottom:env(safe-area-inset-bottom)}
+  #modal{padding:0;place-items:end stretch}
+  .tools .tgroup .lab{display:none}
+  .dacts .ibtn{width:36px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body data-size="l" data-pane="list">
+<div id="app">
+  <aside id="side" aria-label="Πλοήγηση"></aside>
+  <section id="listPane" aria-label="Τραγούδια"></section>
+  <main id="detail" tabindex="-1"></main>
+</div>
+<nav id="tabbar" aria-label="Κύρια πλοήγηση"></nav>
+<div class="pbar" id="pbar" role="toolbar" aria-label="Έλεγχος παιξίματος"></div>
+<div class="pnext" id="pnext"></div>
+<div id="modal" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+<input type="file" id="lsIn" accept=".html,.htm,text/html" hidden>
+
+<script>
+"use strict";
+/* =====================================================================
+   ICONS
+   ===================================================================== */
+const ICONS={
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+  minus:'<path d="M5 12h14"/>',
+  star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  left:'<path d="m15 18-6-6 6-6"/>',
+  right:'<path d="m9 18 6-6-6-6"/>',
+  play:'<polygon points="6 3 20 12 6 21 6 3"/>',
+  pause:'<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
+  x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  pencil:'<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
+  trash:'<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+  listmusic:'<path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/>',
+  folder:'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  folderplus:'<path d="M12 10v6"/><path d="M9 13h6"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  grip:'<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  max:'<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+  music:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  history:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  paste:'<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+  library:'<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>',
+  textsize:'<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/>',
+  scroll:'<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+  undo:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
+  share:'<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/>',
+  settings:'<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
+  cloud:'<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
+  more:'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+  section:'<path d="M4 6h16"/><path d="M4 12h10"/><path d="M4 18h7"/>',
+  monitor:'<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>'
+};
+const NOSLEEP='AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMpbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAB9AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAlN0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAB9AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAfQAAAAAAABAAAAAAHLbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAgABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABdm1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAATZzdGJsAAAAtnN0c2QAAAAAAAAAAQAAAKZhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAALGF2Y0MBQsAK/+EAFWdCwAraewEQAAADABAAAAMAIPEiagEABGjOD8gAAAAQcGFzcAAAAAEAAAABAAAAFGJ0cnQAAAAAAAAKMAAACjAAAAAYc3R0cwAAAAAAAAABAAAAAgAAQAAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAgAAAAEAAAAcc3RzegAAAAAAAAAAAAAAAgAAAoMAAAAJAAAAFHN0Y28AAAAAAAAAAQAAA1kAAABidWR0YQAAAFptZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAAC1pbHN0AAAAJal0b28AAAAdZGF0YQAAAAEAAAAATGF2ZjYwLjE2LjEwMAAAAAhmcmVlAAAClG1kYXQAAAJtBgX//2ncRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTY0IHIzMTA4IDMxZTE5ZjkgLSBILjI2NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDIzIC0gaHR0cDovL3d3dy52aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MCByZWY9MSBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgxOjB4MSBtZT1oZXggc3VibWU9MiBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0wIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MCA4eDhkY3Q9MCBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0wIHRocmVhZHM9MSBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTAgd2VpZ2h0cD0wIGtleWludD0yNTAga2V5aW50X21pbj0xIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9MTAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAADmWIhAW///8PRQABT3+AAAAABUGaIBX1';
+const ic=(n,cls='')=>`<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
+
+/* =====================================================================
+   UTIL
+   ===================================================================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/ς/g,'σ');
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,10)).replace(/[^a-zA-Z0-9-]/g,'');
+const now=()=>Date.now();
+const clone=o=>JSON.parse(JSON.stringify(o));
+const collator=new Intl.Collator('el',{sensitivity:'base',numeric:true});
+const fmtDate=t=>new Date(t).toLocaleString('el-GR',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let toastT;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600)}
+
+/* =====================================================================
+   CHORDS: recognise, transpose
+   ===================================================================== */
+const CH_RE=/^([A-G])([#b]?)((?:maj|min|dim|aug|sus|add|m|M|°|ø|\+|-|\d|#|b|\(|\)|,)*)(?:\/([A-G])([#b]?))?$/;
+const LOOSE_RE=/^[A-G][#b]?[A-Za-z0-9#+°ø()\/,-]{0,8}$/;
+const FILLER_RE=/^(?:\|+:?|:?\|+|\|\|:?|:\|\||[(\[]?(?:[xχ×]\s?\d+|\d+\s?[xχ×])[)\]]?|-+|\/+|%|\.{2,}|…|N\.?C\.?|\(|\))$/i;
+function normChord(tok){
+  let t=String(tok).replace(/♯/g,'#').replace(/♭/g,'b');
+  let note='';
+  const par=t.match(/^\((.+)\)$/); if(par) t=par[1];
+  if(/^H/.test(t)){t='B'+t.slice(1);note='H→B'}
+  if(CH_RE.test(t)) return {ok:true,strict:true,c:t,note};
+  if(LOOSE_RE.test(t)) return {ok:true,strict:false,c:t,note:'unknown'};
+  return {ok:false};
+}
+function isChordLine(line){
+  const toks=line.trim().split(/\s+/).filter(Boolean);
+  if(!toks.length) return false;
+  let strict=0;
+  for(const t of toks){
+    if(FILLER_RE.test(t)) continue;
+    const n=normChord(t); if(!n.ok) return false; if(n.strict) strict++;
+  }
+  return strict>0;
+}
+const SH=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const FL=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const IDX={C:0,'B#':0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,Fb:4,F:5,'E#':5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11,Cb:11};
+function trNote(note,n,flat){const i=IDX[note];if(i==null)return note;return (flat?FL:SH)[((i+n)%12+12)%12]}
+function trChord(ch,n,flat){
+  if(!n||!ch) return ch;
+  const m=ch.match(/^([A-G][#b]?)(.*?)(?:\/([A-G][#b]?))?$/); if(!m) return ch;
+  return trNote(m[1],n,flat)+m[2]+(m[3]?'/'+trNote(m[3],n,flat):'');
+}
+function keyParts(k){const m=String(k||'').match(/^([A-G][#b]?)(m?)$/);return m?{root:m[1],minor:!!m[2]}:null}
+function preferFlat(song,n){
+  const kp=keyParts(song.key);
+  if(kp){const j=((IDX[kp.root]+n)%12+12)%12;return kp.minor?[2,7,0,5,10,3].includes(j):[5,10,3,8,1,6].includes(j)}
+  let f=0,s=0;for(const L of song.lines||[]) if(L.k==='l') for(const [c] of L.s){if(/^[A-G]b/.test(c))f++;else if(/^[A-G]#/.test(c))s++}
+  return f>s;
+}
+function trKey(k,n,flat){const kp=keyParts(k);if(!kp)return k||'';return trNote(kp.root,n,flat)+(kp.minor?'m':'')}
+function guessKey(lines){
+  for(const L of lines) if(L.k==='l') for(const [c] of L.s) if(c){const m=c.match(/^([A-G][#b]?)(m(?!aj))?/);if(m) return m[1]+(m[2]?'m':'')}
+  return '';
+}
+const KEYS=['C','C#','Db','D','Eb','E','F','F#','Gb','G','Ab','A','Bb','B'];
+const ALLKEYS=[...KEYS,...KEYS.map(k=>k+'m')];
+
+/* =====================================================================
+   PARSER: kithara-style text (chords above lyrics) + inline [C]hordPro
+   Song.lines items:
+     {k:'l', s:[[chord,text],...], r?:repeat}  lyric/chord line
+     {k:'h', t:label}  section     {k:'b'} blank     {k:'n', t:text} note
+   ===================================================================== */
+const SEC_WORDS='ρεφρ[εέ]ν|ρεφραιν|refrain|chorus|κουπλ[εέ]|στροφ[ηή]|verse|εισαγωγ[ηή]|intro|γ[εέ]φυρα|bridge|outro|τ[εέ]λος|φιν[αά]λε|σ[οό]λο|solo|ταξ[ιί]μι|ενδι[αά]μεσο|interlude|instrumental|οργανικ[οό]';
+const SEC_RE=new RegExp('^\\s*(?:'+SEC_WORDS+')[\\s\\d.]{0,6}:?\\s*$','i');
+function matchSection(l){
+  const t=l.trim();
+  const b=t.match(/^\[([^\]]+)\]$/);
+  if(b){ if(normChord(b[1].trim()).ok) return null; return b[1].trim() }
+  const cp=t.match(/^\{(?:c|comment|ci|soc|start_of_chorus|sov|start_of_verse)(?::\s*(.*))?\}$/i);
+  if(cp) return (cp[1]||'Ρεφρέν').trim();
+  if(SEC_RE.test(t)) return t.replace(/:\s*$/,'');
+  return null;
+}
+function hasInline(l){
+  const m=[...l.matchAll(/\[([^\]]+)\]/g)]; if(!m.length) return false;
+  if(matchSection(l)) return false;
+  return m.every(x=>normChord(x[1].trim()).ok);
+}
+const REP_RE=/\s*(?:\|\s*)?[(\[]?\s*(?:[xχ×]\s*(\d{1,2})|(\d{1,2})\s*[xχ×])\s*[)\]]?\s*\|?\s*$/i;
+function stripRep(text){
+  const m=text.match(REP_RE);
+  if(m&&m.index>0&&text.slice(0,m.index).trim()) return {text:text.slice(0,m.index).replace(/\s*\|\s*$/,''),rep:+(m[1]||m[2])};
+  return {text:text.replace(/\s+\|+\s*$/,''),rep:0};
+}
+function lead(s){return (s.match(/^ */)||[''])[0].length}
+function mergeChordLyric(cl,ly,unknown){
+  let ind=lead(cl); if(ly.trim()) ind=Math.min(ind,lead(ly));
+  cl=cl.slice(ind); ly=ly.trim()?ly.slice(ind):'';
+  const chords=[];let rep=0;
+  for(const m of cl.matchAll(/\S+/g)){
+    const tok=m[0];
+    if(FILLER_RE.test(tok)){const d=tok.match(/\d+/);if(d&&/[xχ×]/i.test(tok))rep=+d[0];continue}
+    const n=normChord(tok); if(!n.ok) continue;
+    if(n.note) unknown.add(n.note==='H→B'?tok+' → '+n.c:tok);
+    chords.push({c:n.c,i:m.index});
+  }
+  const r=stripRep(ly); ly=r.text; rep=rep||r.rep;
+  if(!chords.length){const L={k:'l',s:[['',ly]]};if(rep)L.r=rep;return L}
+  const last=chords[chords.length-1].i;
+  if(ly.length<last) ly=ly.padEnd(last,' ');
+  const s=[];
+  if(chords[0].i>0) s.push(['',ly.slice(0,chords[0].i)]);
+  chords.forEach((c,k)=>{const end=k+1<chords.length?chords[k+1].i:ly.length;s.push([c.c,ly.slice(c.i,end)])});
+  if(!ly.trim()) s.forEach(x=>x[1]=x[1].length?x[1]:' ');
+  const L={k:'l',s};if(rep)L.r=rep;return L;
+}
+function parseInline(l,unknown){
+  const r=stripRep(l);let text=r.text;const s=[];let last=0,cur='';
+  const re=/\[([^\]]+)\]/g;let m;
+  while((m=re.exec(text))){
+    const before=text.slice(last,m.index);
+    if(s.length) s[s.length-1][1]+=before; else if(before) s.push(['',before]);
+    const n=normChord(m[1].trim()); if(n.note) unknown.add(m[1].trim());
+    s.push([n.c,'']);last=re.lastIndex;
+  }
+  const rest=text.slice(last); if(s.length) s[s.length-1][1]+=rest; else s.push(['',rest]);
+  const L={k:'l',s};if(r.rep)L.r=r.rep;return L;
+}
+function parseText(text){
+  const raw=String(text||'').replace(/\t/g,'    ').replace(/ /g,' ').split(/\r?\n/);
+  const out=[];const unknown=new Set();let chordLines=0;
+  const isNote=l=>/^\s*#/.test(l);
+  for(let i=0;i<raw.length;i++){
+    const l=raw[i].replace(/\s+$/,'');
+    if(!l.trim()){out.push({k:'b'});continue}
+    const sec=matchSection(l); if(sec){out.push({k:'h',t:sec});continue}
+    if(isNote(l)){out.push({k:'n',t:l.replace(/^\s*#\s?/,'')});continue}
+    if(hasInline(l)){out.push(parseInline(l,unknown));chordLines++;continue}
+    if(isChordLine(l)){
+      chordLines++;
+      const nx=raw[i+1];
+      if(nx!==undefined&&nx.trim()&&!isChordLine(nx)&&!matchSection(nx)&&!hasInline(nx)&&!isNote(nx)){out.push(mergeChordLyric(l,nx.replace(/\s+$/,''),unknown));i++}
+      else out.push(mergeChordLyric(l,'',unknown));
+      continue;
+    }
+    const r=stripRep(l);const L={k:'l',s:[['',r.text]]};if(r.rep)L.r=r.rep;out.push(L);
+  }
+  // tidy blanks
+  const tidy=[];for(const L of out){if(L.k==='b'&&(!tidy.length||tidy[tidy.length-1].k==='b'))continue;tidy.push(L)}
+  while(tidy.length&&tidy[tidy.length-1].k==='b')tidy.pop();
+  // strip common indentation of plain lyric lines
+  return {lines:tidy,unknown:[...unknown],chordLines};
+}
+function lineToText(L){
+  if(L.k==='h') return '['+L.t+']';
+  if(L.k==='b') return '';
+  if(L.k==='n') return '# '+L.t;
+  const rep=L.r?'   | '+L.r+'x':'';
+  if(!L.s.some(s=>s[0])) return L.s.map(s=>s[1]).join('')+rep;
+  let cl='',ly='';
+  for(const [c,t] of L.s){
+    if(c){let col=ly.length;const need=cl.length?cl.length+1:0;if(col<need){ly+=' '.repeat(need-col);col=need}cl+=' '.repeat(col-cl.length)+c}
+    ly+=t;
+  }
+  if(!ly.trim()) return cl.replace(/\s+$/,'')+rep;
+  return cl.replace(/\s+$/,'')+'\n'+ly.replace(/\s+$/,'')+rep;
+}
+const linesToText=lines=>(lines||[]).map(lineToText).join('\n');
+function linesToChordPro(lines){
+  return (lines||[]).map(L=>{
+    if(L.k==='h') return '{comment: '+L.t+'}';
+    if(L.k==='b') return '';
+    if(L.k==='n') return '{comment_italic: '+L.t+'}';
+    return L.s.map(([c,t])=>(c?'['+c+']':'')+t).join('').replace(/\s+$/,'')+(L.r?' (x'+L.r+')':'');
+  }).join('\n');
+}
+// metadata lines that kithara-like pages put above a song
+function extractMeta(text){
+  const raw=String(text||'').split(/\r?\n/);
+  const first=raw.findIndex(l=>isChordLine(l)||hasInline(l));
+  if(first<=0||first>20) return {meta:{},body:text};
+  const meta={};const keep=[];
+  for(let i=0;i<first;i++){
+    const l=raw[i].trim(); if(!l) continue;
+    let m;
+    // kithara: «Μουσική/Στίχοι: Α/Β» goes to credits, the performer stays in artist
+    if((m=l.match(/^((?:μουσικ[ηή]\s*(?:\/|και|&)?\s*στ[ιί]χοι|μουσικ[ηή]|στ[ιί]χοι|σ[υύ]νθεση|στιχουργ[οό]ς|συνθ[εέ]της))\s*[:：-]\s*(.+)$/i))){
+      const part=m[1].replace(/\s+/g,'')+': '+m[2].trim();meta.credits=meta.credits?meta.credits+' · '+part:part;continue}
+    if((m=l.match(/^(?:ερμηνε[ιί]α|ερμηνευτ[ηή]ς|καλλιτ[εέ]χνης|artist|by)\s*[:：-]\s*(.+)$/i))){ if(!meta.artist) meta.artist=m[1].trim(); continue }
+    if((m=l.match(/^(?:τ[οό]νος|key)\s*[:：-]\s*([A-H][#b]?m?)/i))){meta.key=m[1].replace(/^H/,'B');continue}
+    // kithara: «▼ G μινόρε (*)» / «D ματζόρε»
+    if((m=l.match(/^[▼▾▶►•*\s]*([A-H])([#b♯♭]?)\s*(μιν[οό]ρε|minor|ματζ[οό]ρε|major)(?![\wά-ώ])/i))){
+      if(!meta.key) meta.key=m[1].replace(/^H/,'B')+m[2].replace('♯','#').replace('♭','b')+(/^(μιν|min)/i.test(m[3])?'m':'');continue}
+    // kithara's scale guide («Σύντομος οδηγός…», «Βαθμίδα: 1 2 3…», «Συγχορδία: Gm Adim…»)
+    if(/^(?:σ[υύ]ντομος οδηγ[οό]ς|βαθμ[ιί]δα\s*:|συγχορδ[ιί]α\s*:)/i.test(l)) continue;
+    if((m=l.match(/^(?:ρυθμ[οό]ς|rhythm)\s*[:：-]\s*(.+)$/i))){meta.rhythm=m[1].trim();continue}
+    if((m=l.match(/^(?:κ[αά]πο|capo)\s*[:：-]?\s*(\d+)/i))){meta.capo=m[1];continue}
+    if(/^(?:αποστολ[εέ]ας|στ[αά]λθηκε|προβολ[εέ]ς|ψ[ηή]φοι|\(?\d+\s*ψ[ηή]φ)/i.test(l)) continue;
+    if(/^\(?\d+\s*(?:votes|ψήφοι)\)?$/i.test(l)) continue;
+    if(!meta.title){meta.title=l;continue}
+    if(!meta.artist&&l.length<60&&!/[.!?;]$/.test(l)){meta.artist=l;continue}
+    keep.push(raw[i]);
+  }
+  return {meta,body:[...keep,...raw.slice(first)].join('\n')};
+}
+function songHasChords(s){return (s.lines||[]).some(L=>L.k==='l'&&L.s.some(x=>x[0]))}
+function songLyrics(s){return (s.lines||[]).filter(L=>L.k==='l').map(L=>L.s.map(x=>x[1]).join('')).join(' ')}
+
+/* =====================================================================
+   RENDER A SHEET
+   ===================================================================== */
+function lineHTML(L,n,flat){
+  if(L.k==='b') return '<div class="gap"></div>';
+  if(L.k==='h') return `<div class="sec">${esc(L.t)}</div>`;
+  if(L.k==='n') return `<div class="cmt">${esc(L.t)}</div>`;
+  const rep=L.r?`<span class="rep">${L.r}×</span>`:'';
+  const hasC=L.s.some(s=>s[0]);
+  const full=L.s.map(s=>s[1]).join('');
+  if(!hasC) return `<div class="ln plain"><span class="t">${esc(full)||'&nbsp;'}</span>${rep}</div>`;
+  if(!full.trim()) return `<div class="ln conly">${L.s.filter(s=>s[0]).map(s=>`<span class="c">${esc(trChord(s[0],n,flat))}</span>`).join('')}${rep}</div>`;
+  const marks=[];let off=0;for(const [c,t] of L.s){if(c)marks.push([off,c]);off+=t.length}
+  // A chord sitting on the space between two words would widen that space to the chord's width.
+  // Snap it to the start of the next word, unless that would collide with the next chord or run past the text.
+  for(let k=0;k<marks.length;k++){
+    let o=marks[k][0];if(o>=full.length||!/\s/.test(full[o])) continue;
+    while(o<full.length&&/\s/.test(full[o])) o++;
+    const lim=k+1<marks.length?marks[k+1][0]:full.length;
+    if(o<lim) marks[k][0]=o;
+  }
+  const toks=full.match(/\S+\s*|\s+/g)||[];
+  let pos=0,mi=0,html='';
+  const part=(c,t)=>`<span class="p"><span class="c">${c?esc(trChord(c,n,flat)):''}</span><span class="t">${t?esc(t):'&nbsp;'}</span></span>`;
+  for(const tok of toks){
+    const end=pos+tok.length;let cur=pos;let parts='';
+    while(mi<marks.length&&marks[mi][0]<end){
+      const [o,c]=marks[mi];
+      if(o>cur){parts+=part('',full.slice(cur,o));cur=o}
+      const nextO=(mi+1<marks.length&&marks[mi+1][0]<end)?marks[mi+1][0]:end;
+      parts+=part(c,full.slice(Math.max(o,cur),nextO));cur=nextO;mi++;
+    }
+    if(cur<end) parts+=part('',full.slice(cur,end));
+    html+=`<span class="w">${parts}</span>`;pos=end;
+  }
+  while(mi<marks.length){html+=`<span class="w">${part(marks[mi][1],'')}</span>`;mi++}
+  return `<div class="ln">${html}${rep}</div>`;
+}
+function sheetHTML(song,n){
+  const flat=preferFlat(song,n||0);
+  return (song.lines||[]).map(L=>lineHTML(L,n||0,flat)).join('');
+}
+
+/* =====================================================================
+   GITHUB — a private repo holds the library, one JSON file per item:
+     songs/<id>.json · collections/<id>.json
+   Reads: the branch's tree (one call) tells which files changed; only those are fetched.
+   Writes: every queued change goes into ONE commit (git trees API), so importing
+   500 songs is one commit, and every save keeps its history in git.
+   ===================================================================== */
+const GH_KEY='msb-gh';
+const GH={
+  cfg:null,
+  config(){const c=lsGet(GH_KEY,null);this.cfg=c&&c.owner&&c.repo&&c.token?Object.assign({branch:'main',api:'https://api.github.com'},c):null;return this.cfg},
+  repoPath(c=this.cfg){return `/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}`},
+  async api(method,path,body,opt={}){
+    const c=opt.cfg||this.cfg;const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),opt.timeout||20000);
+    const h={'Authorization':'Bearer '+c.token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+    if(body)h['Content-Type']='application/json';
+    if(opt.etag)h['If-None-Match']=opt.etag;
+    try{
+      const url=(path.startsWith('/repos/')||path.startsWith('/user')?'':this.repoPath(c))+path;
+      const r=await fetch(c.api.replace(/\/$/,'')+url,{method,headers:h,cache:'no-store',signal:ctl.signal,body:body?JSON.stringify(body):undefined});
+      if(r.status===304) return {notModified:true};
+      if(!r.ok){let msg='';try{msg=(await r.json()).message||''}catch(e){}const e=new Error('github '+r.status+' '+msg);e.status=r.status;e.gh=msg;throw e}
+      const j=r.status===204?{}:await r.json();
+      Object.defineProperty(j,'_etag',{value:r.headers.get('ETag'),enumerable:false});
+      return j;
+    }finally{clearTimeout(t)}
+  },
+  dec(b64){const bin=atob(String(b64).replace(/\s/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)},
+  // the sha git gives a file, so a file we just wrote is never downloaded again
+  async blobSha(text){
+    const enc=new TextEncoder(),body=enc.encode(text),head=enc.encode('blob '+body.length+'\0');
+    const all=new Uint8Array(head.length+body.length);all.set(head);all.set(body,head.length);
+    const h=new Uint8Array(await crypto.subtle.digest('SHA-1',all));return [...h].map(b=>b.toString(16).padStart(2,'0')).join('');
+  },
+  text(obj){return JSON.stringify(obj,null,2)+'\n'},
+  stateKey(){return 'msb-gh-state:'+this.cfg.owner+'/'+this.cfg.repo},
+  // run fn over items, n at a time
+  async pool(items,n,fn){let i=0;const run=async()=>{while(i<items.length){const k=i++;await fn(items[k],k)}};await Promise.all(Array.from({length:Math.min(n,items.length)},run))}
+};
+const FILE_RE=/^(songs|collections)\/([A-Za-z0-9-]{1,64})\.json$/;
+
+/* =====================================================================
+   STORE — the only part that talks to storage.
+   'github': a private GitHub repo (see GH above) → every device, anywhere
+   'server': the local Python server (server.py → songbook.db in the folder)
+   'local' : the page opened straight from disk → this browser only
+   'setup' : on the web, not connected to GitHub yet
+   ===================================================================== */
+const CACHE_KEY='msb-cache-v1',LOCAL_KEY='msb-local-v1',OUTBOX_KEY='msb-outbox-v1';
+const Store={
+  mode:'loading',status:'loading',songs:new Map(),cols:new Map(),
+  loaded:{songs:false,cols:false},onChange:()=>{},_chains:{},_cacheT:0,rev:0,outbox:[],pending:new Set(),info:null,progress:null,
+  async init(){
+    if(GH.config()) return this._ghInit();
+    if(/\.github\.io$/i.test(location.hostname)){this.mode='setup';this.status='setup';this.loaded={songs:true,cols:true};this.onChange('all');return}
+    const cache=lsGet(CACHE_KEY,null);
+    if(cache){this._fill(cache);this.status='cache'}
+    if(/^https?:$/.test(location.protocol)){
+      this.mode='server';this.outbox=lsGet(OUTBOX_KEY,[]);
+      const ok=await this._sync(true);
+      if(!ok){this.status=this.songs.size?'stale':'unreach';this.loaded={songs:true,cols:true};this.onChange('all')}
+      else this._flush().then(()=>this._sync(false));
+      this._api('GET','info').then(i=>{this.info=i;this.onChange('status')}).catch(()=>{});
+      setInterval(()=>{if(document.visibilityState==='visible')this._tick()},4000);
+      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')this._tick()});
+      window.addEventListener('online',()=>this._tick());
+      return;
+    }
+    this.mode='local';this.status='local';
+    const loc=lsGet(LOCAL_KEY,null);
+    if(loc) this._fill(loc); else if(!cache){this.songs=new Map();this.cols=new Map()}
+    this.loaded={songs:true,cols:true};this.onChange('all');
+  },
+  /* ---------- github ---------- */
+  async _ghInit(){
+    this.mode='github';this.status='cache';
+    const st=lsGet(GH.stateKey(),null);
+    this.gh={head:st&&st.head||null,shas:st&&st.shas||{},etag:null,committing:false,timer:0};
+    if(st&&st.data){this._fill(st.data)}else{this.songs=new Map();this.cols=new Map();this.status='loading'}
+    this.outbox=lsGet(OUTBOX_KEY+':'+GH.cfg.owner+'/'+GH.cfg.repo,[]);
+    this.onChange('all');
+    await this._ghSync(true);
+    this._ghFlush();
+    // a library brought over from this device when connecting
+    try{const seed=JSON.parse(sessionStorage.getItem('msb-gh-seed')||'null');if(seed){sessionStorage.removeItem('msb-gh-seed');const r=await this.importAll(seed);toast(`Ανέβηκαν ${r.songs} τραγούδια και ${r.cols} συλλογές στο GitHub`)}}catch(e){}
+    setInterval(()=>{if(document.visibilityState==='visible')this._tick()},15000);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')this._tick()});
+    window.addEventListener('online',()=>this._tick());
+  },
+  _ghOutboxKey(){return OUTBOX_KEY+':'+GH.cfg.owner+'/'+GH.cfg.repo},
+  _ghSave(){clearTimeout(this._cacheT);this._cacheT=setTimeout(()=>lsSet(GH.stateKey(),{head:this.gh.head,shas:this.gh.shas,data:this._dump()}),600)},
+  _ghFail(e){
+    const was=this.status;
+    if(e&&(e.status===401||e.status===403&&!/rate limit/i.test(e.gh||'')))this.status='autherr';
+    else if(e&&e.status===404)this.status='ghmissing';
+    else this.status=this.songs.size||this.outbox.length?'stale':'unreach';
+    if(was!==this.status)this.onChange('status');
+    console.warn(e);
+  },
+  async _ghSync(full){
+    const g=this.gh;
+    try{
+      const ref=await GH.api('GET','/git/ref/heads/'+encodeURIComponent(GH.cfg.branch),null,{etag:full?null:g.etag});
+      if(ref.notModified){this._ghStatus();return true}
+      g.etag=ref._etag;const head=ref.object.sha;
+      if(!full&&head===g.head){this._ghStatus();return true}
+      const tree=await GH.api('GET','/git/trees/'+head+'?recursive=1');
+      const remote={};for(const e of tree.tree||[]) if(e.type==='blob'&&FILE_RE.test(e.path)) remote[e.path]=e.sha;
+      const busy=new Set(this.outbox.map(o=>o.p+'.json'));
+      const want=Object.keys(remote).filter(p=>g.shas[p]!==remote[p]&&!busy.has(p));
+      let changed=false;
+      if(want.length>20){this.progress={done:0,total:want.length};this.status='loading';this.onChange('status')}
+      await GH.pool(want,8,async p=>{
+        const b=await GH.api('GET','/git/blobs/'+remote[p]);
+        const obj=JSON.parse(GH.dec(b.content));const [,kind,id]=p.match(FILE_RE);obj.id=id;
+        (kind==='songs'?this.songs:this.cols).set(id,obj);g.shas[p]=remote[p];changed=true;
+        if(this.progress){this.progress.done++;if(this.progress.done%25===0)this.onChange('status')}
+      });
+      // gone on GitHub (deleted on another device), unless we are about to write it
+      const drop=(kind,map)=>{for(const id of [...map.keys()]){const p=kind+'/'+id+'.json';if(!remote[p]&&!busy.has(p)&&(full||g.shas[p])){map.delete(id);delete g.shas[p];changed=true}}};
+      drop('songs',this.songs);drop('collections',this.cols);
+      for(const p of Object.keys(g.shas)) if(!remote[p]&&!busy.has(p)) delete g.shas[p];
+      g.head=head;this.progress=null;this.loaded={songs:true,cols:true};
+      this._ghSave();
+      const was=this.status;this._ghStatus(true);
+      if(changed||full||was==='loading')this.onChange('all');else if(was!==this.status)this.onChange('status');
+      return true;
+    }catch(e){
+      this.progress=null;this.loaded={songs:true,cols:true};
+      if(e.status===404||e.status===409){ // 409: the repo has no commits yet
+        try{await GH.api('GET','');this.status='ghempty'}catch(e2){this._ghFail(e2);return false}
+        this.onChange('all');return false}
+      this._ghFail(e);this.onChange('all');return false;
+    }
+  },
+  _ghStatus(quiet){const was=this.status;this.status=this.outbox.length?'pending':'live';if(!quiet&&was!==this.status)this.onChange('status')},
+  _ghQueue(op){
+    this.outbox=this.outbox.filter(o=>o.p!==op.p);this.outbox.push(op);lsSet(this._ghOutboxKey(),this.outbox);
+    if(this.status==='live')this.status='pending';this.onChange('status');
+    clearTimeout(this.gh.timer);this.gh.timer=setTimeout(()=>this._ghFlush(),900);
+  },
+  async _ghFlush(){
+    const g=this.gh;if(g.committing||!this.outbox.length) return;
+    g.committing=true;
+    try{
+      for(let attempt=0;attempt<4;attempt++){
+        const ops=this.outbox.slice();if(!ops.length) break;
+        const ref=await GH.api('GET','/git/ref/heads/'+encodeURIComponent(GH.cfg.branch));const head=ref.object.sha;
+        const commit=await GH.api('GET','/git/commits/'+head);
+        const base=await GH.api('GET','/git/trees/'+commit.tree.sha+'?recursive=1');
+        const exists=new Set((base.tree||[]).map(e=>e.path));
+        const entries=[],written={};
+        for(const op of ops){
+          const path=op.p+'.json';
+          if(op.m==='PUT'){const txt=GH.text(Object.assign({id:op.p.split('/')[1]},op.b));entries.push({path,mode:'100644',type:'blob',content:txt});written[path]=txt}
+          else if(exists.has(path)){entries.push({path,mode:'100644',type:'blob',sha:null});written[path]=null}
+        }
+        if(entries.length){
+          const nt=await GH.api('POST','/git/trees',{base_tree:commit.tree.sha,tree:entries});
+          const nc=await GH.api('POST','/git/commits',{message:this._ghMessage(ops),tree:nt.sha,parents:[head]});
+          try{await GH.api('PATCH','/git/refs/heads/'+encodeURIComponent(GH.cfg.branch),{sha:nc.sha})}
+          catch(e){if(e.status===422||e.status===409)continue;throw e} // another device committed in between: rebuild on top of it
+          for(const [p,txt] of Object.entries(written)){if(txt==null)delete g.shas[p];else g.shas[p]=await GH.blobSha(txt)}
+          if(g.head===head)g.head=nc.sha; // otherwise the next sync fetches what the other device changed
+        }
+        this.outbox=this.outbox.filter(o=>!ops.includes(o));lsSet(this._ghOutboxKey(),this.outbox);
+        this._ghSave();break;
+      }
+      this._ghStatus();
+    }catch(e){this._ghFail(e)}
+    finally{g.committing=false;if(this.outbox.length&&this.status!=='autherr'&&this.status!=='stale'){clearTimeout(g.timer);g.timer=setTimeout(()=>this._ghFlush(),1500)}}
+  },
+  _ghMessage(ops){
+    if(ops.length>1) return `My Songbook: ${ops.length} αλλαγές`;
+    const o=ops[0],[k,id]=o.p.split('/');const name=o.b&&(o.b.title||o.b.name)||(k==='songs'?(this.songs.get(id)||{}).title:(this.cols.get(id)||{}).name)||id;
+    return (o.m==='DELETE'?'Διαγραφή: ':k==='songs'?'Τραγούδι: ':'Λίστα: ')+name;
+  },
+  async _ghVersions(songId){
+    const path='songs/'+songId+'.json';
+    const list=await GH.api('GET',`/commits?path=${encodeURIComponent(path)}&sha=${encodeURIComponent(GH.cfg.branch)}&per_page=21`);
+    const out=[];
+    await GH.pool(list.slice(1),4,async(c,i)=>{
+      try{const f=await GH.api('GET',`/contents/${path}?ref=${c.sha}`);out[i]={id:c.sha,songId,savedAt:Date.parse(c.commit.committer.date),data:JSON.parse(GH.dec(f.content))}}catch(e){}
+    });
+    return out.filter(Boolean);
+  },
+  _fill(o){this.songs=new Map((o.songs||[]).map(s=>[s.id,s]));this.cols=new Map((o.collections||[]).map(c=>[c.id,c]));this.loaded={songs:true,cols:true}},
+  _dump(){return {songs:[...this.songs.values()],collections:[...this.cols.values()]}},
+  _saveCache(){if(this.mode==='github'){this._ghSave();return}clearTimeout(this._cacheT);this._cacheT=setTimeout(()=>lsSet(CACHE_KEY,this._dump()),800)},
+  _persistLocal(){const d=this._dump();d.versions=lsGet(LOCAL_KEY,{}).versions||[];lsSet(LOCAL_KEY,d)},
+  _serial(key,fn){const p=(this._chains[key]||Promise.resolve()).then(fn,fn);this._chains[key]=p.catch(()=>{});return p},
+  async _api(method,path,body){
+    const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),8000);
+    try{
+      const r=await fetch('api/'+path,{method,cache:'no-store',signal:ctl.signal,headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});
+      if(!r.ok){const e=new Error('http '+r.status);e.status=r.status;throw e}
+      return r.status===204?null:r.json();
+    }finally{clearTimeout(t)}
+  },
+  async _sync(full){
+    try{
+      const d=await this._api('GET','sync?since='+(full?0:this.rev));
+      let changed=!!full;
+      if(full){
+        const keepS=new Map(),keepC=new Map();
+        for(const id of this.pending){const [k,i]=id.split('/');if(k==='songs'&&this.songs.has(i))keepS.set(i,this.songs.get(i));if(k==='collections'&&this.cols.has(i))keepC.set(i,this.cols.get(i))}
+        this.songs=new Map();this.cols=new Map();
+        d.songs.forEach(s=>this.songs.set(s.id,s));d.collections.forEach(c=>this.cols.set(c.id,c));
+        keepS.forEach((v,k)=>this.songs.set(k,v));keepC.forEach((v,k)=>this.cols.set(k,v));
+        for(const op of this.outbox){const [k,i]=op.p.split('/');if(op.m==='PUT'){if(k==='songs')this.songs.set(i,Object.assign({},op.b,{id:i}));if(k==='collections')this.cols.set(i,Object.assign({},op.b,{id:i}))}else{if(k==='songs')this.songs.delete(i);if(k==='collections')this.cols.delete(i)}}
+      }else{
+        for(const s of d.songs){if(this.pending.has('songs/'+s.id))continue;this.songs.set(s.id,s);changed=true}
+        for(const c of d.collections){if(this.pending.has('collections/'+c.id))continue;this.cols.set(c.id,c);changed=true}
+        for(const id of d.deleted.songs||[]){if(this.songs.delete(id))changed=true}
+        for(const id of d.deleted.collections||[]){if(this.cols.delete(id))changed=true}
+      }
+      this.rev=d.rev;this.loaded={songs:true,cols:true};
+      const was=this.status;this.status=this.outbox.length?'pending':'live';
+      if(changed){this._saveCache();this.onChange('all')}else if(was!==this.status)this.onChange('status');
+      return true;
+    }catch(e){
+      if(this.status!=='stale'&&this.status!=='unreach'){this.status=this.songs.size?'stale':'unreach';this.onChange('status')}
+      return false;
+    }
+  },
+  async _tick(){
+    if(this.mode==='github'){if(this.status==='autherr')return;await this._ghFlush();await this._ghSync(false);return}
+    await this._flush();await this._sync(false)},
+  _queue(op){this.outbox=this.outbox.filter(o=>o.p!==op.p);this.outbox.push(op);lsSet(OUTBOX_KEY,this.outbox);this.status='stale';this.onChange('status')},
+  async _flush(){
+    while(this.outbox.length){
+      const op=this.outbox[0];
+      try{await this._api(op.m,op.p,op.b)}catch(e){if(!e.status)return}
+      this.outbox.shift();lsSet(OUTBOX_KEY,this.outbox);
+    }
+  },
+  _send(m,p,b){
+    if(this.mode==='github'){if(!p.startsWith('versions/'))this._ghQueue({m,p,b});return Promise.resolve()}
+    if(this.mode==='setup') return Promise.resolve();
+    if(this.mode!=='server'){this._persistLocal();return Promise.resolve()}
+    this.pending.add(p);
+    return this._serial(p,async()=>{
+      try{await this._api(m,p,b)}
+      catch(e){if(!e.status){this._queue({m,p,b});return}throw e}
+      finally{this.pending.delete(p)}
+    });
+  },
+  _write(coll,obj){const body=clone(obj);delete body.id;return this._send('PUT',coll+'/'+obj.id,body)},
+  _del(coll,id){return this._send('DELETE',coll+'/'+id)},
+  async saveSong(s){s.updatedAt=now();this.songs.set(s.id,s);this.onChange('songs');this._saveCache();return this._write('songs',s)},
+  async deleteSong(id){
+    this.songs.delete(id);const jobs=[];
+    for(const c of this.cols.values()) if(hasSong(c,id)){const n=clone(c);n.items=itemsOf(n).filter(x=>x.s!==id);jobs.push(this.saveCol(n))}
+    this.onChange('songs');jobs.push(this._del('songs',id));
+    if(this.mode!=='server'){const loc=lsGet(LOCAL_KEY,{});loc.versions=(loc.versions||[]).filter(v=>v.songId!==id);lsSet(LOCAL_KEY,Object.assign(this._dump(),{versions:loc.versions}))}
+    return Promise.all(jobs);
+  },
+  async saveCol(c){c.updatedAt=now();this.cols.set(c.id,c);this.onChange('cols');this._saveCache();return this._write('collections',c)},
+  async deleteCol(id){
+    this.cols.delete(id);const jobs=[];
+    for(const c of this.cols.values()) if(c.parent===id){const n=clone(c);n.parent=null;jobs.push(this.saveCol(n))}
+    this.onChange('cols');jobs.push(this._del('collections',id));return Promise.all(jobs);
+  },
+  async addVersion(prev){
+    const v={id:uid(),songId:prev.id,savedAt:now(),data:clone(prev)};
+    if(this.mode==='github'||this.mode==='setup') return; // git keeps every earlier version already
+    if(this.mode!=='server'){const loc=lsGet(LOCAL_KEY,{});let vs=(loc.versions||[]).concat(v);const mine=vs.filter(x=>x.songId===prev.id).sort((a,b)=>b.savedAt-a.savedAt);const drop=new Set(mine.slice(20).map(x=>x.id));vs=vs.filter(x=>!drop.has(x.id));lsSet(LOCAL_KEY,Object.assign(this._dump(),{versions:vs}));return}
+    return this._send('PUT','versions/'+v.id,{songId:v.songId,savedAt:v.savedAt,data:v.data});
+  },
+  async listVersions(songId){
+    if(this.mode==='github') return this._ghVersions(songId);
+    if(this.mode!=='server') return (lsGet(LOCAL_KEY,{}).versions||[]).filter(v=>v.songId===songId).sort((a,b)=>b.savedAt-a.savedAt);
+    return this._api('GET','versions?songId='+encodeURIComponent(songId));
+  },
+  async importAll(data){
+    const songs=(data.songs||[]).filter(s=>s&&s.id&&s.title!=null);
+    const cols=(data.collections||[]).filter(c=>c&&c.id&&c.name);
+    for(const s of songs)this.songs.set(s.id,s);for(const c of cols)this.cols.set(c.id,c);
+    this.onChange('all');
+    if(this.mode==='github'){
+      for(const s of songs){const b=clone(s);delete b.id;this.outbox=this.outbox.filter(o=>o.p!=='songs/'+s.id);this.outbox.push({m:'PUT',p:'songs/'+s.id,b})}
+      for(const c of cols){const b=clone(c);delete b.id;this.outbox=this.outbox.filter(o=>o.p!=='collections/'+c.id);this.outbox.push({m:'PUT',p:'collections/'+c.id,b})}
+      lsSet(this._ghOutboxKey(),this.outbox);this._ghSave();this.status='pending';this.onChange('status');
+      await this._ghFlush(); // if offline, the commit goes out as soon as GitHub is reachable again
+    }
+    else if(this.mode==='server'){await this._api('POST','import',{songs,collections:cols});await this._sync(false)}
+    else this._persistLocal();
+    return {songs:songs.length,cols:cols.length};
+  }
+};
+
+/* =====================================================================
+   APP STATE
+   ===================================================================== */
+const prefs=Object.assign({theme:'auto',fs:22,speed:4,perfDark:true},lsGet('msb-prefs',{}));
+const savePrefs=()=>lsSet('msb-prefs',prefs);
+const S={
+  sec:'all',          // 'all' | 'fav' | 'recent' | 'col:<id>'
+  q:'',f:{genre:'',key:'',artist:''},sort:'title',
+  songId:null,ctx:null, // ctx: {ids:[], colId}
+  tr:{},              // per-song transposition (session)
+  edit:null,          // editor draft
+  perf:false,cueIdx:{},cueMode:false,
+  scrolling:false,
+};
+
+/* =====================================================================
+   THEME & LAYOUT
+   ===================================================================== */
+const mq=window.matchMedia('(prefers-color-scheme: dark)');
+function applyTheme(){
+  const eff=prefs.theme==='auto'?(mq.matches?'dark':'light'):prefs.theme;
+  document.documentElement.dataset.eff=eff;
+  document.querySelector('meta[name=theme-color]').content=(S.perf&&prefs.perfDark)||eff==='dark'?'#111215':'#ffffff';
+}
+mq.addEventListener&&mq.addEventListener('change',applyTheme);
+function layout(){
+  const w=window.innerWidth;
+  const size=w>=1100?'l':w>=760?'m':'s';
+  if(document.body.dataset.size!==size){document.body.dataset.size=size}
+}
+function setPane(p){document.body.dataset.pane=p;renderTabbar()}
+window.addEventListener('resize',layout);
+
+/* =====================================================================
+   DERIVED DATA
+   ===================================================================== */
+const idxCache=new Map();
+function searchKey(s){
+  const k=s.updatedAt+'|'+s.id;const c=idxCache.get(s.id);
+  if(c&&c.k===k) return c.v;
+  const v=norm([s.title,s.artist,(s.tags||[]).join(' '),(s.genres||[]).join(' ')].join(' '));
+  const ly=norm(songLyrics(s));
+  const o={meta:v,ly};idxCache.set(s.id,{k,v:o});return o;
+}
+function colOf(sec){return sec&&sec.startsWith('col:')?Store.cols.get(sec.slice(4)):null}
+/* Collection items
+     {i:itemId, s:songId, key?:'Em', note?:'Ντουέτο'}   a song in this list, with this list's own key and note
+     {i:itemId, sec:'Ρούμπες', sub?:'2ο ΠΑΚΕΤΟ'}         a section (πακέτο / ενότητα) inside an ordered list
+   The same song may appear more than once (e.g. in two packs). Old lists stored plain song ids: read as {i:id, s:id}. */
+function itemsOf(c){
+  if(!c) return [];
+  if(!Array.isArray(c.items)) c.items=[];
+  if(c.items.some(x=>typeof x==='string')) c.items=c.items.map(x=>typeof x==='string'?{i:x,s:x}:x);
+  return c.items;
+}
+const songItems=c=>itemsOf(c).filter(x=>x.s&&Store.songs.has(x.s));
+const hasSong=(c,sid)=>itemsOf(c).some(x=>x.s===sid);
+const itemKey=(it,s)=>(it&&it.key)||(s&&s.key)||'';
+// entries for the list pane: {s:song, it:item|null} or {sec:item}
+function currentEntries(){
+  const col=colOf(S.sec);
+  let arr;
+  if(col){
+    arr=[];for(const it of itemsOf(col)){if(it.sec!=null){arr.push({sec:it});continue}const s=Store.songs.get(it.s);if(s)arr.push({s,it})}
+    if(!col.ordered) arr=arr.filter(e=>e.s).sort((a,b)=>collator.compare(a.s.title,b.s.title));
+  }else{
+    let songs=[...Store.songs.values()];
+    if(S.sec==='fav') songs=songs.filter(s=>s.fav);
+    if(S.sec==='recent') songs=songs.filter(s=>s.openedAt).sort((a,b)=>b.openedAt-a.openedAt).slice(0,40);
+    arr=songs.map(s=>({s,it:null}));
+  }
+  const q=norm(S.q.trim());
+  const filtered=q||S.f.genre||S.f.key||S.f.artist;
+  if(filtered) arr=arr.filter(e=>e.s);
+  if(q){
+    const words=q.split(/\s+/);
+    const scored=[];
+    for(const e of arr){const k=searchKey(e.s);const nn=norm(e.it&&e.it.note||'');
+      if(words.every(w=>k.meta.includes(w)||nn.includes(w))) scored.push([0,e]);
+      else if(k.ly.includes(q)) scored.push([1,e]);}
+    arr=scored.sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+  }
+  if(S.f.genre) arr=arr.filter(e=>(e.s.genres||[]).includes(S.f.genre));
+  if(S.f.key) arr=arr.filter(e=>itemKey(e.it,e.s)===S.f.key);
+  if(S.f.artist) arr=arr.filter(e=>(e.s.artist||'')===S.f.artist);
+  if(!col&&S.sec!=='recent'&&!q){
+    const cmp={title:(a,b)=>collator.compare(a.s.title||'',b.s.title||''),
+      artist:(a,b)=>collator.compare(a.s.artist||'~',b.s.artist||'~')||collator.compare(a.s.title,b.s.title),
+      updated:(a,b)=>(b.s.updatedAt||0)-(a.s.updatedAt||0)}[S.sort];
+    if(cmp) arr.sort(cmp);
+  }
+  return arr;
+}
+function currentIds(){return currentEntries().filter(e=>e.s).map(e=>e.s)}
+const playList=()=>currentEntries().filter(e=>e.s).map(e=>({s:e.s.id,it:e.it?e.it.i:null}));
+// semitones from one key's root to another's, in −5…+6
+function keyShift(from,to){
+  const a=keyParts(from),b=keyParts(to);if(!a||!b) return 0;
+  let d=((IDX[b.root]-IDX[a.root])%12+12)%12;if(d>6)d-=12;return d;
+}
+const baseKey=s=>s.key||guessKey(s.lines||[]);
+const DEFAULT_GENRES=['Λαϊκό','Ρεμπέτικο','Έντεχνο','Ελληνικό rock','Παραδοσιακό','Νησιώτικο'];
+function allGenres(){const s=new Set(DEFAULT_GENRES);for(const x of Store.songs.values())(x.genres||[]).forEach(g=>s.add(g));return [...s]}
+function distinct(field){const s=new Set();for(const x of Store.songs.values()) if(x[field]) s.add(x[field]);return [...s].sort(collator.compare)}
+function colTree(){
+  const cols=[...Store.cols.values()].sort((a,b)=>collator.compare(a.name,b.name));
+  const by=new Map();cols.forEach(c=>{const p=c.parent&&Store.cols.has(c.parent)?c.parent:'';if(!by.has(p))by.set(p,[]);by.get(p).push(c)});
+  const out=[];const walk=(p,d,seen)=>{(by.get(p)||[]).forEach(c=>{if(seen.has(c.id))return;seen.add(c.id);out.push({c,d});walk(c.id,d+1,seen)})};
+  walk('',0,new Set());return out;
+}
+
+/* =====================================================================
+   RENDER: SIDEBAR
+   ===================================================================== */
+function renderSide(){
+  const n=Store.songs.size;
+  const favN=[...Store.songs.values()].filter(s=>s.fav).length;
+  const ob=Store.outbox.length;
+  const pg=Store.progress;
+  const st=Store.mode==='github'||Store.mode==='setup'?({
+    live:['live','Συγχρονισμένο με το GitHub'],
+    pending:['warn','Αποθήκευση στο GitHub…'],
+    cache:['warn','Έλεγχος για αλλαγές…'],
+    loading:['warn',pg?`Φόρτωση από το GitHub · ${pg.done}/${pg.total}`:'Φόρτωση από το GitHub…'],
+    stale:['warn','Χωρίς σύνδεση'+(ob?` · ${ob} αλλαγ${ob===1?'ή περιμένει':'ές περιμένουν'}`:' · δουλεύει με ό,τι έχει')],
+    unreach:['err','Δεν φτάνω στο GitHub. Έλεγξε τη σύνδεση.'],
+    autherr:['err','Το κλειδί του GitHub δεν δουλεύει (έληξε;). Πάτα «GitHub».'],
+    ghmissing:['err','Δεν βρίσκω το repo. Πάτα «GitHub» και έλεγξε το όνομα.'],
+    ghempty:['err','Το repo είναι εντελώς άδειο. Πρόσθεσε ένα README στο GitHub.'],
+    setup:['warn','Σύνδεσε το GitHub για να ξεκινήσεις.']
+  }[Store.status]||['','—']):({live:['live','Συνδεδεμένο στη βάση του laptop'],pending:['warn','Αποστολή αλλαγών…'],cache:['warn','Σύνδεση…'],loading:['warn','Σύνδεση…'],stale:['warn','Εκτός σύνδεσης με το laptop'+(ob?` · ${ob} αλλαγ${ob===1?'ή περιμένει':'ές περιμένουν'}`:'')],unreach:['err','Δεν βρίσκω τον server. Τρέχει το «Start My Songbook»;'],local:['warn','Άνοιξέ το από το «Start My Songbook»: τώρα μένει μόνο σε αυτόν τον browser']}[Store.status]||['','—']);
+  const lan=Store.info&&Store.info.ips&&Store.info.ips[0]&&/^(localhost|127\.)/.test(location.hostname)?`http://${Store.info.ips[0]}:${Store.info.port}`:'';
+  const nav=(sec,icon,label,cnt)=>`<button class="navitem ${S.sec===sec?'on':''}" data-act="sec" data-sec="${sec}">${ic(icon)}<span class="lbl">${label}</span>${cnt!=null?`<span class="cnt">${cnt}</span>`:''}</button>`;
+  const tree=colTree();
+  $('#side').innerHTML=`
+    <div class="brand"><span class="logo">${ic('music')}</span>My Songbook</div>
+    <div class="sidescroll">
+      ${nav('all','library','Όλα τα τραγούδια',n)}
+      ${nav('fav','star','Αγαπημένα',favN)}
+      ${nav('recent','clock','Πρόσφατα')}
+      <div class="sidehead"><span>Συλλογές</span><button class="ibtn sm" data-act="newcol" title="Νέα συλλογή" aria-label="Νέα συλλογή">${ic('plus')}</button></div>
+      ${tree.length?tree.map(({c,d})=>`<button class="navitem ${S.sec==='col:'+c.id?'on':''}" data-act="sec" data-sec="col:${c.id}" style="padding-left:${10+d*16}px">${ic(c.ordered?'listmusic':'folder')}<span class="lbl">${esc(c.name)}</span><span class="cnt">${songItems(c).length||(tree.some(x=>x.c.parent===c.id)?'':0)}</span></button>`).join(''):`<div class="muted" style="font-size:13px;padding:6px 10px 0">Φτιάξε συλλογές για setlist, μαγαζιά ή είδη.</div>`}
+    </div>
+    <div class="sidefoot">
+      <div class="footrow">
+        <button class="btn sm ghost" data-act="theme" title="Θέμα εμφάνισης">${ic(prefs.theme==='dark'?'moon':prefs.theme==='light'?'sun':'monitor','sm')}<span>${{auto:'Αυτόματο',light:'Φωτεινό',dark:'Σκούρο'}[prefs.theme]}</span></button>
+        <button class="btn sm ghost" data-act="backup" title="Αντίγραφο ασφαλείας">${ic('download','sm')}<span>Backup</span></button>
+        <button class="btn sm ghost" data-act="ghsetup" title="Σύνδεση με GitHub">${ic('cloud','sm')}<span>GitHub</span></button>
+      </div>
+      <div class="status"><span class="dot ${st[0]}"></span><span>${st[1]}</span></div>
+      ${lan?`<div class="status" style="font-size:12px"><span>Κινητό/tablet στο ίδιο Wi-Fi:<br><b style="color:var(--text);user-select:all">${lan}</b></span></div>`:''}
+    </div>`;
+}
+
+/* =====================================================================
+   RENDER: LIST PANE
+   ===================================================================== */
+function sectionTitle(){
+  const col=colOf(S.sec);
+  if(col) return col.name;
+  return {all:'Όλα τα τραγούδια',fav:'Αγαπημένα',recent:'Πρόσφατα'}[S.sec]||'Τραγούδια';
+}
+function renderList(full=true){
+  const col=colOf(S.sec);
+  if(S.sec.startsWith('col:')&&!col&&Store.loaded.cols){S.sec='all'}
+  const pane=$('#listPane');
+  if(full||!pane.querySelector('.list')){
+    const genres=allGenres(),artists=distinct('artist'),keys=ALLKEYS.filter(k=>[...Store.songs.values()].some(s=>s.key===k));
+    pane.innerHTML=`
+      <div class="lhead">
+        <div class="ltitle">
+          <h2>${esc(sectionTitle())}</h2>
+          ${col?`<button class="ibtn" data-act="editcol" title="Ρυθμίσεις συλλογής" aria-label="Ρυθμίσεις συλλογής">${ic('settings')}</button>
+                 ${col.ordered?`<button class="ibtn" data-act="addsec" title="Νέα ενότητα / πακέτο" aria-label="Νέα ενότητα">${ic('section')}</button>`:''}
+                 <button class="ibtn" data-act="pickcol" title="Πρόσθεσε τραγούδια" aria-label="Πρόσθεσε τραγούδια">${ic('plus')}</button>
+                 <button class="btn primary sm" data-act="playcol" ${songItems(col).length?'':'disabled'}>${ic('play','sm')}Παίξιμο</button>`
+              :`<button class="btn primary sm" data-act="newsong">${ic('plus','sm')}Νέο</button>`}
+        </div>
+        ${col&&col.notes?`<div class="colnotes">${esc(col.notes)}</div>`:''}
+        <div class="search">${ic('search')}<input id="q" type="search" placeholder="Τίτλος, καλλιτέχνης ή στίχος" value="${esc(S.q)}" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση"><button class="ibtn clr" data-act="clearq" aria-label="Καθαρισμός" ${S.q?'':'hidden'}>${ic('x','sm')}</button></div>
+        <div class="filters">
+          ${col?`<div class="seg" role="group" aria-label="Εμφάνιση"><button class="${col.mode!=='cue'?'on':''}" data-act="colmode" data-mode="full">Πλήρη</button><button class="${col.mode==='cue'?'on':''}" data-act="colmode" data-mode="cue">Τίτλος–τόνος</button></div>`:''}
+          <select class="sel ${S.f.genre?'on':''}" data-f="genre" aria-label="Είδος"><option value="">Είδος</option>${genres.map(g=>`<option ${S.f.genre===g?'selected':''}>${esc(g)}</option>`).join('')}</select>
+          <select class="sel ${S.f.key?'on':''}" data-f="key" aria-label="Τόνος"><option value="">Τόνος</option>${keys.map(k=>`<option ${S.f.key===k?'selected':''}>${k}</option>`).join('')}</select>
+          <select class="sel ${S.f.artist?'on':''}" data-f="artist" aria-label="Καλλιτέχνης"><option value="">Καλλιτέχνης</option>${artists.map(a=>`<option ${S.f.artist===a?'selected':''}>${esc(a)}</option>`).join('')}</select>
+          ${!col&&S.sec!=='recent'?`<select class="sel" data-sort aria-label="Ταξινόμηση"><option value="title" ${S.sort==='title'?'selected':''}>Α–Ω τίτλος</option><option value="artist" ${S.sort==='artist'?'selected':''}>Καλλιτέχνης</option><option value="updated" ${S.sort==='updated'?'selected':''}>Τελευταίες αλλαγές</option></select>`:''}
+        </div>
+      </div>
+      <div class="list" id="list"></div>`;
+  }
+  renderRows();
+}
+function renderRows(){
+  const el=$('#list');if(!el) return;
+  const col=colOf(S.sec);
+  const clr=document.querySelector('[data-act=clearq]');if(clr)clr.hidden=!S.q;
+  if(!Store.loaded.songs){el.innerHTML=`<div class="loading">Φόρτωση βιβλιοθήκης…</div>`;return}
+  const arr=currentEntries();
+  const filtered=S.q||S.f.genre||S.f.key||S.f.artist;
+  const canDrag=col&&col.ordered&&!filtered;
+  const cue=col&&col.mode==='cue';
+  el.classList.toggle('cue',!!cue);
+  if(!arr.some(e=>e.s)&&!(col&&arr.length)){el.innerHTML=emptyList(col,filtered);return}
+  const curIt=S.ctx&&S.ctx.colId===(col&&col.id)?ctxEntry()?.it:null;
+  const handle=id=>canDrag?`<button class="handle" data-drag="${id}" aria-label="Μετακίνηση" title="Σύρε για αλλαγή σειράς · Alt+↑/↓">${ic('grip','sm')}</button>`:'';
+  let pos=0,num=0;
+  el.innerHTML=arr.map(e=>{
+    if(e.sec){num=0;return `<div class="row secrow" data-item="${e.sec.i}">${handle(e.sec.i)}<button class="sechead" data-act="editsec" data-item="${e.sec.i}"><span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}</button></div>`}
+    const s=e.s,it=e.it,k=itemKey(it,s),p=pos++;num++;
+    const on=it?curIt===it.i&&S.songId===s.id:S.songId===s.id;
+    return `<div class="row ${on?'on':''}" data-act="open" data-id="${s.id}" data-pos="${p}" ${it?`data-item="${it.i}"`:''} role="button" tabindex="0">
+      ${handle(it?it.i:'')}
+      ${col&&col.ordered?`<span class="num">${num}</span>`:''}
+      <div class="main"><div class="tt">${esc(s.title||'Χωρίς τίτλο')}</div>${it&&it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${esc(s.artist||'')}</div></div>
+      ${s.fav&&!cue?`<svg class="favmark" viewBox="0 0 24 24" aria-label="Αγαπημένο">${ICONS.star}</svg>`:''}
+      <span class="keyb ${k?'':'none'} ${it&&it.key&&it.key!==s.key?'own':''}" title="${it&&it.key&&s.key&&it.key!==s.key?'Σε αυτή τη λίστα · το τραγούδι είναι σε '+esc(s.key):''}">${esc(k||'—')}</span>
+      ${it?`<button class="ibtn imenu" data-act="itemmenu" data-item="${it.i}" aria-label="Τόνος και σημείωση σε αυτή τη λίστα" title="Τόνος και σημείωση σε αυτή τη λίστα">${ic('more','sm')}</button>`:''}
+    </div>`}).join('');
+}
+function emptyList(col,filtered){
+  if(filtered){
+    const q=S.q.trim();
+    return `<div class="empty"><h3>Δεν βρέθηκε τίποτα</h3><p>${q?`Κανένα τραγούδι για «${esc(q)}»${S.f.genre||S.f.key||S.f.artist?' με αυτά τα φίλτρα':''}.`:'Κανένα τραγούδι με αυτά τα φίλτρα.'}</p>
+      <div class="acts">${q?`<button class="btn primary" data-act="newsong" data-title="${esc(q)}">${ic('plus','sm')}Νέο «${esc(q.length>24?q.slice(0,24)+'…':q)}»</button>`:''}<button class="btn" data-act="clearall">Καθαρισμός φίλτρων</button></div></div>`;
+  }
+  if(col) return `<div class="empty"><h3>Η συλλογή είναι άδεια</h3><p>Πρόσθεσε τραγούδια από τη βιβλιοθήκη. Το ίδιο τραγούδι μπορεί να είναι σε πολλές συλλογές.</p><div class="acts"><button class="btn primary" data-act="pickcol">${ic('plus','sm')}Πρόσθεσε τραγούδια</button></div></div>`;
+  if(S.sec==='fav') return `<div class="empty"><h3>Κανένα αγαπημένο ακόμα</h3><p>Πάτα το αστέρι σε ένα τραγούδι για να το βρίσκεις εδώ.</p></div>`;
+  if(S.sec==='recent') return `<div class="empty"><h3>Τίποτα πρόσφατο</h3><p>Τα τραγούδια που ανοίγεις θα εμφανίζονται εδώ, σε όλες τις συσκευές σου.</p></div>`;
+  return `<div class="empty"><h3>Η βιβλιοθήκη είναι άδεια</h3><p>Αντίγραψε ένα τραγούδι από το kithara.to ή από ένα αρχείο κειμένου και επικόλλησέ το.</p>
+    <div class="acts"><button class="btn primary" data-act="newsong">${ic('paste','sm')}Επικόλληση τραγουδιού</button><button class="btn" data-act="sample">Βάλε ένα δείγμα</button></div></div>`;
+}
+
+/* =====================================================================
+   RENDER: DETAIL (song view)
+   ===================================================================== */
+// S.ctx = {list:[{s:songId, it:itemId|null}], colId, pos}: the list the current song was opened from
+function ctxEntry(){return S.ctx?S.ctx.list[S.ctx.pos]||null:null}
+function itemById(colId,iid){const c=colId&&Store.cols.get(colId);return c&&iid?itemsOf(c).find(x=>x.i===iid)||null:null}
+function ctxItem(){const e=ctxEntry();return e&&e.s===S.songId?itemById(S.ctx.colId,e.it):null}
+// transposition is remembered per list position (a list may want another key) or per song
+function trSlot(s){const it=ctxItem();return it&&s.id===S.songId?'i:'+it.i:s.id}
+function defShift(s){const it=s.id===S.songId?ctxItem():null;return it&&it.key?keyShift(baseKey(s),it.key):0}
+function curShift(s){
+  const slot=trSlot(s);
+  if(S.tr[slot]==null) S.tr[slot]=defShift(s);
+  return S.tr[slot];
+}
+function ctxStep(d){
+  if(!S.ctx) return -1;
+  for(let p=S.ctx.pos+d;p>=0&&p<S.ctx.list.length;p+=d) if(Store.songs.has(S.ctx.list[p].s)) return p;
+  return -1;
+}
+function ctxInfo(){
+  const e=ctxEntry();if(!e||e.s!==S.songId) return null;
+  const alive=S.ctx.list.filter(x=>Store.songs.has(x.s));
+  const pi=ctxStep(-1),ni=ctxStep(1);
+  const nx=ni>=0?S.ctx.list[ni]:null,next=nx?Store.songs.get(nx.s):null;
+  return {i:alive.indexOf(e),n:alive.length,prev:pi>=0?Store.songs.get(S.ctx.list[pi].s):null,next,
+    nextKey:next?itemKey(itemById(S.ctx.colId,nx.it),next):'',col:S.ctx.colId?Store.cols.get(S.ctx.colId):null,it:ctxItem()};
+}
+let lastDetailKey='';
+function renderDetail(force=false){
+  const d=$('#detail');
+  if(S.edit){return}
+  document.body.classList.remove('editing');
+  if(S.cueMode){renderCueSheet();return}
+  const s=S.songId&&Store.songs.get(S.songId);
+  if(!s){
+    lastDetailKey='';
+    d.innerHTML=`<div class="dempty"><div class="empty"><h3>${Store.songs.size?'Διάλεξε τραγούδι':'Ξεκίνα τη βιβλιοθήκη σου'}</h3><p>${Store.songs.size?'Ή πρόσθεσε ένα καινούργιο με επικόλληση από το kithara.':'Επικόλλησε το πρώτο σου τραγούδι. Τίτλος, καλλιτέχνης και ακόρντα αναγνωρίζονται αυτόματα.'}</p><div class="acts"><button class="btn primary" data-act="newsong">${ic('plus','sm')}Νέο τραγούδι</button></div></div></div>`;
+    renderPbar();return;
+  }
+  const n=curShift(s);
+  const cx=ctxInfo();const it=cx&&cx.it;
+  const key=s.id+'|'+s.updatedAt+'|'+n+'|'+(S.ctx?S.ctx.colId+'@'+S.ctx.pos+'/'+S.ctx.list.length:'')+'|'+(it?it.key+'~'+it.note:'')+'|'+(cx&&cx.col?cx.col.updatedAt:'')+'|'+S.perf;
+  if(!force&&key===lastDetailKey){renderPbar();return}
+  const keep=d.scrollTop;const sameSong=lastDetailKey.split('|')[0]===s.id;
+  lastDetailKey=key;
+  const flat=preferFlat(s,n);
+  const chips=[];
+  if(s.key) chips.push(`<span class="chip key">Τόνος <b>${esc(trKey(s.key,n,flat))}</b>${n?` <span>(το τραγούδι είναι σε ${esc(s.key)})</span>`:''}</span>`);
+  else if(it&&it.key) chips.push(`<span class="chip key">Τόνος <b>${esc(it.key)}</b></span>`);
+  if(s.capo) chips.push(`<span class="chip">Κάπο <b>${esc(s.capo)}</b></span>`);
+  if(s.rhythm) chips.push(`<span class="chip">Ρυθμός <b>${esc(s.rhythm)}</b></span>`);
+  if(s.timeSig) chips.push(`<span class="chip">Μέτρο <b>${esc(s.timeSig)}</b></span>`);
+  (s.genres||[]).forEach(g=>chips.push(`<span class="chip">${esc(g)}</span>`));
+  (s.tags||[]).forEach(g=>chips.push(`<span class="chip">#${esc(g)}</span>`));
+  const hasC=songHasChords(s);
+  d.innerHTML=`<div class="dwrap">
+    ${cx&&cx.col?`<div class="ctxbar">${ic(cx.col.ordered?'listmusic':'folder','sm')}<span>${esc(cx.col.name)}</span><span class="pos">· ${cx.i+1} από ${cx.n}</span>${it?`<button class="btn sm ghost" data-act="itemmenu" data-item="${it.i}" data-col="${cx.col.id}">${ic('pencil','sm')}Τόνος/σημείωση λίστας</button>`:''}</div>`:''}
+    <div class="dtop">
+      <button class="ibtn back" data-act="back" aria-label="Πίσω">${ic('left')}</button>
+      <div class="dtitle"><h1>${esc(s.title||'Χωρίς τίτλο')}</h1>${s.artist?`<div class="ar">${esc(s.artist)}</div>`:''}${s.credits?`<div class="cr">${esc(s.credits)}</div>`:''}</div>
+      <div class="dacts">
+        <button class="ibtn fav ${s.fav?'on':''}" data-act="fav" title="${s.fav?'Αφαίρεση από αγαπημένα':'Αγαπημένο'}" aria-pressed="${!!s.fav}" aria-label="Αγαπημένο">${ic('star')}</button>
+        <button class="ibtn" data-act="edit" title="Επεξεργασία" aria-label="Επεξεργασία">${ic('pencil')}</button>
+        <button class="ibtn" data-act="tocol" title="Συλλογές" aria-label="Προσθήκη σε συλλογή">${ic('folderplus')}</button>
+        <button class="ibtn" data-act="versions" title="Ιστορικό εκδόσεων" aria-label="Ιστορικό εκδόσεων">${ic('history')}</button>
+        <button class="ibtn" data-act="exportsong" title="Εξαγωγή" aria-label="Εξαγωγή">${ic('share')}</button>
+        <button class="ibtn" data-act="delsong" title="Διαγραφή" aria-label="Διαγραφή">${ic('trash')}</button>
+      </div>
+    </div>
+    ${chips.length?`<div class="meta">${chips.join('')}</div>`:''}
+    ${it&&it.note?`<div class="note inl"><span class="nl">${esc(cx.col.name)}</span>${esc(it.note)}</div>`:''}
+    ${s.notes?`<div class="note"><span class="nl">Σημειώσεις</span>${esc(s.notes)}</div>`:''}
+    <div class="tools">
+      ${hasC?`<div class="tgroup"><span class="lab">Τόνος</span><button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus','sm')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus','sm')}</button>${n!==defShift(s)?`<button class="ibtn" data-act="tr0" title="${it&&it.key?'Πίσω στον τόνο της λίστας':'Επαναφορά τόνου'}" aria-label="Επαναφορά τόνου">${ic('undo','sm')}</button>`:''}</div>`:''}
+      <div class="tgroup"><span class="lab">Γράμματα</span><button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus','sm')}</button><span class="val">${prefs.fs}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus','sm')}</button></div>
+      <div class="tgroup"><span class="lab">Κύλιση</span><button class="ibtn ${S.scrolling?'on':''}" data-act="scroll" aria-label="${S.scrolling?'Παύση κύλισης':'Αυτόματη κύλιση'}">${ic(S.scrolling?'pause':'play','sm')}</button><button class="ibtn" data-act="speed" data-d="-1" aria-label="Πιο αργά">${ic('minus','sm')}</button><span class="val">${prefs.speed}</span><button class="ibtn" data-act="speed" data-d="1" aria-label="Πιο γρήγορα">${ic('plus','sm')}</button></div>
+      <span class="tspacer"></span>
+      ${hasC&&n!==defShift(s)?`<button class="btn sm" data-act="keeptr" title="${it?'Αυτή η λίστα θα ανοίγει το τραγούδι σε αυτόν τον τόνο':'Γράφει τα ακόρντα στον νέο τόνο'}">${it?'Κράτα τον τόνο στη λίστα':'Κράτα αυτόν τον τόνο'}</button>`:''}
+      <button class="btn sm primary" data-act="perf">${ic('max','sm')}Παίξιμο</button>
+    </div>
+    <div class="sheet" style="--fs:${prefs.fs}px">${(s.lines||[]).length?sheetHTML(s,n):''}</div>
+    ${!(s.lines||[]).length?`<div class="empty"><h3>Δεν έχει στίχους ακόμα</h3><p>Πρόσθεσέ τους με επικόλληση, όποτε τους βρεις.</p><div class="acts"><button class="btn" data-act="edit">${ic('pencil','sm')}Συμπλήρωση</button></div></div>`:''}
+    ${cx&&cx.next?`<div class="nextup" data-act="next">${ic('right')}<div class="main"><div class="l">Επόμενο</div><div class="tt">${esc(cx.next.title)}</div></div><span class="keyb ${cx.nextKey?'':'none'}">${esc(cx.nextKey||'—')}</span></div>`:''}
+  </div>`;
+  if(sameSong) d.scrollTop=keep; else d.scrollTop=0;
+  renderPbar();
+}
+function renderPbar(){
+  const pb=$('#pbar'),pn=$('#pnext');
+  if(!S.perf){pb.innerHTML='';pn.classList.remove('show');return}
+  if(S.cueMode){
+    pb.innerHTML=`<button class="ibtn" data-act="cue" data-d="-1" aria-label="Προηγούμενο">${ic('left')}</button><span class="sep"></span>
+      <button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus')}</button><span class="val">${ic('textsize','sm')}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus')}</button>
+      <span class="sep"></span><button class="ibtn" data-act="cue" data-d="1" aria-label="Επόμενο">${ic('right')}</button><span class="sep"></span><button class="ibtn" data-act="perfx" aria-label="Έξοδος">${ic('x')}</button>`;
+    pn.classList.remove('show');return;
+  }
+  const s=Store.songs.get(S.songId);if(!s) return;
+  const n=curShift(s);const flat=preferFlat(s,n);const cx=ctxInfo();
+  pb.innerHTML=`
+    <button class="ibtn" data-act="prev" aria-label="Προηγούμενο τραγούδι" ${cx&&cx.prev?'':'disabled style="opacity:.3"'}>${ic('left')}</button>
+    <span class="sep"></span>
+    ${songHasChords(s)?`<button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus')}</button><span class="sep"></span>`:''}
+    <button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus')}</button><span class="val" title="Μέγεθος">${prefs.fs}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus')}</button>
+    <span class="sep"></span>
+    <button class="ibtn ${S.scrolling?'on':''}" data-act="scroll" aria-label="Αυτόματη κύλιση">${ic(S.scrolling?'pause':'scroll')}</button>
+    <button class="ibtn" data-act="speed" data-d="-1" aria-label="Πιο αργά">${ic('minus')}</button><span class="val">${prefs.speed}</span><button class="ibtn" data-act="speed" data-d="1" aria-label="Πιο γρήγορα">${ic('plus')}</button>
+    <span class="sep"></span>
+    <button class="ibtn" data-act="next" aria-label="Επόμενο τραγούδι" ${cx&&cx.next?'':'disabled style="opacity:.3"'}>${ic('right')}</button>
+    <button class="ibtn" data-act="perfx" aria-label="Έξοδος από παίξιμο">${ic('x')}</button>`;
+  if(cx&&cx.next){pn.textContent='Επόμενο: '+cx.next.title+(cx.nextKey?' · '+cx.nextKey:'');pn.classList.add('show')}else pn.classList.remove('show');
+}
+function renderCueSheet(){
+  const d=$('#detail');const col=Store.cols.get(S.ctx&&S.ctx.colId);
+  if(!col){S.cueMode=false;exitPerf();return}
+  const cur=S.cueIdx[col.id]||0;
+  let p=0,num=0;
+  const rows=itemsOf(col).map(it=>{
+    if(it.sec!=null){num=0;return `<div class="cuesec">${esc(it.sec||'Ενότητα')}${it.sub?` <span>${esc(it.sub)}</span>`:''}</div>`}
+    const s=Store.songs.get(it.s);if(!s) return '';
+    const i=p++;num++;const k=itemKey(it,s);
+    return `<div class="row ${i===cur?'cur':''} ${i<cur?'done':''}" data-act="cuepick" data-i="${i}" role="button" tabindex="0"><span class="num">${num}</span><div class="main"><div class="tt">${esc(s.title)}</div>${it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${esc(s.artist||'')}</div></div><span class="keyb ${k?'':'none'}">${esc(k||'—')}</span></div>`;
+  }).join('');
+  d.innerHTML=`<div class="dwrap"><div class="dtitle" style="margin-bottom:14px"><h1>${esc(col.name)}</h1><div class="ar">${p} τραγούδια</div></div>
+    ${col.notes?`<div class="note inl" style="margin:0 0 14px"><span class="nl">Σημειώσεις προγράμματος</span>${esc(col.notes)}</div>`:''}
+    <div class="cuesheet" style="--fs:${prefs.fs}px">${rows}</div></div>`;
+  const el=d.querySelector('.row.cur');if(el) el.scrollIntoView({block:'center',behavior:'smooth'});
+  renderPbar();
+}
+function renderTabbar(){
+  const p=document.body.dataset.pane;
+  $('#tabbar').innerHTML=`
+    <button class="${p==='list'&&!S.sec.startsWith('col:')?'on':''}" data-act="tab" data-t="songs">${ic('library')}Τραγούδια</button>
+    <button class="${p==='side'||S.sec.startsWith('col:')&&p==='list'?'on':''}" data-act="tab" data-t="cols">${ic('listmusic')}Συλλογές</button>
+    <button data-act="newsong">${ic('plus')}Νέο</button>`;
+}
+function renderAll(){renderSide();renderList(true);renderDetail(true);renderTabbar()}
+
+/* =====================================================================
+   EDITOR
+   ===================================================================== */
+function openEditor(song,preset){
+  stopScroll();
+  const s=song?clone(song):{id:null,title:(preset&&preset.title)||'',artist:'',credits:'',key:'',genres:[],tags:[],rhythm:'',timeSig:'',capo:'',notes:'',lines:[]};
+  S.edit={id:s.id,orig:song?clone(song):null,draft:s,text:linesToText(s.lines),dirty:false,showPrev:false,touchedKey:!!s.key};
+  if(document.body.dataset.size!=='l') setPane('detail');
+  document.body.classList.add('editing');
+  renderEditor();
+  setTimeout(()=>{const f=song?null:document.getElementById(preset&&preset.title||document.body.dataset.size==='s'?'edBody':'edTitle');if(f)f.focus({preventScroll:true})},50);
+}
+function renderEditor(){
+  const E=S.edit,s=E.draft,d=$('#detail');
+  const genres=allGenres();
+  d.innerHTML=`<div class="ed">
+    <div class="dtop"><button class="ibtn back" data-act="cancelEdit" aria-label="Πίσω">${ic('left')}</button><h1>${E.id?'Επεξεργασία τραγουδιού':'Νέο τραγούδι'}</h1></div>
+    <div class="edcols ${!E.id&&!E.text.trim()&&document.body.dataset.size==='s'?'pastefirst':''}">
+    <div class="fgrid">
+      <div class="field span3"><label for="edTitle">Τίτλος</label><input id="edTitle" data-k="title" value="${esc(s.title)}" placeholder="π.χ. Φραγκοσυριανή" autocomplete="off"></div>
+      <div class="field span3"><label for="edArtist">Καλλιτέχνης</label><input id="edArtist" data-k="artist" value="${esc(s.artist)}" list="dlArtists" autocomplete="off"><datalist id="dlArtists">${distinct('artist').map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
+      <div class="field span6"><label for="edCredits">Δημιουργοί</label><input id="edCredits" data-k="credits" value="${esc(s.credits)}" placeholder="π.χ. Μουσική: … · Στίχοι: …" autocomplete="off"></div>
+      <div class="field span1"><label for="edKey">Τόνος</label><select id="edKey" data-k="key"><option value="">—</option>${ALLKEYS.map(k=>`<option ${s.key===k?'selected':''}>${k}</option>`).join('')}</select></div>
+      <div class="field span1"><label for="edCapo">Κάπο</label><input id="edCapo" data-k="capo" value="${esc(s.capo)}" inputmode="numeric" placeholder="—"></div>
+      <div class="field span2"><label for="edRhythm">Ρυθμός</label><input id="edRhythm" data-k="rhythm" value="${esc(s.rhythm)}" list="dlRhythm" placeholder="π.χ. Χασάπικο"><datalist id="dlRhythm">${['Ζεϊμπέκικο','Χασάπικο','Χασαποσέρβικο','Τσιφτετέλι','Καλαματιανό','Συρτό','Μπάλος','Καρσιλαμάς','Βαλς','Ταγκό','Ballad','Rock'].concat(distinct('rhythm')).filter((v,i,a)=>a.indexOf(v)===i).map(r=>`<option value="${esc(r)}">`).join('')}</datalist></div>
+      <div class="field span2"><label for="edTime">Μέτρο</label><input id="edTime" data-k="timeSig" value="${esc(s.timeSig)}" placeholder="π.χ. 9/8" list="dlTime"><datalist id="dlTime">${['2/4','3/4','4/4','5/8','6/8','7/8','9/8','12/8'].map(r=>`<option value="${r}">`).join('')}</datalist></div>
+      <div class="field span6"><label>Είδος</label><div class="chips" id="edGenres">${genres.map(g=>`<button type="button" class="tog ${(s.genres||[]).includes(g)?'on':''}" data-act="tgGenre" data-g="${esc(g)}" aria-pressed="${(s.genres||[]).includes(g)}">${esc(g)}</button>`).join('')}<input class="addg" id="edNewGenre" placeholder="+ Άλλο είδος" aria-label="Νέο είδος"></div></div>
+      <div class="field span3"><label for="edTags">Ετικέτες</label><input id="edTags" data-k="tags" value="${esc((s.tags||[]).join(', '))}" placeholder="π.χ. γλέντι, αργό, γάμος"></div>
+      <div class="field span3"><label for="edNotes">Σημειώσεις</label><input id="edNotes" data-k="notes" value="${esc(s.notes)}" placeholder="π.χ. αργά στην αρχή, κάπο στο 2"></div>
+    </div>
+    <div class="edtabs"><div class="seg"><button class="${E.showPrev?'':'on'}" data-act="edtab" data-p="0">Κείμενο</button><button class="${E.showPrev?'on':''}" data-act="edtab" data-p="1">Προεπισκόπηση</button></div></div>
+    <div class="edbody ${E.showPrev?'showprev':''}">
+      <div class="field"><label for="edBody">Στίχοι και ακόρντα</label>
+        <textarea id="edBody" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Επικόλλησε εδώ το τραγούδι, όπως είναι στο kithara.to:
+
+Am            Dm
+Μήλο μου κόκκινο, ρόιδο βαμμένο
+E                         Am
+γιατί με μάρανες τον πικραμένο   | 2x">${esc(E.text)}</textarea>
+        <div class="hint">Ακόρντα στη γραμμή πάνω από τους στίχους · <code>[Ρεφρέν]</code> για ενότητα · <code>| 2x</code> για επανάληψη · <code># σημείωση</code> · δουλεύει και το <code>[Am]στίχος</code></div>
+        <div class="parseinfo" id="parseInfo"></div>
+      </div>
+      <div class="prev" id="edPrev" aria-label="Προεπισκόπηση"></div>
+    </div>
+    </div>
+    <div class="edfoot"><span class="err" id="edErr"></span><button class="btn" data-act="cancelEdit">Άκυρο</button><button class="btn primary" data-act="saveEdit">${ic('check','sm')}Αποθήκευση</button></div>
+  </div>`;
+  d.scrollTop=0;
+  updatePreview();
+}
+let prevT;
+function updatePreview(){
+  const E=S.edit;if(!E) return;
+  const r=parseText(E.text);
+  const tmp=Object.assign({},E.draft,{lines:r.lines});
+  const p=$('#edPrev');
+  if(p) p.innerHTML=r.lines.length?`<div class="sheet" style="--fs:17px">${sheetHTML(tmp,0)}</div>`:`<div class="muted">Η προεπισκόπηση εμφανίζεται εδώ, με τα ακόρντα πάνω από τις συλλαβές τους.</div>`;
+  const info=$('#parseInfo');
+  if(info){
+    const parts=[];
+    if(r.lines.length) parts.push(`${r.lines.filter(l=>l.k==='l').length} γραμμές`);
+    if(r.chordLines) parts.push(`${r.chordLines} με ακόρντα`);
+    const g=guessKey(r.lines);
+    if(g&&!E.touchedKey) parts.push(`προτεινόμενος τόνος ${g}`);
+    let html=parts.map(esc).join(' · ');
+    if(r.unknown.length) html+=` <span class="warn">Έλεγξε: ${r.unknown.slice(0,6).map(esc).join(', ')}</span>`;
+    info.innerHTML=html;
+  }
+  if(!E.touchedKey){const g=guessKey(r.lines);const sel=$('#edKey');if(sel&&g&&!E.draft.key){sel.value=g}}
+}
+function editorInput(e){
+  const E=S.edit;if(!E) return;const t=e.target;
+  if(t.id==='edBody'){E.text=t.value;E.dirty=true;clearTimeout(prevT);prevT=setTimeout(updatePreview,140);return}
+  const k=t.dataset.k;if(!k) return;
+  E.dirty=true;
+  if(k==='tags') E.draft.tags=t.value.split(/[,;]/).map(x=>x.trim().replace(/^#/,'')).filter(Boolean);
+  else if(k==='key'){E.draft.key=t.value;E.touchedKey=true}
+  else E.draft[k]=t.value;
+}
+function editorPaste(e){
+  const E=S.edit;if(!E||e.target.id!=='edBody') return;
+  const wasEmpty=!E.text.trim();
+  setTimeout(()=>{
+    const ta=$('#edBody');E.text=ta.value;E.dirty=true;
+    if(wasEmpty){
+      const {meta,body}=extractMeta(E.text);const filled=[];
+      if(meta.title&&!E.draft.title){E.draft.title=meta.title;$('#edTitle').value=meta.title;filled.push('τίτλο')}
+      if(meta.artist&&!E.draft.artist){E.draft.artist=meta.artist;$('#edArtist').value=meta.artist;filled.push('καλλιτέχνη')}
+      if(meta.credits&&!E.draft.credits){E.draft.credits=meta.credits;$('#edCredits').value=meta.credits;filled.push('δημιουργούς')}
+      if(meta.key&&!E.draft.key&&ALLKEYS.includes(meta.key)){E.draft.key=meta.key;E.touchedKey=true;$('#edKey').value=meta.key;filled.push('τόνο')}
+      if(meta.rhythm&&!E.draft.rhythm){E.draft.rhythm=meta.rhythm;$('#edRhythm').value=meta.rhythm;filled.push('ρυθμό')}
+      if(meta.capo&&!E.draft.capo){E.draft.capo=meta.capo;$('#edCapo').value=meta.capo;filled.push('κάπο')}
+      if(Object.keys(meta).length){E.text=body;ta.value=body}
+      if(filled.length){const f=filled.length>1?filled.slice(0,-1).join(', ')+' και '+filled[filled.length-1]:filled[0];toast('Συμπλήρωσα '+f+' από το κείμενο. Έλεγξέ τα.')}
+    }
+    updatePreview();
+  },0);
+}
+async function saveEditor(){
+  const E=S.edit;if(!E) return;
+  const err=$('#edErr');
+  const ng=$('#edNewGenre');if(ng&&ng.value.trim()) addGenre(ng.value.trim());
+  const title=(E.draft.title||'').trim();
+  if(!title){err.textContent='Γράψε τίτλο για να αποθηκευτεί.';$('#edTitle').focus();return}
+  const r=parseText(E.text);
+  const s=Object.assign({},E.draft,{title,artist:(E.draft.artist||'').trim(),credits:(E.draft.credits||'').trim(),lines:r.lines});
+  if(!s.key&&!E.touchedKey){s.key=guessKey(r.lines)}
+  const sel=$('#edKey');if(sel) s.key=sel.value||s.key;
+  const isNew=!E.id;
+  if(isNew){s.id=uid();s.createdAt=now();s.fav=false}
+  try{
+    if(!isNew&&E.orig) await Store.addVersion(E.orig).catch(()=>{});
+    const p=Store.saveSong(s);
+    S.edit=null;S.songId=s.id;
+    if(isNew){const col=colOf(S.sec);if(col&&!hasSong(col,s.id)){const c=clone(col);c.items=itemsOf(c).concat({i:uid(),s:s.id});Store.saveCol(c)}}
+    if(!S.ctx||!S.ctx.list.some(x=>x.s===s.id)){const list=playList();S.ctx={list,colId:colOf(S.sec)?S.sec.slice(4):null,pos:Math.max(0,list.findIndex(x=>x.s===s.id))}}
+    renderList(false);renderDetail(true);
+    await p;toast(isNew?'Το τραγούδι προστέθηκε':'Αποθηκεύτηκε');
+  }catch(e){toast(e&&e.code==='quota_exceeded'?'Η βάση γέμισε. Σβήσε παλιές εκδόσεις ή τραγούδια.':'Δεν αποθηκεύτηκε. Δοκίμασε ξανά.');console.warn(e)}
+}
+function addGenre(g){const E=S.edit;if(!E) return;E.draft.genres=E.draft.genres||[];if(!E.draft.genres.includes(g))E.draft.genres.push(g);E.dirty=true}
+function cancelEditor(force){
+  const E=S.edit;if(!E) return;
+  if(E.dirty&&!force){confirmDlg('Απόρριψη αλλαγών;','Οι αλλαγές που δεν αποθηκεύτηκαν θα χαθούν.','Απόρριψη',()=>cancelEditor(true));return}
+  S.edit=null;
+  if(!E.id&&document.body.dataset.size!=='l') setPane('list');
+  renderDetail(true);
+}
+
+/* =====================================================================
+   MODALS
+   ===================================================================== */
+let modalCleanup=null;
+function openModal(html,onMount){
+  const m=$('#modal');m.innerHTML=`<div class="scrim" data-act="closeModal"></div><div class="dlg" role="dialog" aria-modal="true">${html}</div>`;m.hidden=false;
+  modalCleanup=onMount?onMount(m):null;
+  const f=m.querySelector('[autofocus]')||m.querySelector('input,button.primary');if(f)setTimeout(()=>f.focus(),30);
+}
+function closeModal(){const m=$('#modal');m.hidden=true;m.innerHTML='';if(typeof modalCleanup==='function')modalCleanup();modalCleanup=null}
+const dhead=t=>`<div class="dhead"><h3>${t}</h3><button class="ibtn" data-act="closeModal" aria-label="Κλείσιμο">${ic('x')}</button></div>`;
+let confirmFn=null;
+function confirmDlg(title,text,okLabel,fn){
+  confirmFn=fn;
+  openModal(`${dhead(esc(title))}<div class="dbody"><p style="margin:0">${esc(text)}</p></div><div class="dfoot"><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn danger solid" data-act="confirmOk">${esc(okLabel)}</button></div>`);
+}
+function colModal(col,opts={}){
+  const c=col||{name:'',ordered:true,mode:'full',parent:null};
+  const others=colTree().filter(x=>!col||x.c.id!==col.id);
+  openModal(`${dhead(col?'Ρυθμίσεις συλλογής':'Νέα συλλογή')}
+    <div class="dbody">
+      <div class="field"><label for="cName">Όνομα</label><input id="cName" value="${esc(c.name)}" placeholder="π.χ. Παρασκευή στο μαγαζί" autofocus></div>
+      <div class="field"><label>Σειρά</label><div class="radios">
+        <label class="radio"><input type="radio" name="cOrd" value="1" ${c.ordered?'checked':''}><div><b>Με σειρά (setlist)</b><div class="d">Ορίζεις τη σειρά με σύρσιμο και παίζεις από την αρχή ως το τέλος.</div></div></label>
+        <label class="radio"><input type="radio" name="cOrd" value="0" ${!c.ordered?'checked':''}><div><b>Χωρίς σειρά</b><div class="d">Ομάδα τραγουδιών, π.χ. «Νησιώτικα». Ταξινόμηση αλφαβητικά.</div></div></label>
+      </div></div>
+      <div class="field"><label>Εμφάνιση στο παίξιμο</label><div class="radios">
+        <label class="radio"><input type="radio" name="cMode" value="full" ${c.mode!=='cue'?'checked':''}><div><b>Πλήρη τραγούδια</b><div class="d">Στίχοι και ακόρντα, με επόμενο και προηγούμενο.</div></div></label>
+        <label class="radio"><input type="radio" name="cMode" value="cue" ${c.mode==='cue'?'checked':''}><div><b>Μόνο τίτλος και τόνος</b><div class="d">Μεγάλη λίστα για τη σκηνή, χωρίς στίχους.</div></div></label>
+      </div></div>
+      <div class="field"><label for="cNotes">Σημειώσεις</label><textarea id="cNotes" rows="3" placeholder="π.χ. ντουέτα, ποιος μπαίνει πότε, αλλαγές της βραδιάς">${esc(c.notes||'')}</textarea></div>
+      ${others.length?`<div class="field"><label for="cParent">Μέσα στη συλλογή</label><select id="cParent"><option value="">— Καμία (κορυφή) —</option>${others.map(({c:o,d})=>`<option value="${o.id}" ${c.parent===o.id?'selected':''}>${'— '.repeat(d)}${esc(o.name)}</option>`).join('')}</select></div>`:''}
+      <span class="err" id="cErr"></span>
+    </div>
+    <div class="dfoot">${col?`<button class="btn danger left" data-act="delcol">${ic('trash','sm')}Διαγραφή</button><button class="btn" data-act="exportcol">${ic('download','sm')}Εξαγωγή</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveColModal" data-id="${col?col.id:''}" data-add="${opts.addSong||''}">${col?'Αποθήκευση':'Δημιουργία'}</button></div>`);
+  const inp=$('#cName');inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('[data-act=saveColModal]').click()}});
+}
+// a song's place in one list: its own key and note there
+function itemModal(colId,iid){
+  const c=Store.cols.get(colId);const it=itemById(colId,iid);const s=it&&Store.songs.get(it.s);if(!c||!s) return;
+  openModal(`${dhead(esc(s.title))}
+    <div class="dbody">
+      <div class="muted" style="font-size:13.5px">Ισχύουν μόνο στη «${esc(c.name)}». Το τραγούδι στη βιβλιοθήκη δεν αλλάζει.</div>
+      <div class="field"><label for="iKey">Τόνος σε αυτή τη λίστα</label><input id="iKey" list="dlKeys" value="${esc(it.key||'')}" placeholder="${s.key?'Όπως το τραγούδι: '+esc(s.key):'π.χ. Em'}" autocomplete="off" autocapitalize="off"><datalist id="dlKeys">${ALLKEYS.map(k=>`<option value="${k}">`).join('')}</datalist>
+        <div class="hint">${songHasChords(s)&&baseKey(s)?'Τα ακόρντα θα ανοίγουν μεταφερμένα σε αυτόν τον τόνο.':'Γράφεται και ελεύθερα, π.χ. «Em/Fm».'}</div></div>
+      <div class="field"><label for="iNote">Σημείωση σε αυτή τη λίστα</label><textarea id="iNote" rows="3" placeholder="π.χ. Ντουέτο · Μπαίνουμε από το ρεφρέν · Κλείνει και μπαίνει ρούμπα">${esc(it.note||'')}</textarea></div>
+    </div>
+    <div class="dfoot"><button class="btn danger left" data-act="rmItem" data-col="${c.id}" data-item="${it.i}">${ic('x','sm')}Αφαίρεση από τη λίστα</button><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveItem" data-col="${c.id}" data-item="${it.i}">Αποθήκευση</button></div>`,
+    m=>{const h=e=>{if(e.key==='Enter'&&e.target.id==='iKey'){e.preventDefault();m.querySelector('[data-act=saveItem]').click()}};m.addEventListener('keydown',h);return()=>m.removeEventListener('keydown',h)});
+}
+function secModal(colId,iid){
+  const it=iid?itemById(colId,iid):null;
+  openModal(`${dhead(it?'Ενότητα':'Νέα ενότητα')}
+    <div class="dbody">
+      <div class="field"><label for="sName">Όνομα</label><input id="sName" value="${esc(it?it.sec:'')}" placeholder="π.χ. Ζεϊμπέκικα" autofocus autocomplete="off"></div>
+      <div class="field"><label for="sSub">Υπότιτλος</label><input id="sSub" value="${esc(it&&it.sub||'')}" placeholder="π.χ. 2ο πακέτο" autocomplete="off"></div>
+      ${it?'':'<div class="hint">Μπαίνει στο τέλος της λίστας. Σύρ’ την στη θέση της· τα τραγούδια από κάτω της ανήκουν σε αυτή.</div>'}
+    </div>
+    <div class="dfoot">${it?`<button class="btn danger left" data-act="delSec" data-col="${colId}" data-item="${it.i}">${ic('trash','sm')}Διαγραφή</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveSec" data-col="${colId}" data-item="${it?it.i:''}">${it?'Αποθήκευση':'Προσθήκη'}</button></div>`,
+    m=>{const h=e=>{if(e.key==='Enter'&&e.target.matches('input')){e.preventDefault();m.querySelector('[data-act=saveSec]').click()}};m.addEventListener('keydown',h);return()=>m.removeEventListener('keydown',h)});
+}
+function toColModal(songId){
+  const s=Store.songs.get(songId);if(!s) return;
+  const tree=colTree();
+  openModal(`${dhead('Συλλογές')}
+    <div class="dbody"><div class="muted" style="font-size:13.5px">«${esc(s.title)}» σε:</div>
+      <div id="tcList">${tree.length?tree.map(({c,d})=>`<label class="ck" style="padding-left:${8+d*18}px"><input type="checkbox" data-col="${c.id}" ${hasSong(c,songId)?'checked':''}><div class="main"><div class="tt">${esc(c.name)}</div><div class="ar">${songItems(c).length} τραγούδια${c.ordered?' · με σειρά':''}</div></div></label>`).join(''):'<div class="muted">Δεν έχεις συλλογές ακόμα.</div>'}</div>
+      <div style="display:flex;gap:8px"><input id="tcNew" class="field" style="flex:1;border:1px solid var(--line2);border-radius:9px;padding:8px 11px;min-height:40px;background:var(--raise);font-size:16px" placeholder="Νέα συλλογή…" aria-label="Όνομα νέας συλλογής"><button class="btn" data-act="tcCreate" data-id="${songId}">${ic('plus','sm')}Δημιουργία</button></div>
+    </div><div class="dfoot"><button class="btn primary" data-act="closeModal">Τέλος</button></div>`,m=>{
+      const h=async e=>{const cb=e.target.closest('input[data-col]');if(!cb) return;const c=clone(Store.cols.get(cb.dataset.col));const items=itemsOf(c);
+        if(cb.checked){if(!hasSong(c,songId))items.push({i:uid(),s:songId})}else c.items=items.filter(x=>x.s!==songId);
+        await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));};
+      m.addEventListener('change',h);
+      return ()=>m.removeEventListener('change',h);
+    });
+}
+function pickModal(colId){
+  const col=Store.cols.get(colId);if(!col) return;
+  const sel=new Set(itemsOf(col).filter(x=>x.s).map(x=>x.s));let q='';
+  const draw=()=>{
+    const nq=norm(q);
+    const arr=[...Store.songs.values()].filter(s=>!nq||searchKey(s).meta.includes(nq)).sort((a,b)=>collator.compare(a.title,b.title));
+    $('#pkList').innerHTML=arr.length?arr.map(s=>`<label class="ck"><input type="checkbox" data-sid="${s.id}" ${sel.has(s.id)?'checked':''}><div class="main"><div class="tt">${esc(s.title)}</div><div class="ar">${esc(s.artist||'')}</div></div><span class="keyb ${s.key?'':'none'}">${esc(s.key||'—')}</span></label>`).join(''):`<div class="muted" style="padding:12px 4px">${Store.songs.size?'Τίποτα για αυτή την αναζήτηση.':'Η βιβλιοθήκη είναι άδεια.'}</div>`;
+    $('#pkCount').textContent=sel.size+' επιλεγμένα';
+  };
+  openModal(`${dhead('Τραγούδια στη συλλογή')}
+    <div class="dbody" style="gap:8px"><div class="search">${ic('search')}<input id="pkQ" type="search" placeholder="Αναζήτηση" autofocus aria-label="Αναζήτηση"></div><div id="pkList"></div></div>
+    <div class="dfoot"><span class="left muted" id="pkCount" style="align-self:center;font-size:13.5px"></span><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="pkSave">Αποθήκευση</button></div>`,m=>{
+      const onIn=e=>{if(e.target.id==='pkQ'){q=e.target.value;draw()}};
+      const onCh=e=>{const cb=e.target.closest('input[data-sid]');if(!cb) return;cb.checked?sel.add(cb.dataset.sid):sel.delete(cb.dataset.sid);$('#pkCount').textContent=sel.size+' επιλεγμένα'};
+      m.addEventListener('input',onIn);m.addEventListener('change',onCh);
+      pickModal.save=async()=>{const c=clone(Store.cols.get(colId));const keep=itemsOf(c).filter(x=>x.sec!=null||sel.has(x.s));const add=[...sel].filter(id=>!keep.some(x=>x.s===id)).sort((a,b)=>collator.compare(Store.songs.get(a).title,Store.songs.get(b).title));c.items=keep.concat(add.map(s=>({i:uid(),s})));closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Η συλλογή ενημερώθηκε')};
+      setTimeout(draw,0);
+      return ()=>{m.removeEventListener('input',onIn);m.removeEventListener('change',onCh)};
+    });
+}
+async function versionsModal(songId){
+  const s=Store.songs.get(songId);if(!s) return;
+  openModal(`${dhead('Ιστορικό εκδόσεων')}<div class="dbody" id="vList"><div class="loading">Φόρτωση…</div></div><div class="dfoot"><button class="btn" data-act="closeModal">Κλείσιμο</button></div>`);
+  try{
+    const vs=await Store.listVersions(songId);
+    const el=$('#vList');if(!el) return;
+    el.innerHTML=`<div class="vrow"><div class="main"><div class="d">Τρέχουσα</div><div class="s">${s.updatedAt?fmtDate(s.updatedAt):''}</div></div></div>`+(vs.length?vs.map(v=>`<div class="vrow"><div class="main"><div class="d">${fmtDate(v.savedAt)}</div><div class="s">${esc(v.data.title)}${v.data.key?' · '+esc(v.data.key):''} · ${(v.data.lines||[]).filter(l=>l.k==='l').length} γραμμές</div></div><button class="btn sm" data-act="restoreV" data-vid="${v.id}">${ic('undo','sm')}Επαναφορά</button></div>`).join(''):`<div class="muted" style="padding:10px 4px">Κάθε φορά που αποθηκεύεις αλλαγές, η προηγούμενη μορφή κρατιέται εδώ (έως 20).</div>`);
+    versionsModal.cache=vs;
+  }catch(e){const el=$('#vList');if(el)el.innerHTML='<div class="muted">Δεν φόρτωσε το ιστορικό. Δοκίμασε ξανά.</div>'}
+}
+function songAsText(s){
+  const head=[s.title,s.artist&&('Καλλιτέχνης: '+s.artist),...(s.credits?s.credits.split(' · '):[]),s.key&&('Τόνος: '+s.key),s.capo&&('Κάπο: '+s.capo),s.rhythm&&('Ρυθμός: '+s.rhythm)].filter(Boolean).join('\n');
+  return head+'\n\n'+(s.notes?'# '+s.notes+'\n\n':'')+linesToText(s.lines)+'\n';
+}
+function songAsChordPro(s){
+  const h=[`{title: ${s.title}}`,s.artist&&`{artist: ${s.artist}}`,s.key&&`{key: ${s.key}}`,s.capo&&`{capo: ${s.capo}}`,s.timeSig&&`{time: ${s.timeSig}}`,s.notes&&`{comment: ${s.notes}}`].filter(Boolean).join('\n');
+  return h+'\n\n'+linesToChordPro(s.lines)+'\n';
+}
+const safeName=t=>String(t||'song').replace(/[\\/:*?"<>|]+/g,' ').trim().slice(0,80)||'song';
+async function saveFile(filename,data){
+  try{const url=URL.createObjectURL(new Blob([data],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);return true}catch(e){}
+  openModal(`${dhead('Αντιγραφή')}<div class="dbody"><div class="muted" style="font-size:13.5px">Η λήψη αρχείου δεν είναι διαθέσιμη εδώ. Αντίγραψε το περιεχόμενο του <b>${esc(filename)}</b>:</div><textarea class="codebox" id="copyBox" readonly>${esc(data)}</textarea></div><div class="dfoot"><button class="btn" data-act="closeModal">Κλείσιμο</button><button class="btn primary" data-act="copyBox">${ic('paste','sm')}Αντιγραφή</button></div>`);
+  return false;
+}
+function exportSongModal(id){
+  const s=Store.songs.get(id);if(!s) return;
+  openModal(`${dhead('Εξαγωγή τραγουδιού')}<div class="dbody">
+    <button class="btn" data-act="exp" data-f="copy" style="justify-content:flex-start">${ic('paste','sm')}Αντιγραφή κειμένου (ακόρντα πάνω από στίχους)</button>
+    <button class="btn" data-act="exp" data-f="txt" style="justify-content:flex-start">${ic('download','sm')}Λήψη .txt</button>
+    <button class="btn" data-act="exp" data-f="cho" style="justify-content:flex-start">${ic('download','sm')}Λήψη ChordPro (.cho), για άλλες εφαρμογές</button>
+  </div><div class="dfoot"><button class="btn" data-act="closeModal">Κλείσιμο</button></div>`);
+}
+function ghModal(){
+  const c=GH.cfg||lsGet(GH_KEY,{})||{};const on=Store.mode==='github';
+  const here=Store.mode!=='github'&&Store.songs.size;
+  openModal(`${dhead('Σύνδεση με GitHub')}
+    <div class="dbody">
+      ${on?`<div class="ghok">${ic('check','sm')} Συνδεδεμένο με <b>${esc(c.owner)}/${esc(c.repo)}</b>. Κάθε αλλαγή γίνεται commit εκεί.</div>`
+        :`<ol class="ghsteps"><li>Ένα <b>ιδιωτικό</b> repo για τα τραγούδια, με ένα README μέσα.</li><li>Ένα <b>fine-grained token</b> μόνο για αυτό το repo, με δικαίωμα <b>Contents: Read and write</b>.</li><li>Τα γράφεις εδώ μία φορά σε κάθε συσκευή.</li></ol>`}
+      <div class="fgrid" style="margin-top:4px">
+        <div class="field span3"><label for="ghOwner">Χρήστης GitHub</label><input id="ghOwner" value="${esc(c.owner||'')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+        <div class="field span3"><label for="ghRepo">Repo δεδομένων</label><input id="ghRepo" value="${esc(c.repo||'my-songbook-data')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+        <div class="field span6"><label for="ghToken">Token</label><input id="ghToken" type="password" value="${esc(c.token||'')}" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+      </div>
+      ${here?`<label class="ck" style="padding-left:0"><input type="checkbox" id="ghSeed" checked><div class="main"><div class="tt">Ανέβασε και τα ${Store.songs.size} τραγούδια αυτής της συσκευής</div><div class="ar">Μαζί με τις ${Store.cols.size} συλλογές. Όσα υπάρχουν ήδη στο GitHub μένουν.</div></div></label>`:''}
+      <div class="hint">Το token μένει μόνο σε αυτόν τον browser. Όποιος έχει τη συσκευή ξεκλείδωτη μπορεί να το δει, οπότε δώσ' του δικαίωμα μόνο σε αυτό το repo.</div>
+      <span class="err" id="ghErr"></span>
+    </div>
+    <div class="dfoot">${on?`<button class="btn danger left" data-act="ghOff">Αποσύνδεση</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="ghSave">${on?'Αποθήκευση':'Σύνδεση'}</button></div>`);
+}
+function backupModal(){
+  openModal(`${dhead('Αντίγραφο ασφαλείας')}<div class="dbody">
+    <p style="margin:0" class="muted">${Store.songs.size} τραγούδια · ${Store.cols.size} συλλογές. ${Store.mode==='github'?`Όλα είναι στο repo <b>${esc(GH.cfg.owner)}/${esc(GH.cfg.repo)}</b> στο GitHub, με κάθε παλιά μορφή στο ιστορικό του. Το αρχείο .json είναι ένα επιπλέον αντίγραφο στη συσκευή σου.`:`Η βάση είναι στο <b>songbook.db</b> στον φάκελο, και ο server κρατάει αυτόματα ένα αντίγραφο κάθε μέρα στο <b>backups</b>. Το αρχείο .json μεταφέρεται και σε άλλον υπολογιστή.`}</p>
+    <button class="btn primary" data-act="doBackup">${ic('download','sm')}Λήψη αντιγράφου (.json)</button>
+    <button class="btn" data-act="doRestore">${ic('upload','sm')}Επαναφορά από αρχείο</button>
+    <button class="btn" data-act="doLiveSetlist">${ic('listmusic','sm')}Εισαγωγή λιστών από Live Setlist (.html)</button>
+    <p style="margin:0;font-size:12.5px" class="muted">Η επαναφορά προσθέτει ή ενημερώνει τραγούδια και συλλογές. Δεν σβήνει όσα δεν υπάρχουν στο αρχείο.</p>
+  </div><div class="dfoot"><button class="btn" data-act="closeModal">Κλείσιμο</button></div>`);
+}
+
+/* =====================================================================
+   IMPORT: «Live Setlist» html (shows → programs → packs → {title, artist, key, note})
+     show    → folder collection
+     program → ordered list (cue mode), its notes → list notes
+     pack    → section inside the list (when the program has more than one)
+     song    → one library song per title; key/note → this position's own key/note
+   ===================================================================== */
+const lsFold=s=>String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/ς/g,'σ').replace(/['’΄`]/g,'').replace(/\s+/g,' ').trim();
+// same key the Live Setlist app uses for its lyrics
+function lsLyrKey(t){const s=lsFold(t).replace(/[^\p{L}\p{N}]+/gu,' ').trim();let h=0x811c9dc5;for(const ch of s){h^=ch.codePointAt(0);h=Math.imul(h,16777619)>>>0}return'l'+h.toString(36)+s.length.toString(36)}
+const lsId=(p,id)=>(p+String(id||uid())).replace(/[^A-Za-z0-9-]/g,'-').slice(0,64);
+const lsKeyOf=k=>{k=String(k||'').trim();return k&&k!=='—'&&k!=='-'?k.replace(/^H/,'B'):''};
+function lsParse(html){
+  const m=String(html).match(/<script[^>]*id=["']setlist-data["'][^>]*>([\s\S]*?)<\/script>/i);
+  if(!m) throw new Error('format');
+  const d=JSON.parse(m[1]);if(!d||!Array.isArray(d.shows)) throw new Error('format');
+  return d;
+}
+function lsPlan(d){
+  const lyrics=d.lyrics||{};
+  // 1. group every occurrence by title (and by artist when two artists share a title)
+  const groups=new Map();
+  const occ=[];
+  for(const sh of d.shows) for(const pr of sh.programs||[]) for(const pk of pr.packs||[]) for(const x of pk.songs||[]){
+    const title=String(x.title||'').trim();if(!title) continue;
+    const o={title,artist:String(x.artist||'').trim(),key:lsKeyOf(x.key),note:String(x.note||'').trim()};occ.push(o);
+    const f=lsFold(title);if(!groups.has(f))groups.set(f,[]);groups.get(f).push(o);
+  }
+  const lib=new Map();for(const s of Store.songs.values()){const f=lsFold(s.title);if(!lib.has(f))lib.set(f,[]);lib.get(f).push(s)}
+  const newSongs=[];let matched=0,withLyrics=0;
+  for(const [f,list] of groups){
+    const artists=[...new Set(list.map(o=>o.artist).filter(Boolean))];
+    const parts=artists.length>1?artists.map(a=>list.filter(o=>o.artist===a)):[list];
+    if(artists.length>1) parts[0].push(...list.filter(o=>!o.artist));
+    for(const part of parts){
+      const artist=part.find(o=>o.artist)?.artist||'';
+      const have=(lib.get(f)||[]).find(s=>!artist||!s.artist||lsFold(s.artist)===lsFold(artist));
+      let song=have;
+      if(have) matched++;
+      else{
+        const cnt={};part.forEach(o=>{if(o.key)cnt[o.key]=(cnt[o.key]||0)+1});
+        const key=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||'';
+        const ly=lyrics[lsLyrKey(part[0].title)];
+        const lines=ly?parseText(String(ly)).lines:[];if(lines.length)withLyrics++;
+        song={id:uid(),title:part[0].title,artist,credits:'',key:ALLKEYS.includes(key)?key:'',genres:[],tags:['live setlist'],rhythm:'',timeSig:'',capo:'',notes:'',lines,fav:false,createdAt:now(),updatedAt:now()};
+        newSongs.push(song);
+      }
+      part.forEach(o=>o.song=song);
+    }
+  }
+  // 2. folders and lists
+  const cols=[];let positions=0,replaced=0,k=0;
+  for(const sh of d.shows){
+    const fid=lsId('ls-',sh.id);if(Store.cols.has(fid))replaced++;
+    cols.push({id:fid,name:String(sh.name||'Εμφάνιση').trim(),ordered:false,mode:'cue',parent:null,items:[],notes:'',createdAt:now()});
+    for(const pr of sh.programs||[]){
+      const id=lsId('ls-',pr.id);if(Store.cols.has(id))replaced++;
+      const packs=pr.packs||[];const items=[];
+      for(const pk of packs){
+        if(packs.length>1) items.push(Object.assign({i:uid(),sec:String(pk.name||'Πακέτο').trim()},pk.sub?{sub:String(pk.sub).trim()}:{}));
+        for(const x of pk.songs||[]){
+          if(!String(x.title||'').trim()) continue;
+          const o=occ[k++];positions++;   // same walk order as step 1
+          const it={i:uid(),s:o.song.id};
+          if(o.key&&o.key!==o.song.key) it.key=o.key;   // also keeps free-text keys like «C/Am» on the position
+          if(o.note) it.note=o.note;
+          items.push(it);
+        }
+      }
+      const notes=Array.isArray(pr.notes)?pr.notes.map(String).join('\n'):String(pr.notes||'');
+      cols.push({id,name:String(pr.name||'Πρόγραμμα').trim(),ordered:true,mode:'cue',parent:fid,items,notes,createdAt:now()});
+    }
+  }
+  return {songs:newSongs,cols,stats:{shows:d.shows.length,programs:cols.length-d.shows.length,positions,newSongs:newSongs.length,matched,withLyrics,replaced}};
+}
+function lsModal(plan){
+  const st=plan.stats;
+  lsModal.plan=plan;
+  openModal(`${dhead('Εισαγωγή από Live Setlist')}
+    <div class="dbody">
+      <div class="lsgrid">
+        <div><b>${st.shows}</b><span>μαγαζιά / σεζόν</span></div>
+        <div><b>${st.programs}</b><span>προγράμματα</span></div>
+        <div><b>${st.positions}</b><span>θέσεις σε λίστες</span></div>
+        <div><b>${st.newSongs}</b><span>νέα τραγούδια</span></div>
+      </div>
+      <p style="margin:0" class="muted">Κάθε μαγαζί γίνεται φάκελος και κάθε πρόγραμμα λίστα «τίτλος–τόνος» μέσα του, με τα πακέτα ως ενότητες. Ο τόνος και η σημείωση κάθε θέσης μένουν στη λίστα.</p>
+      <ul class="lslist">
+        <li>${st.newSongs} τραγούδια μπαίνουν στη βιβλιοθήκη, ${st.withLyrics?`${st.withLyrics} με στίχους, `:''}τα υπόλοιπα μόνο με τίτλο. Ακόρντα προσθέτεις όποτε θες.</li>
+        ${st.matched?`<li>${st.matched} υπάρχουν ήδη στη βιβλιοθήκη σου και χρησιμοποιούνται όπως είναι.</li>`:''}
+        ${st.replaced?`<li class="warnli">${st.replaced} φάκελοι/λίστες έχουν ξαναεισαχθεί και θα αντικατασταθούν με τη μορφή του αρχείου.</li>`:''}
+      </ul>
+    </div>
+    <div class="dfoot"><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="lsGo">${ic('check','sm')}Εισαγωγή</button></div>`);
+}
+
+/* =====================================================================
+   ACTIONS
+   ===================================================================== */
+// list: [{s:songId,it:itemId|null}] to open within (or omit to stay in the current list); pos: position in it
+function openSong(id,list,colId,pos){
+  stopScroll();
+  if(S.edit){S.edit=null}
+  S.cueMode=false;
+  S.songId=id;
+  if(list) S.ctx={list,colId:colId||null,pos:pos!=null?pos:Math.max(0,list.findIndex(x=>x.s===id))};
+  else if(S.ctx){
+    if(pos!=null) S.ctx.pos=pos;
+    else if(!ctxEntry()||ctxEntry().s!==id){const p=S.ctx.list.findIndex(x=>x.s===id);if(p>=0)S.ctx.pos=p;else S.ctx=null}
+  }
+  const s=Store.songs.get(id);
+  // «Πρόσφατα»: on GitHub this stays on the device, so opening a song never makes a commit
+  if(s&&(!s.openedAt||now()-s.openedAt>120000)){const n=clone(s);n.openedAt=now();Store.songs.set(id,n);if(Store.mode==='github')Store._saveCache();else Store._write('songs',n).catch(()=>{})}
+  if(document.body.dataset.size!=='l') setPane('detail');
+  renderRows();renderDetail(true);
+  $('#detail').scrollTop=0;
+}
+function go(delta){
+  if(!ctxInfo()) return;
+  const p=ctxStep(delta>0?1:-1);if(p<0) return;
+  openSong(S.ctx.list[p].s,null,null,p);
+}
+// ---- autoscroll ----
+let rafId=0,lastTs=0,acc=0;
+function startScroll(){
+  S.scrolling=true;lastTs=0;acc=0;
+  const d=$('#detail');
+  const step=ts=>{
+    if(!S.scrolling) return;
+    if(lastTs){const dt=Math.min(64,ts-lastTs);acc+=dt/1000*(prefs.speed*7)*(prefs.fs/20);const px=Math.floor(acc);if(px){d.scrollTop+=px;acc-=px}}
+    lastTs=ts;
+    if(d.scrollTop+d.clientHeight>=d.scrollHeight-2){stopScroll();refreshScrollBtns();return}
+    rafId=requestAnimationFrame(step);
+  };
+  rafId=requestAnimationFrame(step);refreshScrollBtns();
+}
+function stopScroll(){S.scrolling=false;cancelAnimationFrame(rafId)}
+function refreshScrollBtns(){
+  document.querySelectorAll('[data-act=scroll]').forEach(b=>{b.classList.toggle('on',S.scrolling);b.innerHTML=ic(S.scrolling?'pause':(b.closest('.pbar')?'scroll':'play'),b.closest('.pbar')?'':'sm')});
+}
+// ---- perf ----
+let wakeLock=null,wakeWarned=false;
+let nsVideo=null;
+async function requestWake(){
+  try{if('wakeLock' in navigator&&window.isSecureContext){wakeLock=await navigator.wakeLock.request('screen');return true}}catch(e){}
+  // fallback for http:// on the Wi-Fi: a tiny silent looping video keeps phones and tablets awake
+  try{
+    if(!nsVideo){nsVideo=document.createElement('video');nsVideo.setAttribute('playsinline','');nsVideo.setAttribute('muted','');nsVideo.muted=true;nsVideo.loop=true;nsVideo.setAttribute('aria-hidden','true');nsVideo.style.cssText='position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:0;top:0';nsVideo.src='data:video/mp4;base64,'+NOSLEEP;document.body.appendChild(nsVideo)}
+    await nsVideo.play();return true;
+  }catch(e){}
+  if(!wakeWarned){wakeWarned=true;setTimeout(()=>toast('Η οθόνη μπορεί να σβήσει. Αύξησε τον χρόνο αδράνειας στις ρυθμίσεις της συσκευής.'),900)}
+  return false;
+}
+document.addEventListener('visibilitychange',()=>{if(S.perf&&document.visibilityState==='visible'&&wakeLock===null)requestWake()});
+function enterPerf(){
+  S.perf=true;document.body.classList.add('perf');document.body.classList.remove('uihidden');
+  applyTheme();requestWake();
+  try{const el=document.documentElement;el.requestFullscreen&&el.requestFullscreen().catch(()=>{})}catch(e){}
+  renderDetail(true);$('#detail').focus({preventScroll:true});
+}
+function exitPerf(){
+  const wasCue=S.cueMode;
+  S.perf=false;S.cueMode=false;if(wasCue&&document.body.dataset.size!=='l')setPane('list');stopScroll();document.body.classList.remove('perf','uihidden');
+  try{wakeLock&&wakeLock.release&&wakeLock.release()}catch(e){}wakeLock=null;try{nsVideo&&nsVideo.pause()}catch(e){}
+  try{document.fullscreenElement&&document.exitFullscreen().catch(()=>{})}catch(e){}
+  applyTheme();renderDetail(true);
+}
+function cueMove(d){
+  const col=Store.cols.get(S.ctx&&S.ctx.colId);if(!col) return;
+  const n=songItems(col).length;
+  S.cueIdx[col.id]=Math.max(0,Math.min(n-1,(S.cueIdx[col.id]||0)+d));renderCueSheet();
+}
+
+const A={
+  sec(el){S.sec=el.dataset.sec;S.f={genre:'',key:'',artist:''};S.q='';renderSide();renderList(true);if(document.body.dataset.size==='s')setPane('list');else if(document.body.dataset.size==='m'&&document.body.dataset.pane==='detail')setPane('list');renderTabbar()},
+  tab(el){if(el.dataset.t==='songs'){if(S.sec.startsWith('col:')){S.sec='all';renderSide();renderList(true)}setPane('list')}else setPane('side')},
+  open(el){const col=colOf(S.sec);openSong(el.dataset.id,playList(),col?col.id:null,+el.dataset.pos)},
+  itemmenu(el){const colId=el.dataset.col||(colOf(S.sec)||{}).id;itemModal(colId,el.dataset.item)},
+  async saveItem(el){
+    const c=clone(Store.cols.get(el.dataset.col));const it=itemsOf(c).find(x=>x.i===el.dataset.item);if(!it)return;
+    const k=$('#iKey').value.trim().replace(/^H/,'B'),note=$('#iNote').value.trim();
+    if(k)it.key=k;else delete it.key;if(note)it.note=note;else delete it.note;
+    delete S.tr['i:'+it.i];closeModal();
+    await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));renderDetail(true);toast('Αποθηκεύτηκε για τη λίστα')},
+  rmItem(el){const c=clone(Store.cols.get(el.dataset.col));c.items=itemsOf(c).filter(x=>x.i!==el.dataset.item);closeModal();
+    if(S.ctx&&S.ctx.colId===c.id){const e=ctxEntry();S.ctx.list=S.ctx.list.filter(x=>x.it!==el.dataset.item);S.ctx.pos=Math.max(0,S.ctx.list.indexOf(e))}
+    Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Αφαιρέθηκε από τη λίστα')},
+  addsec(){const c=colOf(S.sec);if(c)secModal(c.id,null)},
+  editsec(el){const c=colOf(S.sec);if(c)secModal(c.id,el.dataset.item)},
+  async saveSec(el){
+    const name=$('#sName').value.trim();if(!name){$('#sName').focus();return}
+    const sub=$('#sSub').value.trim();const c=clone(Store.cols.get(el.dataset.col));const items=itemsOf(c);
+    let it=el.dataset.item&&items.find(x=>x.i===el.dataset.item);
+    if(!it){it={i:uid(),sec:name};items.push(it)}
+    it.sec=name;if(sub)it.sub=sub;else delete it.sub;
+    closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'))},
+  delSec(el){const c=clone(Store.cols.get(el.dataset.col));c.items=itemsOf(c).filter(x=>x.i!==el.dataset.item);closeModal();Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Η ενότητα σβήστηκε · τα τραγούδια της έμειναν')},
+  back(){if(S.perf){exitPerf();return}setPane('list');renderRows()},
+  newsong(el){openEditor(null,{title:el&&el.dataset?el.dataset.title:''})},
+  clearq(){S.q='';const q=$('#q');if(q){q.value='';q.focus()}renderRows()},
+  clearall(){S.q='';S.f={genre:'',key:'',artist:''};renderList(true)},
+  fav(){const s=Store.songs.get(S.songId);if(!s)return;const n=clone(s);n.fav=!n.fav;Store.songs.set(n.id,n);Store._write('songs',n).catch(()=>toast('Δεν αποθηκεύτηκε.'));Store.onChange('songs');toast(n.fav?'Στα αγαπημένα':'Αφαιρέθηκε από τα αγαπημένα')},
+  edit(){const s=Store.songs.get(S.songId);if(s){if(S.perf)exitPerf();openEditor(s)}},
+  cancelEdit(){cancelEditor(false)},
+  saveEdit(){saveEditor()},
+  edtab(el){S.edit.showPrev=el.dataset.p==='1';$('.edbody').classList.toggle('showprev',S.edit.showPrev);document.querySelectorAll('.edtabs button').forEach(b=>b.classList.toggle('on',b===el));if(S.edit.showPrev)updatePreview()},
+  tgGenre(el){const E=S.edit;const g=el.dataset.g;E.draft.genres=E.draft.genres||[];const on=E.draft.genres.includes(g);E.draft.genres=on?E.draft.genres.filter(x=>x!==g):E.draft.genres.concat(g);el.classList.toggle('on',!on);el.setAttribute('aria-pressed',!on);E.dirty=true},
+  tr(el){const s=Store.songs.get(S.songId);if(!s)return;let n=curShift(s)+(+el.dataset.d);if(n>11)n-=12;if(n<-11)n+=12;S.tr[trSlot(s)]=n;renderDetail(true)},
+  tr0(){const s=Store.songs.get(S.songId);if(!s)return;S.tr[trSlot(s)]=defShift(s);renderDetail(true)},
+  async keeptr(){const s=Store.songs.get(S.songId);if(!s)return;const n=curShift(s);const flat=preferFlat(s,n);
+    const cx=ctxInfo();
+    if(cx&&cx.it){ // remember the key for this list position only; the song itself stays as it is
+      const c=clone(cx.col);const it=itemsOf(c).find(x=>x.i===cx.it.i);const bk=baseKey(s);
+      if(n===0&&s.key) delete it.key; else it.key=bk?trKey(bk,n,flat):it.key;
+      delete S.tr['i:'+it.i];await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));renderDetail(true);
+      toast(`Στη «${cx.col.name}» θα ανοίγει σε ${it.key||s.key}`);return}
+    if(!n)return;
+    confirmFn=async()=>{const prev=clone(s);const ns=clone(s);ns.lines=ns.lines.map(L=>L.k==='l'?Object.assign({},L,{s:L.s.map(([c,t])=>[trChord(c,n,flat),t])}):L);ns.key=trKey(s.key,n,flat);S.tr[s.id]=0;
+      // lists that had their own key keep sounding the same
+      await Store.addVersion(prev).catch(()=>{});await Store.saveSong(ns);toast('Ο νέος τόνος αποθηκεύτηκε')};
+    openModal(`${dhead('Αλλαγή τόνου μόνιμα;')}<div class="dbody"><p style="margin:0">Τα ακόρντα θα γραφτούν στον νέο τόνο${s.key?` (${esc(s.key)} → ${esc(trKey(s.key,n,flat))})`:''}. Η τωρινή μορφή μένει στο ιστορικό εκδόσεων.</p></div><div class="dfoot"><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="confirmOk">Αποθήκευση τόνου</button></div>`)},
+  fs(el){prefs.fs=Math.max(14,Math.min(48,prefs.fs+(+el.dataset.d)));savePrefs();document.querySelectorAll('.sheet,.cuesheet').forEach(x=>x.style.setProperty('--fs',prefs.fs+'px'));S.cueMode?renderCueSheet():renderDetail(true)},
+  scroll(){S.scrolling?stopScroll():startScroll();refreshScrollBtns();if(S.scrolling&&S.perf)setTimeout(()=>{if(S.scrolling)document.body.classList.add('uihidden')},1800)},
+  speed(el){prefs.speed=Math.max(1,Math.min(15,prefs.speed+(+el.dataset.d)));savePrefs();renderDetail(true)},
+  perf(){enterPerf()},
+  perfx(){exitPerf()},
+  prev(){go(-1)},next(){go(1)},
+  tocol(){toColModal(S.songId)},
+  tcCreate(el){const inp=$('#tcNew');const name=inp.value.trim();if(!name){inp.focus();return}const c={id:uid(),name,ordered:true,mode:'full',parent:null,items:[{i:uid(),s:el.dataset.id}],createdAt:now()};Store.saveCol(c);closeModal();toColModal(el.dataset.id);toast('Δημιουργήθηκε η «'+name+'»')},
+  versions(){versionsModal(S.songId)},
+  async restoreV(el){const v=(versionsModal.cache||[]).find(x=>x.id===el.dataset.vid);const s=Store.songs.get(S.songId);if(!v||!s)return;await Store.addVersion(s).catch(()=>{});const ns=Object.assign(clone(v.data),{id:s.id,fav:s.fav,openedAt:s.openedAt});closeModal();await Store.saveSong(ns);toast('Επαναφέρθηκε η έκδοση της '+fmtDate(v.savedAt))},
+  exportsong(){exportSongModal(S.songId)},
+  async exp(el){const s=Store.songs.get(S.songId);if(!s)return;const f=el.dataset.f;
+    if(f==='copy'){try{await navigator.clipboard.writeText(songAsText(s));toast('Αντιγράφηκε')}catch(e){saveFile(safeName(s.title)+'.txt',songAsText(s))}return}
+    const ok=await saveFile(safeName(s.title)+(f==='cho'?'.cho':'.txt'),f==='cho'?songAsChordPro(s):songAsText(s));if(ok){closeModal();toast('Το αρχείο αποθηκεύτηκε')}},
+  delsong(){const s=Store.songs.get(S.songId);if(!s)return;confirmDlg('Διαγραφή τραγουδιού;',`Το «${s.title}» θα σβηστεί από τη βιβλιοθήκη και από όλες τις συλλογές.`,'Διαγραφή',async()=>{const id=s.id;if(S.perf)exitPerf();S.songId=null;if(document.body.dataset.size!=='l')setPane('list');await Store.deleteSong(id).catch(()=>toast('Δεν σβήστηκε. Δοκίμασε ξανά.'));renderDetail(true);toast('Διαγράφηκε')})},
+  async confirmOk(){const f=confirmFn;confirmFn=null;closeModal();if(f)await f()},
+  closeModal(){closeModal()},
+  newcol(){colModal(null)},
+  editcol(){const c=colOf(S.sec);if(c)colModal(c)},
+  async saveColModal(el){
+    const name=$('#cName').value.trim();if(!name){$('#cErr').textContent='Γράψε όνομα.';$('#cName').focus();return}
+    const id=el.dataset.id;const ordered=document.querySelector('input[name=cOrd]:checked').value==='1';const mode=document.querySelector('input[name=cMode]:checked').value;const pe=$('#cParent');const parent=pe&&pe.value?pe.value:null;
+    const c=id?clone(Store.cols.get(id)):{id:uid(),items:[],createdAt:now()};
+    const notes=($('#cNotes')||{value:''}).value.trim();
+    Object.assign(c,{name,ordered,mode,parent,notes});
+    if(!id&&el.dataset.add) c.items=[{i:uid(),s:el.dataset.add}];
+    closeModal();S.sec='col:'+c.id;
+    await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));
+    renderSide();renderList(true);if(document.body.dataset.size==='s')setPane('list');toast(id?'Αποθηκεύτηκε':'Η συλλογή δημιουργήθηκε');
+  },
+  delcol(){const c=colOf(S.sec);if(!c)return;confirmDlg('Διαγραφή συλλογής;',`Η «${c.name}» θα σβηστεί. Τα τραγούδια μένουν στη βιβλιοθήκη.`,'Διαγραφή',async()=>{S.sec='all';await Store.deleteCol(c.id).catch(()=>toast('Δεν σβήστηκε.'));renderAll();toast('Η συλλογή διαγράφηκε')})},
+  async exportcol(){const c=colOf(S.sec);if(!c)return;
+    // a running order (title · key · note) followed by the full songs
+    let num=0;const order=[],full=[];
+    for(const it of itemsOf(c)){
+      if(it.sec!=null){num=0;order.push('\n['+it.sec+(it.sub?' · '+it.sub:'')+']');continue}
+      const s=Store.songs.get(it.s);if(!s)continue;num++;const k=itemKey(it,s);
+      order.push((c.ordered?num+'. ':'· ')+s.title+(k?'  ·  '+k:'')+(it.note?'  ('+it.note+')':''));
+      if((s.lines||[]).length) full.push(songAsText(it.key&&it.key!==s.key?Object.assign({},s,{key:it.key+' (στο τραγούδι: '+s.key+')'}):s));
+    }
+    const txt=c.name+'\n'+'='.repeat(Math.min(40,c.name.length))+'\n'+(c.notes?'\n'+c.notes+'\n':'')+order.join('\n')+(full.length?'\n\n========================================\n\n'+full.join('\n\n----------------------------------------\n\n'):'')+'\n';const ok=await saveFile(safeName(c.name)+'.txt',txt);if(ok){closeModal();toast('Η συλλογή εξήχθη')}},
+  colmode(el){const c=colOf(S.sec);if(!c)return;const n=clone(c);n.mode=el.dataset.mode;Store.saveCol(n).catch(()=>toast('Δεν αποθηκεύτηκε.'))},
+  pickcol(){const c=colOf(S.sec);if(c)pickModal(c.id)},
+  pkSave(){pickModal.save&&pickModal.save()},
+  playcol(){const c=colOf(S.sec);if(!c)return;const list=playList();if(!list.length)return;
+    if(c.mode==='cue'){S.ctx={list,colId:c.id,pos:0};S.edit=null;S.cueMode=true;S.songId=null;S.cueIdx[c.id]=S.cueIdx[c.id]||0;if(document.body.dataset.size!=='l')setPane('detail');enterPerf();renderCueSheet()}
+    else{openSong(list[0].s,list,c.id,0);enterPerf()}},
+  cuepick(el){const c=Store.cols.get(S.ctx.colId);S.cueIdx[c.id]=+el.dataset.i;renderCueSheet()},
+  cue(el){cueMove(+el.dataset.d)},
+  theme(){prefs.theme={auto:'light',light:'dark',dark:'auto'}[prefs.theme];savePrefs();applyTheme();renderSide()},
+  backup(){backupModal()},
+  async doBackup(){const d=new Date();const name='mysongbook-backup-'+d.toISOString().slice(0,10)+'.json';const data=JSON.stringify(Object.assign({app:'My Songbook',format:1,exportedAt:d.toISOString()},Store._dump()),null,1);const ok=await saveFile(name,data);if(ok){closeModal();toast('Το αντίγραφο αποθηκεύτηκε')}},
+  doRestore(){$('#fileIn').click()},
+  ghsetup(){ghModal()},
+  async ghSave(el){
+    const err=$('#ghErr');err.textContent='';
+    const cfg=Object.assign({branch:'main',api:'https://api.github.com'},lsGet(GH_KEY,{})||{},{owner:$('#ghOwner').value.trim().replace(/^@/,''),repo:$('#ghRepo').value.trim(),token:$('#ghToken').value.trim()});
+    if(!cfg.owner||!cfg.repo||!cfg.token){err.textContent='Συμπλήρωσε και τα τρία.';return}
+    el.disabled=true;el.textContent='Έλεγχος…';
+    try{
+      const repo=await GH.api('GET','',null,{cfg});
+      if(!repo.private){err.textContent='Το repo είναι δημόσιο: τα τραγούδια σου θα φαίνονται σε όλους. Κάν’ το ιδιωτικό στις ρυθμίσεις του στο GitHub.';el.disabled=false;el.textContent='Σύνδεση';return}
+      cfg.branch=repo.default_branch||'main';
+      try{await GH.api('GET','/git/ref/heads/'+encodeURIComponent(cfg.branch),null,{cfg})}
+      catch(e){if(e.status===404||e.status===409){err.textContent='Το repo είναι εντελώς άδειο. Στο GitHub πάτα «Add a README» και ξαναδοκίμασε.';el.disabled=false;el.textContent='Σύνδεση';return}throw e}
+    }catch(e){
+      err.textContent=e.status===401?'Το token δεν δουλεύει. Έλεγξε ότι το αντέγραψες ολόκληρο.':e.status===404||e.status===403?'Δεν βρίσκω το repo με αυτό το token. Έλεγξε το όνομα και ότι το token έχει πρόσβαση σε αυτό.':'Δεν φτάνω στο GitHub. Έλεγξε τη σύνδεση.';
+      el.disabled=false;el.textContent='Σύνδεση';return}
+    const seed=$('#ghSeed');if(seed&&seed.checked){try{sessionStorage.setItem('msb-gh-seed',JSON.stringify(Store._dump()))}catch(e){}}
+    lsSet(GH_KEY,cfg);location.reload();
+  },
+  ghOff(){confirmDlg('Αποσύνδεση από το GitHub;','Σε αυτή τη συσκευή σβήνονται το token και το τοπικό αντίγραφο. Τα τραγούδια στο GitHub μένουν όπως είναι.','Αποσύνδεση',()=>{
+    if(Store.outbox.length&&!window.confirm(Store.outbox.length+' αλλαγές δεν έχουν ανέβει ακόμα και θα χαθούν. Συνέχεια;'))return;
+    try{localStorage.removeItem(GH.stateKey());localStorage.removeItem(Store._ghOutboxKey())}catch(e){}
+    try{localStorage.removeItem(GH_KEY)}catch(e){}location.reload()})},
+  doLiveSetlist(){$('#lsIn').click()},
+  async lsGo(el){
+    const plan=lsModal.plan;if(!plan)return;el.disabled=true;el.textContent='Εισαγωγή…';
+    try{
+      const r=await Store.importAll({songs:plan.songs,collections:plan.cols});
+      closeModal();lsModal.plan=null;
+      const first=plan.cols.find(c=>c.parent);S.sec=first?'col:'+first.id:'all';S.q='';S.f={genre:'',key:'',artist:''};
+      renderAll();if(document.body.dataset.size==='s')setPane('list');
+      toast(`Μπήκαν ${plan.stats.programs} προγράμματα και ${r.songs} τραγούδια`);
+    }catch(e){el.disabled=false;el.textContent='Εισαγωγή';toast('Δεν ολοκληρώθηκε. Δοκίμασε ξανά.');console.warn(e)}
+  },
+  copyBox(){const t=$('#copyBox');t.select();navigator.clipboard.writeText(t.value).then(()=>toast('Αντιγράφηκε'),()=>toast('Επίλεξε το κείμενο και αντίγραψέ το'))},
+  async sample(){
+    const text=`Am                Dm
+Μήλο μου κόκκινο, ρόιδο βαμμένο
+E                              Am
+γιατί με μάρανες τον πικραμένο   | 2x`;
+    const r=parseText(text);
+    const s={id:uid(),title:'Μήλο μου κόκκινο',artist:'Παραδοσιακό',key:'Am',genres:['Παραδοσιακό'],tags:['δείγμα'],rhythm:'Συρτό',timeSig:'',capo:'',notes:'Δείγμα: σβήσ’ το όποτε θες.',lines:r.lines,fav:false,createdAt:now()};
+    const t={id:uid(),title:'Τραγούδι μόνο με τίτλο',artist:'',key:'',genres:[],tags:['δείγμα'],rhythm:'',timeSig:'',capo:'',notes:'',lines:[],fav:false,createdAt:now()};
+    await Store.saveSong(s);await Store.saveSong(t);openSong(s.id,playList(),(colOf(S.sec)||{}).id);toast('Προστέθηκαν δύο δείγματα');
+  }
+};
+
+/* =====================================================================
+   EVENTS
+   ===================================================================== */
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');
+  if(el){
+    if(el.closest('.handle')) return;
+    const f=A[el.dataset.act];
+    if(f){e.preventDefault();f(el,e)}
+    return;
+  }
+  if(S.perf&&e.target.closest('#detail')&&!e.target.closest('button')) document.body.classList.toggle('uihidden');
+});
+document.addEventListener('input',e=>{
+  if(e.target.id==='q'){S.q=e.target.value;renderRows();return}
+  if(S.edit&&e.target.closest('.ed')) editorInput(e);
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.f){S.f[t.dataset.f]=t.value;renderList(true);return}
+  if(t.hasAttribute('data-sort')){S.sort=t.value;renderRows();return}
+  if(S.edit&&t.id==='edKey') editorInput(e);
+});
+document.addEventListener('paste',editorPaste);
+document.addEventListener('keydown',e=>{
+  const t=e.target;const typing=t.matches&&t.matches('input,textarea,select');
+  if(t.id==='edNewGenre'&&e.key==='Enter'){e.preventDefault();const v=t.value.trim();if(v){addGenre(v);t.value='';const wrap=$('#edGenres');const b=document.createElement('button');b.type='button';b.className='tog on';b.dataset.act='tgGenre';b.dataset.g=v;b.textContent=v;wrap.insertBefore(b,t)}return}
+  if(e.key==='Escape'){if(!$('#modal').hidden){closeModal();return}if(S.perf){exitPerf();return}if(S.edit){cancelEditor(false);return}}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&S.edit){e.preventDefault();saveEditor();return}
+  if(typing||!$('#modal').hidden) return;
+  if(e.key==='/'){const q=$('#q');if(q&&q.offsetParent){e.preventDefault();q.focus()}return}
+  // drag keyboard reorder
+  if(t.classList&&t.classList.contains('handle')&&e.altKey&&(e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();moveItem(t.dataset.drag,e.key==='ArrowUp'?-1:1);return}
+  if(t.classList&&t.classList.contains('row')&&e.key==='Enter'){t.click();return}
+  if(S.cueMode){if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();cueMove(1)}else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();cueMove(-1)}return}
+  if(!S.songId||S.edit) return;
+  const d=$('#detail');
+  if(e.key==='ArrowRight'){e.preventDefault();go(1)}
+  else if(e.key==='ArrowLeft'){e.preventDefault();go(-1)}
+  else if(e.key==='PageDown'||(e.key===' '&&S.perf)){e.preventDefault();d.scrollBy({top:d.clientHeight*.8,behavior:'smooth'})}
+  else if(e.key==='PageUp'){e.preventDefault();d.scrollBy({top:-d.clientHeight*.8,behavior:'smooth'})}
+});
+// file restore
+$('#fileIn').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f) return;
+  try{const data=JSON.parse(await f.text());if(!data||!Array.isArray(data.songs)) throw new Error('format');
+    closeModal();toast('Επαναφορά…');const r=await Store.importAll(data);toast(`Επαναφέρθηκαν ${r.songs} τραγούδια και ${r.cols} συλλογές`)}
+  catch(err){toast('Το αρχείο δεν είναι αντίγραφο του My Songbook.')}
+});
+$('#lsIn').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f) return;
+  let plan;
+  try{plan=lsPlan(lsParse(await f.text()))}
+  catch(err){toast('Δεν βρήκα λίστες Live Setlist σε αυτό το αρχείο.');console.warn(err);return}
+  closeModal();lsModal(plan);
+});
+// swipe in perf
+let tx=0,ty=0,tt=0;
+$('#detail').addEventListener('touchstart',e=>{if(!S.perf)return;const p=e.changedTouches[0];tx=p.clientX;ty=p.clientY;tt=Date.now()},{passive:true});
+$('#detail').addEventListener('touchend',e=>{if(!S.perf)return;const p=e.changedTouches[0];const dx=p.clientX-tx,dy=p.clientY-ty;if(Date.now()-tt<600&&Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*1.6){S.cueMode?cueMove(dx<0?1:-1):go(dx<0?1:-1)}},{passive:true});
+// manual scroll pauses nothing; wheel during autoscroll just adds
+// ---- drag to reorder ----
+function moveItem(id,delta){
+  const c=colOf(S.sec);if(!c) return;const n=clone(c);const items=itemsOf(n);const i=items.findIndex(x=>x.i===id);const j=i+delta;if(i<0||j<0||j>=items.length) return;
+  const [moved]=items.splice(i,1);items.splice(j,0,moved);Store.saveCol(n).then(()=>{const h=document.querySelector(`.handle[data-drag="${id}"]`);h&&h.focus()},()=>toast('Δεν αποθηκεύτηκε.'));
+  setTimeout(()=>{const h=document.querySelector(`.handle[data-drag="${id}"]`);h&&h.focus()},30);
+}
+let drag=null;
+document.addEventListener('pointerdown',e=>{
+  const h=e.target.closest('.handle');if(!h) return;
+  e.preventDefault();const row=h.closest('.row');const list=$('#list');
+  drag={id:h.dataset.drag,row,list,startY:e.clientY,offset:0,pid:e.pointerId};
+  row.classList.add('dragging');h.setPointerCapture(e.pointerId);
+});
+document.addEventListener('pointermove',e=>{
+  if(!drag||e.pointerId!==drag.pid) return;
+  const {row,list}=drag;
+  const rows=[...list.querySelectorAll('.row')].filter(r=>r!==row);
+  const y=e.clientY;
+  let before=null;for(const r of rows){const b=r.getBoundingClientRect();if(y<b.top+b.height/2){before=r;break}}
+  if(before!==row.nextSibling) list.insertBefore(row,before);
+  const lb=list.getBoundingClientRect();if(y<lb.top+40)list.scrollTop-=8;else if(y>lb.bottom-40)list.scrollTop+=8;
+});
+document.addEventListener('pointerup',e=>{
+  if(!drag||e.pointerId!==drag.pid) return;
+  const {row,list}=drag;row.classList.remove('dragging');
+  const order=[...list.querySelectorAll('.row[data-item]')].map(r=>r.dataset.item);drag=null;
+  const c=colOf(S.sec);if(!c) return;
+  const by=new Map(itemsOf(c).map(x=>[x.i,x]));
+  const n=clone(c);n.items=order.filter(i=>by.has(i)).map(i=>by.get(i)).concat(itemsOf(c).filter(x=>!order.includes(x.i)));
+  if(n.items.map(x=>x.i).join()!==itemsOf(c).map(x=>x.i).join()) Store.saveCol(n).catch(()=>toast('Δεν αποθηκεύτηκε η σειρά.'));
+  else renderRows();
+});
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+Store.onChange=what=>{
+  if(drag) return;
+  if(what==='status'){renderSide();return}
+  renderSide();
+  if(what==='cols'||what==='all'){
+    const q=document.activeElement&&document.activeElement.id==='q';
+    renderList(true);if(q){const el=$('#q');el.focus();el.setSelectionRange(el.value.length,el.value.length)}
+  } else renderRows();
+  if(S.cueMode) renderCueSheet(); else renderDetail(false);
+  renderTabbar();
+};
+layout();applyTheme();
+if(window.innerWidth<760) document.body.dataset.pane='list';
+renderAll();
+Store.init().then(()=>{renderAll();if(Store.mode==='setup')ghModal()});
+</script>
+</body>
+</html>
