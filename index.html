@@ -67,7 +67,26 @@ body.perf #detail{display:block!important}
 .navitem{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:9px 10px;border-radius:8px;text-align:left;color:var(--text);min-height:40px}
 .navitem:hover{background:color-mix(in srgb,var(--text) 6%,transparent)}
 .navitem.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
-.navitem .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navitem .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25;overflow-wrap:anywhere}
+.navrow{display:flex;align-items:center}
+.navrow .navitem{flex:1;min-width:0}
+.fold{width:24px;height:32px;flex:none;border:0;background:none;color:var(--faint);display:grid;place-items:center;border-radius:6px;padding:0}
+.fold:hover{color:var(--text);background:color-mix(in srgb,var(--text) 6%,transparent)}
+.fold svg.i{transition:transform .15s}
+.fold.open svg.i{transform:rotate(90deg)}
+.foldsp{width:24px;flex:none}
+.fsum{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.folderlist{padding-top:10px}
+.frow{min-height:72px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;align-items:center}
+.frow:hover{border-color:var(--line2)}
+.frow .ficon{width:38px;height:38px;border-radius:10px;background:var(--accent-weak);color:var(--accent);display:grid;place-items:center;flex:none}
+.frow .tt{font-size:16px;white-space:normal}
+.frow .ar{white-space:normal}
+.frow .fnotes{font-size:12.5px;color:var(--note);margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fplay{flex:none}
+.addsub{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;border:1px dashed var(--line2);border-radius:12px;background:none;color:var(--muted);font-weight:600;margin-top:4px}
+.addsub:hover{color:var(--accent);border-color:var(--accent)}
+@media (max-width:420px){.fplay span{display:none}.fplay{width:40px;padding:0}}
 .navitem .cnt{font-size:12.5px;color:var(--faint);font-variant-numeric:tabular-nums}
 .navitem.on .cnt{color:var(--accent)}
 .sidehead{display:flex;align-items:center;justify-content:space-between;margin:18px 4px 4px 10px;font-size:12.5px;font-weight:600;color:var(--muted)}
@@ -1039,12 +1058,17 @@ const baseKey=s=>s.key||guessKey(s.lines||[]);
 const DEFAULT_GENRES=['Λαϊκό','Ρεμπέτικο','Έντεχνο','Ελληνικό rock','Παραδοσιακό','Νησιώτικο'];
 function allGenres(){const s=new Set(DEFAULT_GENRES);for(const x of Store.songs.values())(x.genres||[]).forEach(g=>s.add(g));return [...s]}
 function distinct(field){const s=new Set();for(const x of Store.songs.values()) if(x[field]) s.add(x[field]);return [...s].sort(collator.compare)}
-function colTree(){
+// opts.collapsed: skip what is inside folders the sidebar has closed
+function colTree(opts={}){
   const cols=[...Store.cols.values()].sort((a,b)=>collator.compare(a.name,b.name));
   const by=new Map();cols.forEach(c=>{const p=c.parent&&Store.cols.has(c.parent)?c.parent:'';if(!by.has(p))by.set(p,[]);by.get(p).push(c)});
-  const out=[];const walk=(p,d,seen)=>{(by.get(p)||[]).forEach(c=>{if(seen.has(c.id))return;seen.add(c.id);out.push({c,d});walk(c.id,d+1,seen)})};
+  const closed=new Set(opts.collapsed?prefs.closed||[]:[]);
+  const out=[];const walk=(p,d,seen)=>{(by.get(p)||[]).forEach(c=>{if(seen.has(c.id))return;seen.add(c.id);const kids=(by.get(c.id)||[]).length;out.push({c,d,kids});if(!closed.has(c.id))walk(c.id,d+1,seen)})};
   walk('',0,new Set());return out;
 }
+const childrenOf=id=>[...Store.cols.values()].filter(c=>c.parent===id).sort((a,b)=>collator.compare(a.name,b.name));
+// a folder holds lists, not songs: it gets its own view
+const isFolder=c=>!!c&&childrenOf(c.id).length>0&&!songItems(c).length;
 
 /* =====================================================================
    RENDER: SIDEBAR
@@ -1067,7 +1091,11 @@ function renderSide(){
     setup:['warn','Σύνδεσε το GitHub για να ξεκινήσεις.']
   }[Store.status]||['','—'];
   const nav=(sec,icon,label,cnt)=>`<button class="navitem ${S.sec===sec?'on':''}" data-act="sec" data-sec="${sec}">${ic(icon)}<span class="lbl">${label}</span>${cnt!=null?`<span class="cnt">${cnt}</span>`:''}</button>`;
-  const tree=colTree();
+  const tree=colTree({collapsed:true});const closed=new Set(prefs.closed||[]);
+  const colRow=({c,d,kids})=>{
+    const on=S.sec==='col:'+c.id,n=songItems(c).length;
+    return `<div class="navrow" style="padding-left:${d*16}px">${kids?`<button class="fold ${closed.has(c.id)?'':'open'}" data-act="foldtoggle" data-id="${c.id}" aria-label="${closed.has(c.id)?'Άνοιγμα':'Κλείσιμο'} φακέλου" aria-expanded="${!closed.has(c.id)}">${ic('right','sm')}</button>`:'<span class="foldsp"></span>'}<button class="navitem ${on?'on':''}" data-act="sec" data-sec="col:${c.id}">${ic(kids&&!n?'folder':c.ordered?'listmusic':'folder')}<span class="lbl">${esc(c.name)}</span>${n?`<span class="cnt">${n}</span>`:''}</button></div>`;
+  };
   $('#side').innerHTML=`
     <div class="brand"><span class="logo">${ic('music')}</span>My Songbook</div>
     <div class="sidescroll">
@@ -1075,7 +1103,7 @@ function renderSide(){
       ${nav('fav','star','Αγαπημένα',favN)}
       ${nav('recent','clock','Πρόσφατα')}
       <div class="sidehead"><span>Συλλογές</span><button class="ibtn sm" data-act="newcol" title="Νέα συλλογή" aria-label="Νέα συλλογή">${ic('plus')}</button></div>
-      ${tree.length?tree.map(({c,d})=>`<button class="navitem ${S.sec==='col:'+c.id?'on':''}" data-act="sec" data-sec="col:${c.id}" style="padding-left:${10+d*16}px">${ic(c.ordered?'listmusic':'folder')}<span class="lbl">${esc(c.name)}</span><span class="cnt">${songItems(c).length||(tree.some(x=>x.c.parent===c.id)?'':0)}</span></button>`).join(''):`<div class="muted" style="font-size:13px;padding:6px 10px 0">Φτιάξε συλλογές για setlist, μαγαζιά ή είδη.</div>`}
+      ${tree.length?tree.map(colRow).join(''):`<div class="muted" style="font-size:13px;padding:6px 10px 0">Φτιάξε συλλογές για setlist, μαγαζιά ή είδη.</div>`}
     </div>
     <div class="sidefoot">
       <div class="footrow">
@@ -1099,7 +1127,8 @@ function renderList(full=true){
   const col=colOf(S.sec);
   if(S.sec.startsWith('col:')&&!col&&Store.loaded.cols){S.sec='all'}
   const pane=$('#listPane');
-  if(full||!pane.querySelector('.list')){
+  if(isFolder(col)){renderFolder(col,pane);return}
+  if(full||!pane.querySelector('.list')||pane.querySelector('.folderlist')){
     const genres=allGenres(),artists=distinct('artist'),keys=ALLKEYS.filter(k=>[...Store.songs.values()].some(s=>s.key===k));
     pane.innerHTML=`
       <div class="lhead">
@@ -1124,6 +1153,32 @@ function renderList(full=true){
       <div class="list" id="list"></div>`;
   }
   renderRows();
+}
+// a folder (e.g. «Φάρος · Χειμώνας»): its lists, each with its size and a play button
+function renderFolder(col,pane){
+  const kids=childrenOf(col.id);
+  const total=kids.reduce((n,c)=>n+songItems(c).length,0);
+  const row=c=>{
+    const n=songItems(c).length,secs=itemsOf(c).filter(x=>x.sec!=null).length,sub=childrenOf(c.id).length;
+    const bits=[sub&&!n?`${sub} λίστ${sub===1?'α':'ες'}`:`${n} τραγούδι${n===1?'':'α'}`];
+    if(secs) bits.push(`${secs} ενότητ${secs===1?'α':'ες'}`);
+    if(n) bits.push(c.mode==='cue'?'τίτλος–τόνος':'πλήρη');
+    return `<div class="row frow" data-act="sec" data-sec="col:${c.id}" role="button" tabindex="0">
+      <span class="ficon">${ic(sub&&!n?'folder':'listmusic')}</span>
+      <div class="main"><div class="tt">${esc(c.name)}</div><div class="ar">${bits.join(' · ')}</div>${c.notes?`<div class="fnotes">${esc(c.notes)}</div>`:''}</div>
+      ${n?`<button class="btn sm fplay" data-act="playsub" data-col="${c.id}" aria-label="Παίξιμο: ${esc(c.name)}">${ic('play','sm')}<span>Παίξιμο</span></button>`:''}
+    </div>`;
+  };
+  pane.innerHTML=`
+    <div class="lhead">
+      <div class="ltitle"><h2>${esc(col.name)}</h2><button class="ibtn" data-act="editcol" title="Ρυθμίσεις φακέλου" aria-label="Ρυθμίσεις φακέλου">${ic('settings')}</button></div>
+      <div class="fsum">${ic('folder','sm')}${kids.length} λίστ${kids.length===1?'α':'ες'} · ${total} θέσεις</div>
+      ${col.notes?`<div class="colnotes">${esc(col.notes)}</div>`:''}
+    </div>
+    <div class="list folderlist">
+      ${kids.map(row).join('')}
+      <button class="addsub" data-act="newsubcol" data-parent="${col.id}">${ic('plus','sm')}Νέα λίστα σε αυτόν τον φάκελο</button>
+    </div>`;
 }
 function renderRows(){
   const el=$('#list');if(!el) return;
@@ -1448,19 +1503,19 @@ function confirmDlg(title,text,okLabel,fn){
   openModal(`${dhead(esc(title))}<div class="dbody"><p style="margin:0">${esc(text)}</p></div><div class="dfoot"><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn danger solid" data-act="confirmOk">${esc(okLabel)}</button></div>`);
 }
 function colModal(col,opts={}){
-  const c=col||{name:'',ordered:true,mode:'full',parent:null};
+  const c=col||{name:'',ordered:true,mode:'full',parent:opts.parent||null};
   const others=colTree().filter(x=>!col||x.c.id!==col.id);
-  openModal(`${dhead(col?'Ρυθμίσεις συλλογής':'Νέα συλλογή')}
+  openModal(`${dhead(isFolder(col)?'Ρυθμίσεις φακέλου':col?'Ρυθμίσεις συλλογής':opts.parent?'Νέα λίστα':'Νέα συλλογή')}
     <div class="dbody">
       <div class="field"><label for="cName">Όνομα</label><input id="cName" value="${esc(c.name)}" placeholder="π.χ. Παρασκευή στο μαγαζί" autofocus></div>
-      <div class="field"><label>Σειρά</label><div class="radios">
+      ${isFolder(col)?'':`<div class="field"><label>Σειρά</label><div class="radios">
         <label class="radio"><input type="radio" name="cOrd" value="1" ${c.ordered?'checked':''}><div><b>Με σειρά (setlist)</b><div class="d">Ορίζεις τη σειρά με σύρσιμο και παίζεις από την αρχή ως το τέλος.</div></div></label>
         <label class="radio"><input type="radio" name="cOrd" value="0" ${!c.ordered?'checked':''}><div><b>Χωρίς σειρά</b><div class="d">Ομάδα τραγουδιών, π.χ. «Νησιώτικα». Ταξινόμηση αλφαβητικά.</div></div></label>
       </div></div>
       <div class="field"><label>Εμφάνιση στο παίξιμο</label><div class="radios">
         <label class="radio"><input type="radio" name="cMode" value="full" ${c.mode!=='cue'?'checked':''}><div><b>Πλήρη τραγούδια</b><div class="d">Στίχοι και ακόρντα, με επόμενο και προηγούμενο.</div></div></label>
         <label class="radio"><input type="radio" name="cMode" value="cue" ${c.mode==='cue'?'checked':''}><div><b>Μόνο τίτλος και τόνος</b><div class="d">Μεγάλη λίστα για τη σκηνή, χωρίς στίχους.</div></div></label>
-      </div></div>
+      </div></div>`}
       <div class="field"><label for="cNotes">Σημειώσεις</label><textarea id="cNotes" rows="3" placeholder="π.χ. ντουέτα, ποιος μπαίνει πότε, αλλαγές της βραδιάς">${esc(c.notes||'')}</textarea></div>
       ${others.length?`<div class="field"><label for="cParent">Μέσα στη συλλογή</label><select id="cParent"><option value="">— Καμία (κορυφή) —</option>${others.map(({c:o,d})=>`<option value="${o.id}" ${c.parent===o.id?'selected':''}>${'— '.repeat(d)}${esc(o.name)}</option>`).join('')}</select></div>`:''}
       <span class="err" id="cErr"></span>
@@ -1813,10 +1868,15 @@ const A={
   async confirmOk(){const f=confirmFn;confirmFn=null;closeModal();if(f)await f()},
   closeModal(){closeModal()},
   newcol(){colModal(null)},
+  newsubcol(el){colModal(null,{parent:el.dataset.parent})},
+  playsub(el){S.sec='col:'+el.dataset.col;S.q='';S.f={genre:'',key:'',artist:''};renderAll();if(document.body.dataset.size==='s')setPane('list');A.playcol()},
+  foldtoggle(el){const id=el.dataset.id;const s=new Set(prefs.closed||[]);s.has(id)?s.delete(id):s.add(id);prefs.closed=[...s];savePrefs();renderSide()},
   editcol(){const c=colOf(S.sec);if(c)colModal(c)},
   async saveColModal(el){
     const name=$('#cName').value.trim();if(!name){$('#cErr').textContent='Γράψε όνομα.';$('#cName').focus();return}
-    const id=el.dataset.id;const ordered=document.querySelector('input[name=cOrd]:checked').value==='1';const mode=document.querySelector('input[name=cMode]:checked').value;const pe=$('#cParent');const parent=pe&&pe.value?pe.value:null;
+    const id=el.dataset.id;const was=id?Store.cols.get(id):null;
+    const oEl=document.querySelector('input[name=cOrd]:checked'),mEl=document.querySelector('input[name=cMode]:checked'); // a folder has neither
+    const ordered=oEl?oEl.value==='1':!!(was&&was.ordered);const mode=mEl?mEl.value:(was&&was.mode)||'full';const pe=$('#cParent');const parent=pe&&pe.value?pe.value:null;
     const c=id?clone(Store.cols.get(id)):{id:uid(),items:[],createdAt:now()};
     const notes=($('#cNotes')||{value:''}).value.trim();
     Object.assign(c,{name,ordered,mode,parent,notes});
