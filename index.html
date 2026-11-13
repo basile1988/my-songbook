@@ -621,6 +621,10 @@ body.perf .dtop,body.perf .meta{display:none!important}
 .stagesheet .btn{align-self:center}
 .stagesheet .hint{text-align:center}
 @media (max-width:640px){.pmid{order:0;flex:0 0 auto;width:auto}.pbar{flex-wrap:nowrap;gap:6px}.pnav{flex:1 1 0;min-height:56px;font-size:14px;padding:0 10px}.pround{width:44px;height:44px}}
+/* minimal prev/next: a round arrow button, same size everywhere */
+.pnav.arrow{flex:none;width:60px;min-width:60px;height:56px;min-height:56px;padding:0;border-radius:9999px}
+.pnav.arrow svg.i{width:26px;height:26px}
+@media (max-width:640px){.pbar{justify-content:space-between}.pnav.arrow{width:56px;min-width:56px}}
 /* tablet stage: two columns, each scrolls on its own */
 body.perf.stagesplit #detail{overflow:hidden}
 .split{display:grid;grid-template-columns:minmax(280px,38%) minmax(0,1fr);height:100%;min-height:0}
@@ -1771,7 +1775,8 @@ function renderPbar(){
   if(!S.perf){pb.innerHTML='';pn.classList.remove('show');return}
   // stage bar: big labelled prev/next at the ends, a few labelled controls in the middle
   // sub: what is next/previous («Ήλιε Μου · G»), so the player sees it without leaving the lyrics
-  const nav=(act,dir,label,on,sub)=>`<button class="pnav ${dir==='prev'?'back':'fwd'}" data-act="${act}" ${act==='cue'?`data-d="${dir==='prev'?-1:1}"`:''} ${on?'':'disabled'}>${dir==='prev'?ic('left'):''}<span class="pnl"><span>${label}</span>${sub?`<small>${esc(sub)}</small>`:''}</span>${dir==='next'?ic('right'):''}</button>`;
+  // prev/next: arrow only (the list shows what comes next); the name stays as a tooltip and for screen readers
+  const nav=(act,dir,label,on,sub)=>{const t=esc(dir==='prev'?'Προηγούμενο':'Επόμενο')+(sub?': '+esc(sub):'');return `<button class="pnav arrow ${dir==='prev'?'back':'fwd'}" data-act="${act}" ${act==='cue'?`data-d="${dir==='prev'?-1:1}"`:''} ${on?'':'disabled'} aria-label="${t}" title="${t}">${ic(dir==='prev'?'left':'right')}</button>`};
   // one bar: the two big buttons at the ends, a few round ones in the middle, the rest in ⋯
   const rb=(act,inner,label,extra='')=>`<button class="pround" data-act="${act}" aria-label="${label}" title="${label}" ${extra}>${inner}</button>`;
   const srch=rb('stagesearch',ic('search'),'Αναζήτηση σε όλα τα τραγούδια');
