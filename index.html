@@ -217,7 +217,9 @@ body[data-size=m] .dtop .back,body[data-size=s] .dtop .back{display:inline-grid}
 .bigkey b.none{color:var(--faint)}
 .bigkey small{font-size:12.5px;color:var(--muted)}
 .nolyr-acts{display:flex;gap:8px;flex-wrap:wrap}
-body.perf .nolyr-acts{display:none}
+.nolyr-hint{flex-basis:100%;margin-top:0}
+a.btn{text-decoration:none}
+body.perf .nolyr-acts,body.perf .nolyr-hint{display:none}
 body.perf .nolyr{border:0;background:none;padding:0}
 body.perf .bigkey b{font-size:calc(var(--fs) * 3)}
 .mitem.danger,.mitem.danger svg.i{color:var(--danger)}
@@ -1191,6 +1193,8 @@ function renderList(full=true){
   }
   renderRows();
 }
+// kithara.to's own search, with the title (it matches without accents and case)
+const kitharaUrl=s=>'https://kithara.to/fi?query='+encodeURIComponent(String(s.title||'').replace(/['’΄`]/g,' ').trim().slice(0,40));
 // short name for a section chip: «Ζεϊμπέκικα» + «2η ΕΝΟΤΗΤΑ» → «Ζεϊμπέκικα 2»
 function secShort(it){const n=String(it.sub||'').match(/\d+/);return (it.sec||'Ενότητα')+(n?' '+n[0]:'')}
 // a folder (e.g. «Φάρος · Χειμώνας»): its lists, each with its size and a play button
@@ -1331,7 +1335,8 @@ function renderDetail(force=false){
     ${s.notes?`<div class="note"><span class="nl">Σημειώσεις</span>${esc(s.notes)}</div>`:''}
     ${!(s.lines||[]).length?`<div class="nolyr">
       <div class="bigkey"><span>Τόνος</span><b class="${itemKey(it,s)?'':'none'}">${esc(itemKey(it,s)||'—')}</b>${it&&it.key&&s.key&&it.key!==s.key?`<small>το τραγούδι είναι σε ${esc(s.key)}</small>`:''}</div>
-      <div class="nolyr-acts"><button class="btn primary" data-act="perf">${ic('max','sm')}Παίξιμο</button><button class="btn" data-act="edit">${ic('plus','sm')}Πρόσθεσε στίχους</button></div>
+      <div class="nolyr-acts"><button class="btn primary" data-act="perf">${ic('max','sm')}Παίξιμο</button><button class="btn" data-act="edit">${ic('plus','sm')}Πρόσθεσε στίχους</button><a class="btn" href="${kitharaUrl(s)}" target="_blank" rel="noopener">${ic('search','sm')}Βρες στο kithara</a></div>
+      <div class="hint nolyr-hint">Στο kithara.to αντέγραψε το τραγούδι με τα ακόρντα, γύρνα εδώ, πάτα «Πρόσθεσε στίχους» και επικόλλησε.</div>
     </div>`:''}
     ${(s.lines||[]).length?`<div class="tools">
       ${hasC?`<div class="tgroup"><span class="lab">Τόνος</span><button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus','sm')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus','sm')}</button>${n!==defShift(s)?`<button class="ibtn" data-act="tr0" title="${it&&it.key?'Πίσω στον τόνο της λίστας':'Επαναφορά τόνου'}" aria-label="Επαναφορά τόνου">${ic('undo','sm')}</button>`:''}</div>`:''}
