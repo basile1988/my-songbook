@@ -2,7 +2,7 @@
    - The page (index.html): try the network for up to 3 s so a new version arrives right away,
      otherwise open the saved copy. Each successful load refreshes the saved copy.
    - Icons and manifest: saved copy first.
-   - Everything else (GitHub API, the local server's /api) is never touched here:
+   - Everything else (the GitHub API) is never touched here:
      the app keeps its own copy of the songs and queues changes until it is back online. */
 const CACHE = 'msb-shell-v1';
 const SHELL = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon.png'];
@@ -28,7 +28,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== location.origin || url.pathname.includes('/api/')) return;
+  if (url.origin !== location.origin) return;
 
   const scope = new URL(self.registration.scope);
   const isPage = req.mode === 'navigate' || url.pathname === scope.pathname || url.pathname.endsWith('/index.html');

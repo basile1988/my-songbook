@@ -672,35 +672,16 @@ const FILE_RE=/^(songs|collections)\/([A-Za-z0-9-]{1,64})\.json$/;
 
 /* =====================================================================
    STORE — the only part that talks to storage.
-   'github': a private GitHub repo (see GH above) → every device, anywhere
-   'server': the local Python server (server.py → songbook.db in the folder)
-   'local' : the page opened straight from disk → this browser only
-   'setup' : on the web, not connected to GitHub yet
+   'github': a private GitHub repo (see GH above) → every device, anywhere, also offline
+   'setup' : not connected to GitHub yet on this device (nothing is saved)
    ===================================================================== */
-const CACHE_KEY='msb-cache-v1',LOCAL_KEY='msb-local-v1',OUTBOX_KEY='msb-outbox-v1';
+const OUTBOX_KEY='msb-outbox-v1';
 const Store={
   mode:'loading',status:'loading',songs:new Map(),cols:new Map(),
-  loaded:{songs:false,cols:false},onChange:()=>{},_chains:{},_cacheT:0,rev:0,outbox:[],pending:new Set(),info:null,progress:null,
+  loaded:{songs:false,cols:false},onChange:()=>{},_cacheT:0,outbox:[],progress:null,
   async init(){
     if(GH.config()) return this._ghInit();
-    if(/\.github\.io$/i.test(location.hostname)){this.mode='setup';this.status='setup';this.loaded={songs:true,cols:true};this.onChange('all');return}
-    const cache=lsGet(CACHE_KEY,null);
-    if(cache){this._fill(cache);this.status='cache'}
-    if(/^https?:$/.test(location.protocol)){
-      this.mode='server';this.outbox=lsGet(OUTBOX_KEY,[]);
-      const ok=await this._sync(true);
-      if(!ok){this.status=this.songs.size?'stale':'unreach';this.loaded={songs:true,cols:true};this.onChange('all')}
-      else this._flush().then(()=>this._sync(false));
-      this._api('GET','info').then(i=>{this.info=i;this.onChange('status')}).catch(()=>{});
-      setInterval(()=>{if(document.visibilityState==='visible')this._tick()},4000);
-      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')this._tick()});
-      window.addEventListener('online',()=>this._tick());
-      return;
-    }
-    this.mode='local';this.status='local';
-    const loc=lsGet(LOCAL_KEY,null);
-    if(loc) this._fill(loc); else if(!cache){this.songs=new Map();this.cols=new Map()}
-    this.loaded={songs:true,cols:true};this.onChange('all');
+    this.mode='setup';this.status='setup';this.loaded={songs:true,cols:true};this.onChange('all');
   },
   /* ---------- github ---------- */
   async _ghInit(){
@@ -817,64 +798,11 @@ const Store={
   },
   _fill(o){this.songs=new Map((o.songs||[]).map(s=>[s.id,s]));this.cols=new Map((o.collections||[]).map(c=>[c.id,c]));this.loaded={songs:true,cols:true}},
   _dump(){return {songs:[...this.songs.values()],collections:[...this.cols.values()]}},
-  _saveCache(){if(this.mode==='github'){this._ghSave();return}clearTimeout(this._cacheT);this._cacheT=setTimeout(()=>lsSet(CACHE_KEY,this._dump()),800)},
-  _persistLocal(){const d=this._dump();d.versions=lsGet(LOCAL_KEY,{}).versions||[];lsSet(LOCAL_KEY,d)},
-  _serial(key,fn){const p=(this._chains[key]||Promise.resolve()).then(fn,fn);this._chains[key]=p.catch(()=>{});return p},
-  async _api(method,path,body){
-    const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),8000);
-    try{
-      const r=await fetch('api/'+path,{method,cache:'no-store',signal:ctl.signal,headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});
-      if(!r.ok){const e=new Error('http '+r.status);e.status=r.status;throw e}
-      return r.status===204?null:r.json();
-    }finally{clearTimeout(t)}
-  },
-  async _sync(full){
-    try{
-      const d=await this._api('GET','sync?since='+(full?0:this.rev));
-      let changed=!!full;
-      if(full){
-        const keepS=new Map(),keepC=new Map();
-        for(const id of this.pending){const [k,i]=id.split('/');if(k==='songs'&&this.songs.has(i))keepS.set(i,this.songs.get(i));if(k==='collections'&&this.cols.has(i))keepC.set(i,this.cols.get(i))}
-        this.songs=new Map();this.cols=new Map();
-        d.songs.forEach(s=>this.songs.set(s.id,s));d.collections.forEach(c=>this.cols.set(c.id,c));
-        keepS.forEach((v,k)=>this.songs.set(k,v));keepC.forEach((v,k)=>this.cols.set(k,v));
-        for(const op of this.outbox){const [k,i]=op.p.split('/');if(op.m==='PUT'){if(k==='songs')this.songs.set(i,Object.assign({},op.b,{id:i}));if(k==='collections')this.cols.set(i,Object.assign({},op.b,{id:i}))}else{if(k==='songs')this.songs.delete(i);if(k==='collections')this.cols.delete(i)}}
-      }else{
-        for(const s of d.songs){if(this.pending.has('songs/'+s.id))continue;this.songs.set(s.id,s);changed=true}
-        for(const c of d.collections){if(this.pending.has('collections/'+c.id))continue;this.cols.set(c.id,c);changed=true}
-        for(const id of d.deleted.songs||[]){if(this.songs.delete(id))changed=true}
-        for(const id of d.deleted.collections||[]){if(this.cols.delete(id))changed=true}
-      }
-      this.rev=d.rev;this.loaded={songs:true,cols:true};
-      const was=this.status;this.status=this.outbox.length?'pending':'live';
-      if(changed){this._saveCache();this.onChange('all')}else if(was!==this.status)this.onChange('status');
-      return true;
-    }catch(e){
-      if(this.status!=='stale'&&this.status!=='unreach'){this.status=this.songs.size?'stale':'unreach';this.onChange('status')}
-      return false;
-    }
-  },
-  async _tick(){
-    if(this.mode==='github'){if(this.status==='autherr')return;await this._ghFlush();await this._ghSync(false);return}
-    await this._flush();await this._sync(false)},
-  _queue(op){this.outbox=this.outbox.filter(o=>o.p!==op.p);this.outbox.push(op);lsSet(OUTBOX_KEY,this.outbox);this.status='stale';this.onChange('status')},
-  async _flush(){
-    while(this.outbox.length){
-      const op=this.outbox[0];
-      try{await this._api(op.m,op.p,op.b)}catch(e){if(!e.status)return}
-      this.outbox.shift();lsSet(OUTBOX_KEY,this.outbox);
-    }
-  },
+  _saveCache(){if(this.mode==='github')this._ghSave()},
+  async _tick(){if(this.mode!=='github'||this.status==='autherr')return;await this._ghFlush();await this._ghSync(false)},
   _send(m,p,b){
-    if(this.mode==='github'){if(!p.startsWith('versions/'))this._ghQueue({m,p,b});return Promise.resolve()}
-    if(this.mode==='setup') return Promise.resolve();
-    if(this.mode!=='server'){this._persistLocal();return Promise.resolve()}
-    this.pending.add(p);
-    return this._serial(p,async()=>{
-      try{await this._api(m,p,b)}
-      catch(e){if(!e.status){this._queue({m,p,b});return}throw e}
-      finally{this.pending.delete(p)}
-    });
+    if(this.mode==='github') this._ghQueue({m,p,b});
+    return Promise.resolve();
   },
   _write(coll,obj){const body=clone(obj);delete body.id;return this._send('PUT',coll+'/'+obj.id,body)},
   _del(coll,id){return this._send('DELETE',coll+'/'+id)},
@@ -883,7 +811,6 @@ const Store={
     this.songs.delete(id);const jobs=[];
     for(const c of this.cols.values()) if(hasSong(c,id)){const n=clone(c);n.items=itemsOf(n).filter(x=>x.s!==id);jobs.push(this.saveCol(n))}
     this.onChange('songs');jobs.push(this._del('songs',id));
-    if(this.mode!=='server'){const loc=lsGet(LOCAL_KEY,{});loc.versions=(loc.versions||[]).filter(v=>v.songId!==id);lsSet(LOCAL_KEY,Object.assign(this._dump(),{versions:loc.versions}))}
     return Promise.all(jobs);
   },
   async saveCol(c){c.updatedAt=now();this.cols.set(c.id,c);this.onChange('cols');this._saveCache();return this._write('collections',c)},
@@ -892,17 +819,8 @@ const Store={
     for(const c of this.cols.values()) if(c.parent===id){const n=clone(c);n.parent=null;jobs.push(this.saveCol(n))}
     this.onChange('cols');jobs.push(this._del('collections',id));return Promise.all(jobs);
   },
-  async addVersion(prev){
-    const v={id:uid(),songId:prev.id,savedAt:now(),data:clone(prev)};
-    if(this.mode==='github'||this.mode==='setup') return; // git keeps every earlier version already
-    if(this.mode!=='server'){const loc=lsGet(LOCAL_KEY,{});let vs=(loc.versions||[]).concat(v);const mine=vs.filter(x=>x.songId===prev.id).sort((a,b)=>b.savedAt-a.savedAt);const drop=new Set(mine.slice(20).map(x=>x.id));vs=vs.filter(x=>!drop.has(x.id));lsSet(LOCAL_KEY,Object.assign(this._dump(),{versions:vs}));return}
-    return this._send('PUT','versions/'+v.id,{songId:v.songId,savedAt:v.savedAt,data:v.data});
-  },
-  async listVersions(songId){
-    if(this.mode==='github') return this._ghVersions(songId);
-    if(this.mode!=='server') return (lsGet(LOCAL_KEY,{}).versions||[]).filter(v=>v.songId===songId).sort((a,b)=>b.savedAt-a.savedAt);
-    return this._api('GET','versions?songId='+encodeURIComponent(songId));
-  },
+  async addVersion(){}, // every save is a commit, so git already keeps the earlier version
+  async listVersions(songId){return this.mode==='github'?this._ghVersions(songId):[]},
   async importAll(data){
     const songs=(data.songs||[]).filter(s=>s&&s.id&&s.title!=null);
     const cols=(data.collections||[]).filter(c=>c&&c.id&&c.name);
@@ -914,8 +832,6 @@ const Store={
       lsSet(this._ghOutboxKey(),this.outbox);this._ghSave();this.status='pending';this.onChange('status');
       await this._ghFlush(); // if offline, the commit goes out as soon as GitHub is reachable again
     }
-    else if(this.mode==='server'){await this._api('POST','import',{songs,collections:cols});await this._sync(false)}
-    else this._persistLocal();
     return {songs:songs.length,cols:cols.length};
   }
 };
@@ -1039,7 +955,7 @@ function renderSide(){
   const favN=[...Store.songs.values()].filter(s=>s.fav).length;
   const ob=Store.outbox.length;
   const pg=Store.progress;
-  const st=Store.mode==='github'||Store.mode==='setup'?({
+  const st={
     live:['live','Συγχρονισμένο με το GitHub'],
     pending:['warn','Αποθήκευση στο GitHub…'],
     cache:['warn','Έλεγχος για αλλαγές…'],
@@ -1050,8 +966,7 @@ function renderSide(){
     ghmissing:['err','Δεν βρίσκω το repo. Πάτα «GitHub» και έλεγξε το όνομα.'],
     ghempty:['err','Το repo είναι εντελώς άδειο. Πρόσθεσε ένα README στο GitHub.'],
     setup:['warn','Σύνδεσε το GitHub για να ξεκινήσεις.']
-  }[Store.status]||['','—']):({live:['live','Συνδεδεμένο στη βάση του laptop'],pending:['warn','Αποστολή αλλαγών…'],cache:['warn','Σύνδεση…'],loading:['warn','Σύνδεση…'],stale:['warn','Εκτός σύνδεσης με το laptop'+(ob?` · ${ob} αλλαγ${ob===1?'ή περιμένει':'ές περιμένουν'}`:'')],unreach:['err','Δεν βρίσκω τον server. Τρέχει το «Start My Songbook»;'],local:['warn','Άνοιξέ το από το «Start My Songbook»: τώρα μένει μόνο σε αυτόν τον browser']}[Store.status]||['','—']);
-  const lan=Store.info&&Store.info.ips&&Store.info.ips[0]&&/^(localhost|127\.)/.test(location.hostname)?`http://${Store.info.ips[0]}:${Store.info.port}`:'';
+  }[Store.status]||['','—'];
   const nav=(sec,icon,label,cnt)=>`<button class="navitem ${S.sec===sec?'on':''}" data-act="sec" data-sec="${sec}">${ic(icon)}<span class="lbl">${label}</span>${cnt!=null?`<span class="cnt">${cnt}</span>`:''}</button>`;
   const tree=colTree();
   $('#side').innerHTML=`
@@ -1070,7 +985,6 @@ function renderSide(){
         <button class="btn sm ghost" data-act="ghsetup" title="Σύνδεση με GitHub">${ic('cloud','sm')}<span>GitHub</span></button>
       </div>
       <div class="status"><span class="dot ${st[0]}"></span><span>${st[1]}</span></div>
-      ${lan?`<div class="status" style="font-size:12px"><span>Κινητό/tablet στο ίδιο Wi-Fi:<br><b style="color:var(--text);user-select:all">${lan}</b></span></div>`:''}
     </div>`;
 }
 
@@ -1567,7 +1481,7 @@ function ghModal(){
 }
 function backupModal(){
   openModal(`${dhead('Αντίγραφο ασφαλείας')}<div class="dbody">
-    <p style="margin:0" class="muted">${Store.songs.size} τραγούδια · ${Store.cols.size} συλλογές. ${Store.mode==='github'?`Όλα είναι στο repo <b>${esc(GH.cfg.owner)}/${esc(GH.cfg.repo)}</b> στο GitHub, με κάθε παλιά μορφή στο ιστορικό του. Το αρχείο .json είναι ένα επιπλέον αντίγραφο στη συσκευή σου.`:`Η βάση είναι στο <b>songbook.db</b> στον φάκελο, και ο server κρατάει αυτόματα ένα αντίγραφο κάθε μέρα στο <b>backups</b>. Το αρχείο .json μεταφέρεται και σε άλλον υπολογιστή.`}</p>
+    <p style="margin:0" class="muted">${Store.songs.size} τραγούδια · ${Store.cols.size} συλλογές. ${Store.mode==='github'?`Όλα είναι στο repo <b>${esc(GH.cfg.owner)}/${esc(GH.cfg.repo)}</b> στο GitHub, με κάθε παλιά μορφή στο ιστορικό του. Το αρχείο .json είναι ένα επιπλέον αντίγραφο στη συσκευή σου.`:`Δεν είσαι συνδεδεμένος με το GitHub σε αυτή τη συσκευή, οπότε τίποτα δεν αποθηκεύεται ακόμα. Πάτα «GitHub» κάτω αριστερά.`}</p>
     <button class="btn primary" data-act="doBackup">${ic('download','sm')}Λήψη αντιγράφου (.json)</button>
     <button class="btn" data-act="doRestore">${ic('upload','sm')}Επαναφορά από αρχείο</button>
     <button class="btn" data-act="doLiveSetlist">${ic('listmusic','sm')}Εισαγωγή λιστών από Live Setlist (.html)</button>
@@ -1720,7 +1634,7 @@ let wakeLock=null,wakeWarned=false;
 let nsVideo=null;
 async function requestWake(){
   try{if('wakeLock' in navigator&&window.isSecureContext){wakeLock=await navigator.wakeLock.request('screen');return true}}catch(e){}
-  // fallback for http:// on the Wi-Fi: a tiny silent looping video keeps phones and tablets awake
+  // fallback for browsers without the Wake Lock API (older iPads): a tiny silent looping video keeps the screen on
   try{
     if(!nsVideo){nsVideo=document.createElement('video');nsVideo.setAttribute('playsinline','');nsVideo.setAttribute('muted','');nsVideo.muted=true;nsVideo.loop=true;nsVideo.setAttribute('aria-hidden','true');nsVideo.style.cssText='position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:0;top:0';nsVideo.src='data:video/mp4;base64,'+NOSLEEP;document.body.appendChild(nsVideo)}
     await nsVideo.play();return true;

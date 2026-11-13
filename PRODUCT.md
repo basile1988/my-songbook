@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Phase 1: a single self-contained HTML page published as a Claude artifact, using the artifact `db` capability for storage (accessible from any device signed in to Claude). Data access lives behind one small storage adapter so the same code can later move to the user's own server as an installable PWA with Supabase (Postgres + auth) and offline support. Framework choice inside the page: delegated.
+A single self-contained HTML page, no framework, hosted for free on GitHub Pages (public repo `my-songbook`) and installable as a PWA that opens offline. Storage is a private GitHub repo (`my-songbook-data`): one JSON file per song or collection, written by the page through the GitHub API with a fine-grained token entered once per device; every save is one commit, so git is the version history. Each device keeps a full local copy and queues changes while offline. No dependency on Claude, no running costs. All storage access lives in `GH` + `Store` inside `index.html`.
 
 ## Users
 
