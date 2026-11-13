@@ -190,7 +190,7 @@ body.perf .dtitle .cr{display:none}
 .ln.conly .c{font-size:.92em;padding:0}
 .ln .rep{margin-left:.6em;margin-bottom:.15em;align-self:flex-end;font-size:.66em;line-height:1.5;padding:0 .5em;border-radius:999px;background:var(--accent-weak);color:var(--accent);font-weight:700;white-space:nowrap}
 .sheet .gap{height:.8em}
-.sheet .sec{font-weight:700;color:var(--muted);font-size:.72em;margin:.9em 0 .35em;letter-spacing:.02em}
+.sheet .sec{font-weight:800;color:var(--accent);font-size:.8em;margin:1em 0 .35em;letter-spacing:.03em;padding-left:.45em;border-left:.22em solid var(--accent);line-height:1.25}
 .sheet .cmt{color:var(--muted);font-style:italic;font-size:.8em;margin:.2em 0 .4em}
 .nochords{color:var(--faint);font-size:14px;margin:18px 0}
 .nextup{margin-top:40px;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer}
@@ -213,9 +213,20 @@ body.perf .meta{margin-top:8px}
 body.perf .pbar{display:flex}
 body.perf.uihidden .pbar{opacity:0;transform:translate(-50%,24px);pointer-events:none}
 .pbar .ibtn{width:44px;height:44px;color:var(--text)}
-.pbar .sep{width:1px;height:28px;background:var(--line2);flex:none}
-.pbar .val{min-width:40px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
-.pbar .val.k{color:var(--chord)}
+.pbar .val{min-width:34px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.pbar .val.k{color:var(--chord);min-width:40px}
+.pmid{display:flex;align-items:flex-end;gap:4px;flex:0 1 auto;min-width:0}
+.pgrp{display:flex;flex-direction:column;align-items:center;gap:0;padding:0 2px}
+.plab{font-size:10.5px;font-weight:650;color:var(--muted);letter-spacing:.02em;line-height:1;margin-bottom:1px}
+.prow{display:flex;align-items:center}
+.pgrp+.pgrp,.pbtn+.pgrp,.pgrp+.pbtn{border-left:1px solid var(--line2);padding-left:6px;margin-left:2px}
+.pbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:56px;height:52px;border:0;border-radius:12px;background:none;color:var(--text);font-size:11.5px;font-weight:650}
+.pbtn:hover,.pbtn:active{background:color-mix(in srgb,var(--text) 8%,transparent)}
+.pexit{align-self:center;margin-left:4px}
+.pnav{display:flex;align-items:center;justify-content:center;gap:6px;min-height:56px;min-width:104px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--text);font-size:16px;font-weight:700;flex:none}
+.pnav.fwd{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.pnav:disabled{opacity:.3}
+.pnav svg.i{width:22px;height:22px}
 .pnext{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));z-index:30;display:none;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--raise) 90%,transparent);border:1px solid var(--line);border-radius:999px;padding:5px 12px;max-width:min(60vw,420px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .25s}
 body.perf .pnext.show{display:block}
 body.perf.uihidden .pnext{opacity:.6;bottom:calc(14px + env(safe-area-inset-bottom))}
@@ -226,9 +237,15 @@ body.perf.uihidden .pnext{opacity:.6;bottom:calc(14px + env(safe-area-inset-bott
 .cuesheet .row .keyb{font-size:calc(var(--fs) * .95);min-width:3em;padding:.25em .5em}
 .cuesheet .row.cur{background:var(--accent-weak);outline:2px solid var(--accent)}
 .cuesheet .row.done{opacity:.5}
-.cuesheet .row .inote{font-size:calc(var(--fs) * .62)}
-.cuesec{font-weight:800;color:var(--muted);font-size:calc(var(--fs) * .62);letter-spacing:.04em;text-transform:uppercase;margin:1.2em 0 .3em;padding:0 10px}
-.cuesec span{font-weight:600;color:var(--faint)}
+.cuesheet .row .inote{font-size:calc(var(--fs) * .62);white-space:normal}
+/* on stage a title is never cut: it wraps */
+.cuesheet .row .tt,.cue .row .tt{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.2}
+.cuesheet .row{align-items:center;padding-top:.45em;padding-bottom:.45em}
+.cuesheet .row .ar{white-space:normal}
+.lymark{display:inline-flex;align-items:center;gap:3px;margin-left:8px;color:var(--chord);font-weight:650}
+.lymark svg.i{width:1em;height:1em}
+.cuesec{font-weight:800;color:var(--accent);font-size:calc(var(--fs) * .72);letter-spacing:.04em;text-transform:uppercase;margin:1.3em 0 .35em;padding:.15em 10px .15em .5em;border-left:.22em solid var(--accent)}
+.cuesec span{font-weight:650;color:var(--muted);margin-left:.3em}
 .cuesec:first-child{margin-top:0}
 
 /* ---------- editor ---------- */
@@ -301,7 +318,16 @@ html[data-eff=dark] .parseinfo .warn{color:#f0b54a}
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:60;background:#1c1f25;color:#f2f4f7;padding:10px 16px;border-radius:10px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s,transform .25s cubic-bezier(.2,.8,.2,1);max-width:calc(100vw - 32px)}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 body[data-size=s]:not([data-pane=detail]) #toast,body.perf #toast,body.editing #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
-@media (max-width:640px){.pbar{left:8px;right:8px;transform:none;flex-wrap:wrap;justify-content:center;max-width:none;overflow:visible}body.perf.uihidden .pbar{transform:translateY(24px)}.pbar .ibtn{width:42px;height:42px}.pnext{bottom:calc(132px + env(safe-area-inset-bottom))}}
+@media (max-width:640px){
+  /* phone: controls on top, two big prev/next halves underneath */
+  .pbar{left:8px;right:8px;transform:none;flex-wrap:wrap;justify-content:space-between;max-width:none;overflow:visible;row-gap:6px}
+  body.perf.uihidden .pbar{transform:translateY(24px)}
+  .pmid{order:-1;flex:1 1 100%;justify-content:center;flex-wrap:wrap}
+  .pnav{flex:1 1 0;min-height:60px;font-size:17px}
+  .pbar .ibtn{width:40px;height:40px}
+  .pnext{display:none!important}
+  body.perf .dwrap{padding-bottom:230px}
+}
 .edcols{display:flex;flex-direction:column}.edcols.pastefirst .edtabs,.edcols.pastefirst .edbody{order:-1}.edcols.pastefirst .edbody{margin-bottom:6px}
 
 /* ---------- small screens ---------- */
@@ -1233,25 +1259,30 @@ function renderDetail(force=false){
 function renderPbar(){
   const pb=$('#pbar'),pn=$('#pnext');
   if(!S.perf){pb.innerHTML='';pn.classList.remove('show');return}
+  // stage bar: big labelled prev/next at the ends, a few labelled controls in the middle
+  const nav=(act,dir,label,on)=>`<button class="pnav ${dir==='prev'?'back':'fwd'}" data-act="${act}" ${act==='cue'?`data-d="${dir==='prev'?-1:1}"`:''} ${on?'':'disabled'}>${dir==='prev'?ic('left'):''}<span>${label}</span>${dir==='next'?ic('right'):''}</button>`;
+  const grp=(label,inner,cls='')=>`<div class="pgrp ${cls}"><span class="plab">${label}</span><div class="prow">${inner}</div></div>`;
+  const fsGrp=grp('Γράμματα',`<button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus')}</button><span class="val">${prefs.fs}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus')}</button>`);
+  const exitBtn=`<button class="ibtn pexit" data-act="perfx" aria-label="Έξοδος από το παίξιμο" title="Έξοδος">${ic('x')}</button>`;
   if(S.cueMode){
-    pb.innerHTML=`<button class="ibtn" data-act="cue" data-d="-1" aria-label="Προηγούμενο">${ic('left')}</button><span class="sep"></span>
-      <button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus')}</button><span class="val">${ic('textsize','sm')}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus')}</button>
-      <span class="sep"></span><button class="ibtn" data-act="cue" data-d="1" aria-label="Επόμενο">${ic('right')}</button><span class="sep"></span><button class="ibtn" data-act="perfx" aria-label="Έξοδος">${ic('x')}</button>`;
+    const col=Store.cols.get(S.ctx&&S.ctx.colId);const list=col?songItems(col):[];const cur=col?S.cueIdx[col.id]||0:0;
+    const it=list[cur],s=it&&Store.songs.get(it.s);
+    pb.innerHTML=`${nav('cue','prev','Προηγ.',cur>0)}
+      <div class="pmid">${fsGrp}${s&&(s.lines||[]).length?`<button class="pbtn" data-act="cueopen">${ic('music')}<span>Στίχοι</span></button>`:''}${exitBtn}</div>
+      ${nav('cue','next','Επόμ.',cur<list.length-1)}`;
     pn.classList.remove('show');return;
   }
   const s=Store.songs.get(S.songId);if(!s) return;
-  const n=curShift(s);const flat=preferFlat(s,n);const cx=ctxInfo();
-  pb.innerHTML=`
-    <button class="ibtn" data-act="prev" aria-label="Προηγούμενο τραγούδι" ${cx&&cx.prev?'':'disabled style="opacity:.3"'}>${ic('left')}</button>
-    <span class="sep"></span>
-    ${songHasChords(s)?`<button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus')}</button><span class="sep"></span>`:''}
-    <button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus')}</button><span class="val" title="Μέγεθος">${prefs.fs}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus')}</button>
-    <span class="sep"></span>
-    <button class="ibtn ${S.scrolling?'on':''}" data-act="scroll" aria-label="Αυτόματη κύλιση">${ic(S.scrolling?'pause':'scroll')}</button>
-    <button class="ibtn" data-act="speed" data-d="-1" aria-label="Πιο αργά">${ic('minus')}</button><span class="val">${prefs.speed}</span><button class="ibtn" data-act="speed" data-d="1" aria-label="Πιο γρήγορα">${ic('plus')}</button>
-    <span class="sep"></span>
-    <button class="ibtn" data-act="next" aria-label="Επόμενο τραγούδι" ${cx&&cx.next?'':'disabled style="opacity:.3"'}>${ic('right')}</button>
-    <button class="ibtn" data-act="perfx" aria-label="Έξοδος από παίξιμο">${ic('x')}</button>`;
+  const n=curShift(s);const flat=preferFlat(s,n);const cx=ctxInfo();const hasLines=(s.lines||[]).length>0;
+  pb.innerHTML=`${nav('prev','prev','Προηγ.',cx&&cx.prev)}
+    <div class="pmid">
+      ${S.fromCue?`<button class="pbtn" data-act="cueback">${ic('listmusic')}<span>Λίστα</span></button>`:''}
+      ${songHasChords(s)?grp('Τόνος',`<button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus')}</button>`):''}
+      ${hasLines?fsGrp:''}
+      ${hasLines?grp('Κύλιση',`<button class="ibtn ${S.scrolling?'on':''}" data-act="scroll" aria-label="Αυτόματη κύλιση">${ic(S.scrolling?'pause':'scroll')}</button><button class="ibtn" data-act="speed" data-d="-1" aria-label="Πιο αργά">${ic('minus')}</button><span class="val">${prefs.speed}</span><button class="ibtn" data-act="speed" data-d="1" aria-label="Πιο γρήγορα">${ic('plus')}</button>`):''}
+      ${exitBtn}
+    </div>
+    ${nav('next','next','Επόμ.',cx&&cx.next)}`;
   if(cx&&cx.next){pn.textContent='Επόμενο: '+cx.next.title+(cx.nextKey?' · '+cx.nextKey:'');pn.classList.add('show')}else pn.classList.remove('show');
 }
 function renderCueSheet(){
@@ -1263,7 +1294,8 @@ function renderCueSheet(){
     if(it.sec!=null){num=0;return `<div class="cuesec">${esc(it.sec||'Ενότητα')}${it.sub?` <span>${esc(it.sub)}</span>`:''}</div>`}
     const s=Store.songs.get(it.s);if(!s) return '';
     const i=p++;num++;const k=itemKey(it,s);
-    return `<div class="row ${i===cur?'cur':''} ${i<cur?'done':''}" data-act="cuepick" data-i="${i}" role="button" tabindex="0"><span class="num">${num}</span><div class="main"><div class="tt">${esc(s.title)}</div>${it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${esc(s.artist||'')}</div></div><span class="keyb ${k?'':'none'}">${esc(k||'—')}</span></div>`;
+    const ly=(s.lines||[]).length>0;
+    return `<div class="row ${i===cur?'cur':''} ${i<cur?'done':''}" data-act="cuepick" data-i="${i}" role="button" tabindex="0" ${ly?'aria-label="'+esc(s.title)+', άνοιγμα στίχων"':''}><span class="num">${num}</span><div class="main"><div class="tt">${esc(s.title)}</div>${it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${esc(s.artist||'')}${ly?`<span class="lymark">${ic('music','sm')}στίχοι</span>`:''}</div></div><span class="keyb ${k?'':'none'}">${esc(k||'—')}</span></div>`;
   }).join('');
   d.innerHTML=`<div class="dwrap"><div class="dtitle" style="margin-bottom:14px"><h1>${esc(col.name)}</h1><div class="ar">${p} τραγούδια</div></div>
     ${col.notes?`<div class="note inl" style="margin:0 0 14px"><span class="nl">Σημειώσεις προγράμματος</span>${esc(col.notes)}</div>`:''}
@@ -1735,7 +1767,7 @@ function enterPerf(){
 }
 function exitPerf(){
   const wasCue=S.cueMode;
-  S.perf=false;S.cueMode=false;if(wasCue&&document.body.dataset.size!=='l')setPane('list');stopScroll();document.body.classList.remove('perf','uihidden');
+  S.perf=false;S.cueMode=false;S.fromCue=null;if(wasCue&&document.body.dataset.size!=='l')setPane('list');stopScroll();document.body.classList.remove('perf','uihidden');
   try{wakeLock&&wakeLock.release&&wakeLock.release()}catch(e){}wakeLock=null;try{nsVideo&&nsVideo.pause()}catch(e){}
   try{document.fullscreenElement&&document.exitFullscreen().catch(()=>{})}catch(e){}
   applyTheme();renderDetail(true);
@@ -1839,9 +1871,15 @@ const A={
   pickcol(){const c=colOf(S.sec);if(c)pickModal(c.id)},
   pkSave(){pickModal.save&&pickModal.save()},
   playcol(){const c=colOf(S.sec);if(!c)return;const list=playList();if(!list.length)return;
-    if(c.mode==='cue'){S.ctx={list,colId:c.id,pos:0};S.edit=null;S.cueMode=true;S.songId=null;S.cueIdx[c.id]=S.cueIdx[c.id]||0;if(document.body.dataset.size!=='l')setPane('detail');enterPerf();renderCueSheet()}
+    if(c.mode==='cue'){S.ctx={list:songItems(c).map(x=>({s:x.s,it:x.i})),colId:c.id,pos:0};S.fromCue=null;S.edit=null;S.cueMode=true;S.songId=null;S.cueIdx[c.id]=S.cueIdx[c.id]||0;if(document.body.dataset.size!=='l')setPane('detail');enterPerf();renderCueSheet()}
     else{openSong(list[0].s,list,c.id,0);enterPerf()}},
-  cuepick(el){const c=Store.cols.get(S.ctx.colId);S.cueIdx[c.id]=+el.dataset.i;renderCueSheet()},
+  // stage list: tapping a song makes it current; if it has lyrics they open, and «Λίστα» comes back here
+  cuepick(el){const c=Store.cols.get(S.ctx.colId);S.cueIdx[c.id]=+el.dataset.i;const it=songItems(c)[+el.dataset.i],s=it&&Store.songs.get(it.s);
+    if(s&&(s.lines||[]).length){A.cueopen();return}renderCueSheet()},
+  cueopen(){const c=Store.cols.get(S.ctx&&S.ctx.colId);if(!c)return;const list=songItems(c).map(x=>({s:x.s,it:x.i}));const i=S.cueIdx[c.id]||0;if(!list[i])return;
+    S.fromCue=c.id;openSong(list[i].s,list,c.id,i);document.body.classList.remove('uihidden')},
+  cueback(){const c=Store.cols.get(S.fromCue);if(!c){S.fromCue=null;renderPbar();return}stopScroll();
+    S.cueIdx[c.id]=S.ctx&&S.ctx.colId===c.id?S.ctx.pos:(S.cueIdx[c.id]||0);S.cueMode=true;S.songId=null;S.fromCue=null;document.body.classList.remove('uihidden');renderCueSheet();renderRows()},
   cue(el){cueMove(+el.dataset.d)},
   theme(){prefs.theme={auto:'light',light:'dark',dark:'auto'}[prefs.theme];savePrefs();applyTheme();renderSide()},
   backup(){backupModal()},
@@ -1920,14 +1958,14 @@ document.addEventListener('paste',editorPaste);
 document.addEventListener('keydown',e=>{
   const t=e.target;const typing=t.matches&&t.matches('input,textarea,select');
   if(t.id==='edNewGenre'&&e.key==='Enter'){e.preventDefault();const v=t.value.trim();if(v){addGenre(v);t.value='';const wrap=$('#edGenres');const b=document.createElement('button');b.type='button';b.className='tog on';b.dataset.act='tgGenre';b.dataset.g=v;b.textContent=v;wrap.insertBefore(b,t)}return}
-  if(e.key==='Escape'){if(!$('#modal').hidden){closeModal();return}if(S.perf){exitPerf();return}if(S.edit){cancelEditor(false);return}}
+  if(e.key==='Escape'){if(!$('#modal').hidden){closeModal();return}if(S.perf&&S.fromCue&&!S.cueMode){A.cueback();return}if(S.perf){exitPerf();return}if(S.edit){cancelEditor(false);return}}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&S.edit){e.preventDefault();saveEditor();return}
   if(typing||!$('#modal').hidden) return;
   if(e.key==='/'){const q=$('#q');if(q&&q.offsetParent){e.preventDefault();q.focus()}return}
   // drag keyboard reorder
   if(t.classList&&t.classList.contains('handle')&&e.altKey&&(e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();moveItem(t.dataset.drag,e.key==='ArrowUp'?-1:1);return}
   if(t.classList&&t.classList.contains('row')&&e.key==='Enter'){t.click();return}
-  if(S.cueMode){if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();cueMove(1)}else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();cueMove(-1)}return}
+  if(S.cueMode){if(e.key==='Enter'){e.preventDefault();A.cueopen();return}if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();cueMove(1)}else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();cueMove(-1)}return}
   if(!S.songId||S.edit) return;
   const d=$('#detail');
   if(e.key==='ArrowRight'){e.preventDefault();go(1)}
