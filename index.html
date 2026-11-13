@@ -305,6 +305,26 @@ body.perf.uihidden .pbar{opacity:0;transform:translate(-50%,24px);pointer-events
 .tcopts input{width:120px}
 .tcfold{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted);padding:10px 8px 2px}
 .pksec{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted);flex-wrap:wrap}
+.pkhere{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.pkhere b{color:var(--text)}
+/* «+ Πρόσθεσε εδώ» between rows: hidden strip on laptop (shows on hover), visible in «Επεξεργασία λίστας» */
+.insgap{position:relative;height:8px;margin:-4px 0;z-index:2;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.insgap span{display:none;align-items:center;gap:4px;padding:3px 12px;border-radius:9999px;background:var(--accent);color:#000;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.4);position:relative;z-index:1}
+.insgap::before{content:"";position:absolute;left:12px;right:12px;top:50%;height:2px;margin-top:-1px;border-radius:2px;background:var(--accent);opacity:0}
+.list:not(.editing) .insgap{pointer-events:none}
+@media (hover:hover) and (pointer:fine){.list .insgap{pointer-events:auto}.list .insgap:hover span{display:inline-flex}.list .insgap:hover::before{opacity:1}}
+.list.editing .insgap{height:30px;margin:0}
+.list.editing .insgap span{display:inline-flex;background:transparent;color:var(--accent);box-shadow:none;border:1px dashed var(--accent);padding:2px 12px}
+.list.editing .insgap:active span{background:var(--accent-weak)}
+.list.editing .row .tt,.list.editing .row .t{white-space:normal;overflow:visible;text-overflow:clip}
+.mvbtns{display:inline-flex;flex-direction:column;gap:2px;flex:none}
+.mvbtns .ibtn{width:40px;height:30px;border-radius:8px}
+.mvlist{display:flex;flex-direction:column;gap:2px;max-height:55vh;overflow-y:auto;overscroll-behavior:contain}
+.mvrow{display:flex;align-items:center;gap:10px;text-align:left;padding:10px 12px;border-radius:8px;background:none;border:0;color:var(--text);font:inherit;font-size:14.5px;cursor:pointer;touch-action:manipulation}
+.mvrow .n{min-width:22px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;font-size:13px}
+.mvrow.sec{color:var(--accent)}
+.mvrow:active{background:var(--accent-weak)}
+@media (hover:hover) and (pointer:fine){.mvrow:hover{background:var(--hover,rgba(255,255,255,.07))}}
 .pksec select{min-height:38px;border:1px solid var(--line2);border-radius:9px;background:var(--raise);padding:0 10px;font-size:15px}
 .pkn{flex:none;min-width:24px;height:24px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:12.5px;font-weight:800;display:grid;place-items:center;padding:0 6px}
 .sslist{min-height:120px}
@@ -721,6 +741,8 @@ const ICONS={
   share:'<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/>',
   settings:'<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
   cloud:'<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
+  up:'<path d="m18 15-6-6-6 6"/>',
+  down:'<path d="m6 9 6 6 6-6"/>',
   more:'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
   section:'<path d="M4 6h16"/><path d="M4 12h10"/><path d="M4 18h7"/>',
   monitor:'<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>'
@@ -1496,7 +1518,8 @@ function renderList(full=true){
               :`<button class="btn primary sm" data-act="newsong">${ic('plus','sm')}Νέο</button>`}
         </div>
         ${col&&col.notes?`<div class="colnotes">${esc(col.notes)}</div>`:''}
-        ${S.reorder?`<div class="reorderbar">${ic('grip','sm')}<span>Σύρε τραγούδια και ενότητες στη θέση τους</span><button class="btn sm primary" data-act="reorderdone">Τέλος</button></div>`:`
+        ${S.reorder?`<div class="reorderbar">${ic('pencil','sm')}<span>Επεξεργασία: «+» για προσθήκη, ▲▼ ή σύρσιμο για σειρά</span><button class="btn sm primary" data-act="reorderdone">Τέλος</button></div>
+        ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}</div>`:''}`:`
         ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}</div>`:''}
         <div class="searchrow">
           <div class="search">${ic('search')}<input id="q" type="search" placeholder="Τίτλος, καλλιτέχνης ή στίχος" value="${esc(S.q)}" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση"><button class="ibtn clr" data-act="clearq" aria-label="Καθαρισμός" ${S.q?'':'hidden'}>${ic('x','sm')}</button></div>
@@ -1620,17 +1643,22 @@ function renderRows(){
   const curIt=S.ctx&&S.ctx.colId===(col&&col.id)?ctxEntry()?.it:null;
   const handle=id=>canDrag?`<button class="handle" data-drag="${id}" aria-label="Μετακίνηση" title="Σύρε για αλλαγή σειράς · Alt+↑/↓">${ic('grip','sm')}</button>`:'';
   let pos=0,num=0;
-  el.innerHTML=arr.map(e=>{
-    if(e.sec){num=0;return `<div class="row secrow" data-item="${e.sec.i}">${handle(e.sec.i)}<button class="sechead" data-act="editsec" data-item="${e.sec.i}"><span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}</button></div>`}
+  // «+ Πρόσθεσε» between rows: on a laptop it shows on hover, on touch in «Επεξεργασία λίστας»
+  const canIns=col&&col.ordered&&!filtered;
+  const gap=after=>canIns?`<div class="insgap" data-act="insat" data-after="${after}" role="button" tabindex="-1" aria-label="Πρόσθεσε εδώ"><span>${ic('plus','sm')}Πρόσθεσε εδώ</span></div>`:'';
+  const ud=id=>S.reorder&&id?`<span class="mvbtns"><button class="ibtn" data-act="mvup" data-item="${id}" aria-label="Μία θέση πάνω">${ic('up','sm')}</button><button class="ibtn" data-act="mvdn" data-item="${id}" aria-label="Μία θέση κάτω">${ic('down','sm')}</button></span>`:'';
+  el.classList.toggle('editing',!!S.reorder);
+  el.innerHTML=gap('')+arr.map(e=>{
+    if(e.sec){num=0;return `<div class="row secrow" data-item="${e.sec.i}">${handle(e.sec.i)}<button class="sechead" data-act="editsec" data-item="${e.sec.i}"><span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}</button>${ud(e.sec.i)}</div>${gap(e.sec.i)}`}
     const s=e.s,it=e.it,k=itemKey(it,s),p=pos++;num++;
     const on=it?curIt===it.i&&S.songId===s.id:S.songId===s.id;
-    return `<div class="row ${on?'on':''}" data-act="open" data-id="${s.id}" data-pos="${p}" ${it?`data-item="${it.i}"`:''} role="button" tabindex="0">
+    return `<div class="row ${on?'on':''}" data-act="${S.reorder?'':'open'}" data-id="${s.id}" data-pos="${p}" ${it?`data-item="${it.i}"`:''} role="button" tabindex="0">
       ${handle(it?it.i:'')}
       ${col&&col.ordered?`<span class="num">${num}</span>`:''}
       <div class="main"><div class="tt">${esc(s.title||'Χωρίς τίτλο')}</div>${it&&it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${esc([s.artist,!col&&inLists.get(s.id)?`σε ${inLists.get(s.id)} λίστ${inLists.get(s.id)===1?'α':'ες'}`:''].filter(Boolean).join(' · '))}${(s.lines||[]).length?`<span class="lymark">${ic('music','sm')}στίχοι</span>`:''}</div></div>
       <span class="keyb ${k?'':'none'} ${it&&it.key&&it.key!==s.key?'own':''}" title="${it&&it.key&&s.key&&it.key!==s.key?'Σε αυτή τη λίστα · το τραγούδι είναι σε '+esc(s.key):''}">${esc(k||'—')}</span>
-      ${it?`<button class="ibtn imenu" data-act="itemmenu" data-item="${it.i}" aria-label="Τόνος και σημείωση σε αυτή τη λίστα" title="Τόνος και σημείωση σε αυτή τη λίστα">${ic('more','sm')}</button>`:''}
-    </div>`}).join('');
+      ${S.reorder?ud(it&&it.i):it?`<button class="ibtn imenu" data-act="itemmenu" data-item="${it.i}" aria-label="Τόνος, σημείωση, μετακίνηση" title="Τόνος, σημείωση, μετακίνηση">${ic('more','sm')}</button>`:''}
+    </div>${it?gap(it.i):''}`}).join('');
 }
 function emptyList(col,filtered){
   if(filtered){
@@ -2011,10 +2039,27 @@ function itemModal(colId,iid){
       <div class="field"><label for="iKey">Τόνος σε αυτή τη λίστα</label><input id="iKey" list="dlKeys" value="${esc(it.key||'')}" placeholder="${s.key?'Όπως το τραγούδι: '+esc(s.key):'π.χ. Em'}" autocomplete="off" autocapitalize="off"><datalist id="dlKeys">${ALLKEYS.map(k=>`<option value="${k}">`).join('')}</datalist>
         <div class="hint">${songHasChords(s)&&baseKey(s)?'Τα ακόρντα θα ανοίγουν μεταφερμένα σε αυτόν τον τόνο.':'Γράφεται και ελεύθερα, π.χ. «Em/Fm».'}</div></div>
       <div class="field"><label for="iNote">Σημείωση σε αυτή τη λίστα</label><textarea id="iNote" rows="3" placeholder="π.χ. Ντουέτο · Μπαίνουμε από το ρεφρέν · Κλείνει και μπαίνει ρούμπα">${esc(it.note||'')}</textarea></div>
-      ${c.ordered?`<button class="mitem" data-act="secHere" data-col="${c.id}" data-item="${it.i}">${ic('section')}<span><b>Νέο πακέτο από εδώ</b><small>Ξεκινά πακέτο ακριβώς πριν από αυτό το τραγούδι</small></span></button>`:''}
+      ${c.ordered?`<button class="mitem" data-act="moveitem" data-col="${c.id}" data-item="${it.i}">${ic('up')}<span><b>Μετακίνηση…</b><small>Μετά από άλλο τραγούδι, ή στην αρχή ενός πακέτου</small></span></button>
+      <button class="mitem" data-act="secHere" data-col="${c.id}" data-item="${it.i}">${ic('section')}<span><b>Νέο πακέτο από εδώ</b><small>Ξεκινά πακέτο ακριβώς πριν από αυτό το τραγούδι</small></span></button>`:''}
     </div>
     <div class="dfoot"><button class="btn danger left" data-act="rmItem" data-col="${c.id}" data-item="${it.i}">${ic('x','sm')}Αφαίρεση από τη λίστα</button><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveItem" data-col="${c.id}" data-item="${it.i}">Αποθήκευση</button></div>`,
     m=>{const h=e=>{if(e.key==='Enter'&&e.target.id==='iKey'){e.preventDefault();m.querySelector('[data-act=saveItem]').click()}};m.addEventListener('keydown',h);return()=>m.removeEventListener('keydown',h)});
+}
+// «Μετακίνηση…»: pick where this song goes — after another song (found by typing) or at the start of a pack
+function moveModal(colId,iid){
+  const c=Store.cols.get(colId),it=itemById(colId,iid),s=it&&Store.songs.get(it.s);if(!c||!s) return;
+  const targets=[];let num=0;
+  for(const x of itemsOf(c)){if(x===it)continue;
+    if(x.sec!=null){num=0;targets.push({after:x.i,sec:true,label:secShort(x),hay:norm(x.sec+' '+(x.sub||''))});continue}
+    const t=Store.songs.get(x.s);if(!t)continue;num++;targets.push({after:x.i,label:t.title,num,hay:norm(t.title+' '+(t.artist||''))})}
+  const row=t=>`<button class="mvrow ${t.sec?'sec':''}" data-act="moveto" data-col="${colId}" data-item="${iid}" data-after="${t.after}">${t.sec?`${ic('section','sm')}<span>Στην αρχή: <b>${esc(t.label)}</b></span>`:`<span class="n">${t.num}</span><span>μετά από <b>${esc(t.label)}</b></span>`}</button>`;
+  openModal(`${dhead('Μετακίνηση: «'+esc(s.title)+'»')}<div class="dbody" style="gap:8px">
+    <div class="search">${ic('search')}<input id="mvQ" type="search" placeholder="Τίτλος ή πακέτο" autocomplete="off" autofocus aria-label="Βρες πού θα μπει"></div>
+    <div id="mvList" class="mvlist"></div></div>`,m=>{
+    const draw=()=>{const q=norm(($('#mvQ')||{}).value||'');const f=q?targets.filter(t=>t.hay.includes(q)):targets;
+      const first=itemsOf(c)[0],top=!q&&!(first&&first.sec!=null);
+      $('#mvList').innerHTML=(top?`<button class="mvrow sec" data-act="moveto" data-col="${colId}" data-item="${iid}" data-after="">${ic('up','sm')}<span><b>Στην αρχή της λίστας</b></span></button>`:'')+(f.length?f.slice(0,120).map(row).join(''):'<p class="muted" style="margin:8px 12px">Δεν βρέθηκε.</p>')};
+    const h=e=>{if(e.target.id==='mvQ')draw()};m.addEventListener('input',h);setTimeout(draw,0);return()=>m.removeEventListener('input',h)});
 }
 // opts.before: a new section starts right before this item (instead of at the end)
 function secModal(colId,iid,opts={}){
@@ -2025,7 +2070,7 @@ function secModal(colId,iid,opts={}){
       <div class="field"><label for="sSub">Υπότιτλος</label><input id="sSub" value="${esc(it&&it.sub||'')}" placeholder="π.χ. 2ο πακέτο" autocomplete="off"></div>
       ${it?'':bs?`<div class="hint">Ξεκινά πριν από το «${esc(bs.title)}». Αυτό και όσα ακολουθούν ως το επόμενο πακέτο ανήκουν σε αυτό.</div>`:'<div class="hint">Μπαίνει στο τέλος της λίστας. Για να ξεκινά από ένα συγκεκριμένο τραγούδι, πάτα το ⋯ εκείνου του τραγουδιού → «Νέο πακέτο από εδώ».</div>'}
     </div>
-    <div class="dfoot">${it?`<button class="btn danger left" data-act="delSec" data-col="${colId}" data-item="${it.i}">${ic('trash','sm')}Διαγραφή</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveSec" data-col="${colId}" data-item="${it?it.i:''}" data-before="${bef?bef.i:''}">${it?'Αποθήκευση':'Προσθήκη'}</button></div>`,
+    <div class="dfoot">${it?`<button class="btn danger left" data-act="delSec" data-col="${colId}" data-item="${it.i}">${ic('trash','sm')}Διαγραφή</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveSec" data-col="${colId}" data-item="${it?it.i:''}" data-before="${bef?bef.i:''}" data-after="${opts.after!=null?opts.after:'-'}">${it?'Αποθήκευση':'Προσθήκη'}</button></div>`,
     m=>{const h=e=>{if(e.key==='Enter'&&e.target.matches('input')){e.preventDefault();m.querySelector('[data-act=saveSec]').click()}};m.addEventListener('keydown',h);return()=>m.removeEventListener('keydown',h)});
 }
 // put new items at the end of a section (pack), or at the end of the list when secId is empty
@@ -2074,7 +2119,11 @@ function toColModal(songId){
       return ()=>m.removeEventListener('change',h);
     });
 }
-function pickModal(colId){
+// opts.after: an item id (or '' = the very start): the picked songs go in right there, from a «+ Πρόσθεσε εδώ»
+function pickModal(colId,opts={}){
+  const here=opts.after!=null;
+  const afterIt=here&&opts.after?itemById(colId,opts.after):null;
+  const afterName=afterIt?(afterIt.sec!=null?'την αρχή του πακέτου «'+secShort(afterIt)+'»':'«'+((Store.songs.get(afterIt.s)||{}).title||'')+'»'):'';
   const col=Store.cols.get(colId);if(!col) return;
   const had=new Set(itemsOf(col).filter(x=>x.s).map(x=>x.s));
   const sel=new Set(had);const order=[];let q=''; // order: songs ticked now, in the order they were ticked
@@ -2085,18 +2134,21 @@ function pickModal(colId){
     $('#pkList').innerHTML=arr.length?arr.map(s=>{const n=order.indexOf(s.id);return `<label class="ck"><input type="checkbox" data-sid="${s.id}" ${sel.has(s.id)?'checked':''}><div class="main"><div class="tt">${esc(s.title)}</div><div class="ar">${esc(s.artist||'')}</div></div>${n>=0?`<span class="pkn" title="Σειρά προσθήκης">${n+1}</span>`:''}<span class="keyb ${s.key?'':'none'}">${esc(s.key||'—')}</span></label>`}).join(''):`<div class="muted" style="padding:12px 4px">${Store.songs.size?'Τίποτα για αυτή την αναζήτηση.':'Η βιβλιοθήκη είναι άδεια.'}</div>`;
     $('#pkCount').textContent=order.length?`+${order.length} νέα, με τη σειρά που τα πατάς`:sel.size+' στη λίστα';
   };
-  openModal(`${dhead('Πρόσθεσε τραγούδια')}
+  openModal(`${dhead(here?'Πρόσθεσε εδώ':'Πρόσθεσε τραγούδια')}
     <div class="dbody" style="gap:8px">
-      ${secs.length?`<label class="pksec">Μπαίνουν στο πακέτο <select id="pkSec"><option value="">Στο τέλος της λίστας</option>${secs.map(x=>`<option value="${x.i}">${esc(secShort(x))}</option>`).join('')}</select></label>`:''}
+      ${here?`<div class="pkhere">${ic('plus','sm')}<span>Μπαίνουν ${afterIt?(afterIt.sec!=null?'στην αρχή του πακέτου «'+esc(secShort(afterIt))+'»':'μετά από «'+esc((Store.songs.get(afterIt.s)||{}).title||'')+'»'):'στην αρχή της λίστας'}, με τη σειρά που τα πατάς</span></div>`:
+      secs.length?`<label class="pksec">Μπαίνουν στο πακέτο <select id="pkSec"><option value="">Στο τέλος της λίστας</option>${secs.map(x=>`<option value="${x.i}">${esc(secShort(x))}</option>`).join('')}</select></label>`:''}
       <div class="search">${ic('search')}<input id="pkQ" type="search" placeholder="Αναζήτηση" autofocus aria-label="Αναζήτηση"></div><div id="pkList"></div></div>
-    <div class="dfoot"><span class="left muted" id="pkCount" style="align-self:center;font-size:13.5px"></span><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="pkSave">Αποθήκευση</button></div>`,m=>{
+    <div class="dfoot">${here&&col.ordered?`<button class="btn left" data-act="secAt" data-col="${colId}" data-after="${opts.after}">${ic('section','sm')}Νέο πακέτο εδώ</button>`:''}<span class="${here?'':'left '}muted" id="pkCount" style="align-self:center;font-size:13.5px"></span><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="pkSave">Αποθήκευση</button></div>`,m=>{
       const onIn=e=>{if(e.target.id==='pkQ'){q=e.target.value;draw()}};
       const onCh=e=>{const cb=e.target.closest('input[data-sid]');if(!cb) return;const id=cb.dataset.sid;
         if(cb.checked){sel.add(id);if(!had.has(id)&&!order.includes(id))order.push(id)}else{sel.delete(id);const k=order.indexOf(id);if(k>=0)order.splice(k,1)}
         draw()};
       m.addEventListener('input',onIn);m.addEventListener('change',onCh);
       pickModal.save=async()=>{const c=clone(Store.cols.get(colId));const keep=itemsOf(c).filter(x=>x.sec!=null||sel.has(x.s));
-        c.items=insertInSection(keep,order.filter(id=>!keep.some(x=>x.s===id)).map(s=>({i:uid(),s})),($('#pkSec')||{}).value||'');
+        const add=order.filter(id=>!keep.some(x=>x.s===id)).map(s=>({i:uid(),s}));
+        if(here){const k=opts.after?keep.findIndex(x=>x.i===opts.after):-1;keep.splice(k+1,0,...add);c.items=keep} // right at the «+» that was tapped
+        else c.items=insertInSection(keep,add,($('#pkSec')||{}).value||'');
         closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast(order.length?`Προστέθηκαν ${order.length}`:'Η λίστα ενημερώθηκε')};
       setTimeout(draw,0);
       return ()=>{m.removeEventListener('input',onIn);m.removeEventListener('change',onCh)};
@@ -2366,12 +2418,23 @@ const A={
     Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Αφαιρέθηκε από τη λίστα')},
   addsec(){const c=colOf(S.sec);if(c)secModal(c.id,null)},
   secHere(el){secModal(el.dataset.col,null,{before:el.dataset.item})},
+  insat(el){const c=colOf(S.sec);if(c)pickModal(c.id,{after:el.dataset.after||''})},
+  secAt(el){secModal(el.dataset.col,null,{after:el.dataset.after||''})},
+  mvup(el){moveItem(el.dataset.item,-1)},
+  mvdn(el){moveItem(el.dataset.item,1)},
+  moveitem(el){moveModal(el.dataset.col,el.dataset.item)},
+  async moveto(el){ // «Μετακίνηση…»: put the item right after the chosen target ('' = top of the list)
+    const c=clone(Store.cols.get(el.dataset.col));let items=itemsOf(c);const it=items.find(x=>x.i===el.dataset.item);if(!it)return;
+    items=items.filter(x=>x!==it);const k=el.dataset.after?items.findIndex(x=>x.i===el.dataset.after):-1;items.splice(k+1,0,it);c.items=items;
+    closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Μετακινήθηκε')},
   editsec(el){const c=colOf(S.sec);if(c)secModal(c.id,el.dataset.item)},
   async saveSec(el){
     const name=$('#sName').value.trim();if(!name){$('#sName').focus();return}
     const sub=$('#sSub').value.trim();const c=clone(Store.cols.get(el.dataset.col));const items=itemsOf(c);
     let it=el.dataset.item&&items.find(x=>x.i===el.dataset.item);
-    if(!it){it={i:uid(),sec:name};const b=el.dataset.before?items.findIndex(x=>x.i===el.dataset.before):-1;if(b>=0)items.splice(b,0,it);else items.push(it)}
+    if(!it){it={i:uid(),sec:name};const b=el.dataset.before?items.findIndex(x=>x.i===el.dataset.before):-1;
+      const a=el.dataset.after!==undefined&&el.dataset.after!=='-'?(el.dataset.after?items.findIndex(x=>x.i===el.dataset.after)+1:0):-1; // «Νέο πακέτο εδώ»
+      if(b>=0)items.splice(b,0,it);else if(a>=0)items.splice(a,0,it);else items.push(it)}
     it.sec=name;if(sub)it.sub=sub;else delete it.sub;
     closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'))},
   delSec(el){const c=clone(Store.cols.get(el.dataset.col));c.items=itemsOf(c).filter(x=>x.i!==el.dataset.item);closeModal();Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Η ενότητα σβήστηκε · τα τραγούδια της έμειναν')},
@@ -2487,7 +2550,7 @@ const A={
     openModal(`${dhead(esc(c.name))}<div class="dbody menulist">
       ${b('pickcol','plus','Πρόσθεσε τραγούδια','Από τη βιβλιοθήκη')}
       ${c.ordered?b('addsec','section','Νέα ενότητα / πακέτο','π.χ. «Ρούμπες · 2ο πακέτο»'):''}
-      ${c.ordered&&itemsOf(c).length>1?b('reorder','grip','Αλλαγή σειράς','Σύρε τραγούδια και ενότητες'):''}
+      ${c.ordered?b('reorder','pencil','Επεξεργασία λίστας','«+» ανάμεσα στα τραγούδια, ▲▼ και σύρσιμο για σειρά'):''}
       ${b('dupcol','paste','Αντίγραφο λίστας','Νέα λίστα με τα ίδια τραγούδια, πακέτα και τόνους')}
       ${b('editcol','settings','Ρυθμίσεις λίστας','Όνομα, σειρά, εμφάνιση, σημειώσεις, φάκελος')}
       ${b('exportcol','download','Εξαγωγή σε κείμενο','')}
