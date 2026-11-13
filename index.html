@@ -205,7 +205,22 @@ body[data-size=m] .dtop .back,body[data-size=s] .dtop .back{display:inline-grid}
 .note .nl{font-size:12px;font-weight:650;color:var(--muted);display:block;margin-bottom:2px}
 .note.inl{background:color-mix(in srgb,var(--note) 12%,var(--bg));box-shadow:inset 3px 0 0 var(--note);font-weight:600}
 .note.inl .nl{color:var(--note)}
-.ctxbar .btn{margin-left:auto;color:var(--muted)}
+.ctxbar .ctxedit{margin-left:auto;color:var(--muted);flex:none}
+.ctxname{display:inline-flex;align-items:center;gap:6px;min-width:0;border:0;background:none;color:var(--muted);font-size:13px;font-weight:600;padding:4px 0}
+.ctxname span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctxname:hover{color:var(--accent)}
+.ctxbar .pos{flex:none;font-variant-numeric:tabular-nums;color:var(--faint)}
+.nolyr{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:18px 0 6px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.bigkey{display:flex;flex-direction:column;align-items:flex-start;gap:2px;flex:1;min-width:120px}
+.bigkey span{font-size:12.5px;font-weight:650;color:var(--muted)}
+.bigkey b{font-size:44px;line-height:1;font-weight:800;color:var(--chord);font-variant-numeric:tabular-nums}
+.bigkey b.none{color:var(--faint)}
+.bigkey small{font-size:12.5px;color:var(--muted)}
+.nolyr-acts{display:flex;gap:8px;flex-wrap:wrap}
+body.perf .nolyr-acts{display:none}
+body.perf .nolyr{border:0;background:none;padding:0}
+body.perf .bigkey b{font-size:calc(var(--fs) * 3)}
+.mitem.danger,.mitem.danger svg.i{color:var(--danger)}
 .tools{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 0;margin:10px 0 6px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .tgroup{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line2);border-radius:10px;padding:2px;background:var(--raise)}
 .tgroup .lab{font-size:12px;color:var(--faint);padding:0 6px 0 8px}
@@ -378,6 +393,7 @@ body[data-size=s]:not([data-pane=detail]) #toast,body.perf #toast,body.editing #
   #modal{padding:0;place-items:end stretch}
   .tools .tgroup .lab{display:none}
   .dacts .ibtn{width:36px}
+  .ctxedit{padding:0 8px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -1124,7 +1140,7 @@ function renderSide(){
     </div>
     <div class="sidefoot">
       <div class="footrow">
-        <button class="btn sm ghost" data-act="theme" title="Θέμα εμφάνισης">${ic(prefs.theme==='dark'?'moon':prefs.theme==='light'?'sun':'monitor','sm')}<span>${{auto:'Αυτόματο',light:'Φωτεινό',dark:'Σκούρο'}[prefs.theme]}</span></button>
+        <button class="btn sm ghost" data-act="theme" title="Αλλαγή θέματος: αυτόματο → φωτεινό → σκούρο" aria-label="Θέμα: ${{auto:'αυτόματο',light:'φωτεινό',dark:'σκούρο'}[prefs.theme]}. Πάτα για αλλαγή.">${ic(prefs.theme==='dark'?'moon':prefs.theme==='light'?'sun':'monitor','sm')}<span>${{auto:'Αυτόματο θέμα',light:'Φωτεινό θέμα',dark:'Σκούρο θέμα'}[prefs.theme]}</span></button>
         <button class="btn sm ghost" data-act="backup" title="Αντίγραφο ασφαλείας">${ic('download','sm')}<span>Backup</span></button>
         <button class="btn sm ghost" data-act="ghsetup" title="Σύνδεση με GitHub">${ic('cloud','sm')}<span>GitHub</span></button>
       </div>
@@ -1291,39 +1307,40 @@ function renderDetail(force=false){
   lastDetailKey=key;
   const flat=preferFlat(s,n);
   const chips=[];
-  if(s.key) chips.push(`<span class="chip key">Τόνος <b>${esc(trKey(s.key,n,flat))}</b>${n?` <span>(το τραγούδι είναι σε ${esc(s.key)})</span>`:''}</span>`);
-  else if(it&&it.key) chips.push(`<span class="chip key">Τόνος <b>${esc(it.key)}</b></span>`);
+  const hasLines=(s.lines||[]).length>0; // without lyrics the key is shown big instead (.bigkey)
+  if(hasLines&&s.key) chips.push(`<span class="chip key">Τόνος <b>${esc(trKey(s.key,n,flat))}</b>${n?` <span>(το τραγούδι είναι σε ${esc(s.key)})</span>`:''}</span>`);
+  else if(hasLines&&it&&it.key) chips.push(`<span class="chip key">Τόνος <b>${esc(it.key)}</b></span>`);
   if(s.capo) chips.push(`<span class="chip">Κάπο <b>${esc(s.capo)}</b></span>`);
   if(s.rhythm) chips.push(`<span class="chip">Ρυθμός <b>${esc(s.rhythm)}</b></span>`);
   if(s.timeSig) chips.push(`<span class="chip">Μέτρο <b>${esc(s.timeSig)}</b></span>`);
   (s.genres||[]).forEach(g=>chips.push(`<span class="chip">${esc(g)}</span>`));
   const hasC=songHasChords(s);
   d.innerHTML=`<div class="dwrap">
-    ${cx&&cx.col?`<div class="ctxbar">${ic(cx.col.ordered?'listmusic':'folder','sm')}<span>${esc(cx.col.name)}</span><span class="pos">· ${cx.i+1} από ${cx.n}</span>${it?`<button class="btn sm ghost" data-act="itemmenu" data-item="${it.i}" data-col="${cx.col.id}">${ic('pencil','sm')}Τόνος/σημείωση λίστας</button>`:''}</div>`:''}
+    ${cx&&cx.col?`<div class="ctxbar"><button class="ctxname" data-act="sec" data-sec="col:${cx.col.id}" title="Πίσω στη λίστα">${ic(cx.col.ordered?'listmusic':'folder','sm')}<span>${esc(cx.col.name)}</span></button><span class="pos">${cx.i+1}/${cx.n}</span>${it?`<button class="btn sm ghost ctxedit" data-act="itemmenu" data-item="${it.i}" data-col="${cx.col.id}" title="Τόνος και σημείωση σε αυτή τη λίστα" aria-label="Τόνος και σημείωση σε αυτή τη λίστα">${ic('settings','sm')}<span>Τόνος/σημείωση</span></button>`:''}</div>`:''}
     <div class="dtop">
       <button class="ibtn back" data-act="back" aria-label="Πίσω">${ic('left')}</button>
       <div class="dtitle"><h1>${esc(s.title||'Χωρίς τίτλο')}</h1>${s.artist?`<div class="ar">${esc(s.artist)}</div>`:''}</div>
       <div class="dacts">
         <button class="ibtn fav ${s.fav?'on':''}" data-act="fav" title="${s.fav?'Αφαίρεση από αγαπημένα':'Αγαπημένο'}" aria-pressed="${!!s.fav}" aria-label="Αγαπημένο">${ic('star')}</button>
         <button class="ibtn" data-act="edit" title="Επεξεργασία" aria-label="Επεξεργασία">${ic('pencil')}</button>
-        <button class="ibtn" data-act="tocol" title="Συλλογές" aria-label="Προσθήκη σε συλλογή">${ic('folderplus')}</button>
-        <button class="ibtn" data-act="versions" title="Ιστορικό εκδόσεων" aria-label="Ιστορικό εκδόσεων">${ic('history')}</button>
-        <button class="ibtn" data-act="exportsong" title="Εξαγωγή" aria-label="Εξαγωγή">${ic('share')}</button>
-        <button class="ibtn" data-act="delsong" title="Διαγραφή" aria-label="Διαγραφή">${ic('trash')}</button>
+        <button class="ibtn" data-act="songmenu" title="Περισσότερα" aria-label="Περισσότερα">${ic('more')}</button>
       </div>
     </div>
     ${chips.length?`<div class="meta">${chips.join('')}</div>`:''}
     ${it&&it.note?`<div class="note inl"><span class="nl">${esc(cx.col.name)}</span>${esc(it.note)}</div>`:''}
     ${s.notes?`<div class="note"><span class="nl">Σημειώσεις</span>${esc(s.notes)}</div>`:''}
-    <div class="tools">
+    ${!(s.lines||[]).length?`<div class="nolyr">
+      <div class="bigkey"><span>Τόνος</span><b class="${itemKey(it,s)?'':'none'}">${esc(itemKey(it,s)||'—')}</b>${it&&it.key&&s.key&&it.key!==s.key?`<small>το τραγούδι είναι σε ${esc(s.key)}</small>`:''}</div>
+      <div class="nolyr-acts"><button class="btn primary" data-act="perf">${ic('max','sm')}Παίξιμο</button><button class="btn" data-act="edit">${ic('plus','sm')}Πρόσθεσε στίχους</button></div>
+    </div>`:''}
+    ${(s.lines||[]).length?`<div class="tools">
       ${hasC?`<div class="tgroup"><span class="lab">Τόνος</span><button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus','sm')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus','sm')}</button>${n!==defShift(s)?`<button class="ibtn" data-act="tr0" title="${it&&it.key?'Πίσω στον τόνο της λίστας':'Επαναφορά τόνου'}" aria-label="Επαναφορά τόνου">${ic('undo','sm')}</button>`:''}</div>`:''}
       <div class="tgroup"><span class="lab">Γράμματα</span><button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus','sm')}</button><span class="val">${prefs.fs}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus','sm')}</button></div>
       <span class="tspacer"></span>
       ${hasC&&n!==defShift(s)?`<button class="btn sm" data-act="keeptr" title="${it?'Αυτή η λίστα θα ανοίγει το τραγούδι σε αυτόν τον τόνο':'Γράφει τα ακόρντα στον νέο τόνο'}">${it?'Κράτα τον τόνο στη λίστα':'Κράτα αυτόν τον τόνο'}</button>`:''}
       <button class="btn sm primary" data-act="perf">${ic('max','sm')}Παίξιμο</button>
     </div>
-    <div class="sheet" style="--fs:${prefs.fs}px">${(s.lines||[]).length?sheetHTML(s,n):''}</div>
-    ${!(s.lines||[]).length?`<div class="empty"><h3>Δεν έχει στίχους ακόμα</h3><p>Πρόσθεσέ τους με επικόλληση, όποτε τους βρεις.</p><div class="acts"><button class="btn" data-act="edit">${ic('pencil','sm')}Συμπλήρωση</button></div></div>`:''}
+    <div class="sheet" style="--fs:${prefs.fs}px">${sheetHTML(s,n)}</div>`:''}
     ${cx&&cx.next?`<div class="nextup" data-act="next">${ic('right')}<div class="main"><div class="l">Επόμενο</div><div class="tt">${esc(cx.next.title)}</div></div><span class="keyb ${cx.nextKey?'':'none'}">${esc(cx.nextKey||'—')}</span></div>`:''}
   </div>`;
   if(sameSong) d.scrollTop=keep; else d.scrollTop=0;
@@ -1895,6 +1912,15 @@ const A={
   async confirmOk(){const f=confirmFn;confirmFn=null;closeModal();if(f)await f()},
   closeModal(){closeModal()},
   newcol(){colModal(null)},
+  songmenu(){const s=Store.songs.get(S.songId);if(!s)return;
+    const b=(act,icon,label,sub,cls='')=>`<button class="mitem ${cls}" data-act="${act}">${ic(icon)}<span><b>${label}</b>${sub?`<small>${sub}</small>`:''}</span></button>`;
+    const inCols=[...Store.cols.values()].filter(c=>hasSong(c,s.id)).length;
+    openModal(`${dhead(esc(s.title))}<div class="dbody menulist">
+      ${b('tocol','folderplus','Σε λίστες',inCols?`Είναι σε ${inCols} λίστ${inCols===1?'α':'ες'}`:'Δεν είναι σε καμία λίστα')}
+      ${b('versions','history','Ιστορικό εκδόσεων','Προηγούμενες μορφές και επαναφορά')}
+      ${b('exportsong','share','Εξαγωγή','Αντιγραφή κειμένου, .txt ή ChordPro')}
+      ${b('delsong','trash','Διαγραφή τραγουδιού','Σβήνεται και από όλες τις λίστες','danger')}
+    </div>`)},
   colmenu(){const c=colOf(S.sec);if(!c)return;
     const b=(act,icon,label,sub)=>`<button class="mitem" data-act="${act}">${ic(icon)}<span><b>${label}</b>${sub?`<small>${sub}</small>`:''}</span></button>`;
     openModal(`${dhead(esc(c.name))}<div class="dbody menulist">
