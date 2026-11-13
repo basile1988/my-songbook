@@ -42,7 +42,7 @@ Unlike public chord sites (kithara.to), it is a private library shaped by the pl
 
 ## Brand Commitments
 
-The user chose the category standard over distinctive visual worlds: a clean, conventional songbook-app look, executed at the craft level of SongbookPro, Ultimate Guitar and OnSong. No themed or decorative world; familiarity is the goal.
+The look follows Spotify's design language, at the user's request (2026-11): near-black surfaces (#121212 / #181818 / #1f1f1f), a single green (#1ed760 dark, #117a3e light) for play, active and primary actions only, pill buttons and circular icon buttons, uppercase spaced labels on primary buttons, heavy shadows for floating elements. Dark is the default; light keeps the same shapes. No Spotify name, logo or fonts.
 
 ## Evidence on Hand
 
