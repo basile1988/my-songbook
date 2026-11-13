@@ -792,6 +792,16 @@ body.perf .sheet.enter{animation:songin .18s var(--ease-out)}
   .tools .tspacer{flex:1}
   .tools .btn.sm{white-space:nowrap}
 }
+/* Play: just the round green icon, no word */
+.playbtn{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);display:inline-grid;place-items:center;cursor:pointer;touch-action:manipulation;transition:transform .1s ease-out}
+.playbtn svg.i{fill:currentColor;width:20px;height:20px;margin-left:2px}
+.playbtn.sm{width:36px;height:36px}
+.playbtn.sm svg.i{width:16px;height:16px}
+.playbtn.big{width:64px;height:64px;margin-top:8px}
+.playbtn.big svg.i{width:28px;height:28px}
+.playbtn:active{transform:scale(.94)}
+.playbtn:disabled{opacity:.35;cursor:default}
+@media (hover:hover) and (pointer:fine){.playbtn:not(:disabled):hover{transform:scale(1.06)}}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -1655,7 +1665,7 @@ function renderList(full=true){
         <div class="ltitle">${SIDETOG}
           <h2>${esc(sectionTitle())}</h2>
           ${col?`<button class="ibtn" data-act="colmenu" title="Επιλογές λίστας" aria-label="Επιλογές λίστας">${ic('more')}</button>
-                 <button class="btn primary sm" data-act="playcol" ${songItems(col).length?'':'disabled'}>${ic('play','sm')}Παίξιμο</button>`
+                 <button class="playbtn" data-act="playcol" ${songItems(col).length?'':'disabled'} aria-label="Παίξιμο" title="Παίξιμο">${ic('play')}</button>`
               :`<button class="btn primary sm" data-act="newsong">${ic('plus','sm')}Νέο τραγούδι</button>`}
         </div>
         ${col&&col.notes?notesBox(col):''}
@@ -1772,7 +1782,7 @@ function renderFolder(col,pane){
     return `<div class="row frow" data-act="sec" data-sec="col:${c.id}" role="button" tabindex="0">
       <span class="ficon">${ic(sub&&!n?'folder':'listmusic')}</span>
       <div class="main"><div class="tt">${esc(c.name)}</div><div class="ar">${bits.join(' · ')}</div>${c.notes?`<div class="fnotes">${esc(c.notes)}</div>`:''}</div>
-      ${n?`<button class="btn sm fplay" data-act="playsub" data-col="${c.id}" aria-label="Παίξιμο: ${esc(c.name)}">${ic('play','sm')}<span>Παίξιμο</span></button>`:''}
+      ${n?`<button class="playbtn sm" data-act="playsub" data-col="${c.id}" aria-label="Παίξιμο: ${esc(c.name)}" title="Παίξιμο">${ic('play')}</button>`:''}
     </div>`;
   };
   pane.innerHTML=`
@@ -1899,7 +1909,7 @@ function renderDetail(force=false){
         <div class="muted">${n} τραγούδι${n===1?'':'α'}${packs.length?` · ${packs.length} πακέτ${packs.length===1?'ο':'α'}`:''}</div>
         ${packs.length?`<div class="packs">${packs.map(p=>`<span class="pk">${esc(p.name)} <b>${p.n}</b></span>`).join('')}</div>`:''}
         ${col.notes?`<div class="note"><span class="nl">Σημειώσεις</span>${esc(col.notes)}</div>`:''}
-        ${n?`<button class="btn primary big" data-act="playstart">${ic('play','sm')}Παίξιμο από την αρχή</button>`:`<button class="btn primary big" data-act="pickcol">${ic('plus','sm')}Πρόσθεσε τραγούδια</button>`}
+        ${n?`<button class="playbtn big" data-act="playstart" aria-label="Παίξιμο από την αρχή" title="Παίξιμο από την αρχή">${ic('play')}</button>`:`<button class="btn primary big" data-act="pickcol">${ic('plus','sm')}Πρόσθεσε τραγούδια</button>`}
       </div></div>`;
       renderPbar();return;
     }
@@ -1943,7 +1953,7 @@ function renderDetail(force=false){
     ${s.notes?`<div class="note"><span class="nl">Σημειώσεις</span>${esc(s.notes)}</div>`:''}
     ${!(s.lines||[]).length?`<div class="nolyr">
       <div class="bigkey"><span>Τόνος</span><b class="${itemKey(it,s)?'':'none'}">${esc(itemKey(it,s)||'—')}</b>${it&&it.key&&s.key&&it.key!==s.key?`<small>το τραγούδι είναι σε ${esc(s.key)}</small>`:''}</div>
-      <div class="nolyr-acts"><button class="btn primary" data-act="perf">${ic('max','sm')}Παίξιμο</button><button class="btn" data-act="edit">${ic('plus','sm')}Πρόσθεσε στίχους</button><a class="btn" href="${kitharaUrl(s)}" target="_blank" rel="noopener">${ic('search','sm')}Βρες στο kithara</a></div>
+      <div class="nolyr-acts"><button class="playbtn" data-act="perf" aria-label="Παίξιμο" title="Παίξιμο">${ic('play')}</button><button class="btn" data-act="edit">${ic('plus','sm')}Πρόσθεσε στίχους</button><a class="btn" href="${kitharaUrl(s)}" target="_blank" rel="noopener">${ic('search','sm')}Βρες στο kithara</a></div>
       <div class="hint nolyr-hint">Στο kithara.to αντέγραψε το τραγούδι με τα ακόρντα, γύρνα εδώ, πάτα «Πρόσθεσε στίχους» και επικόλλησε.</div>
     </div>`:''}
     ${(s.lines||[]).length?`<div class="tools">
@@ -1952,7 +1962,7 @@ function renderDetail(force=false){
       <button class="tgroup aabtn" data-act="stagepop" data-sheet="fs" aria-label="Μέγεθος γραμμάτων" aria-haspopup="true"><b class="ptxt">Aa</b></button>
       <span class="tspacer"></span>
       ${hasC&&n!==defShift(s)?`<button class="btn sm" data-act="keeptr" title="${it?'Αυτή η λίστα θα ανοίγει το τραγούδι σε αυτόν τον τόνο':'Γράφει τα ακόρντα στον νέο τόνο'}">${it?'Κράτα τον τόνο στη λίστα':'Κράτα αυτόν τον τόνο'}</button>`:''}
-      <button class="btn sm primary" data-act="perf">${ic('max','sm')}Παίξιμο</button>
+      <button class="playbtn" data-act="perf" aria-label="Παίξιμο" title="Παίξιμο">${ic('play')}</button>
     </div>
     <div class="sheet" style="--fs:${prefs.fs}px">${sheetHTML(s,n)}</div>`:''}
     ${cx&&cx.next?`<div class="nextup" data-act="next">${ic('right')}<div class="main"><div class="l">Επόμενο</div><div class="tt">${esc(cx.next.title)}</div></div><span class="keyb ${cx.nextKey?'':'none'}">${esc(cx.nextKey||'—')}</span></div>`:''}
