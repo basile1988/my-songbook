@@ -802,6 +802,11 @@ body.perf .sheet.enter{animation:songin .18s var(--ease-out)}
 .playbtn:active{transform:scale(.94)}
 .playbtn:disabled{opacity:.35;cursor:default}
 @media (hover:hover) and (pointer:fine){.playbtn:not(:disabled):hover{transform:scale(1.06)}}
+/* the logo on phones (top of Λίστες and Τραγούδια) */
+.mbrand{display:none}
+body[data-size=s] .mbrand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;letter-spacing:-.02em;padding:calc(4px + env(safe-area-inset-top,0px)) 0 8px}
+.mbrand .logo{width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.mbrand .logo svg{width:15px;height:15px}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -1638,6 +1643,8 @@ function renderSide(){
    RENDER: LIST PANE
    ===================================================================== */
 // ☰: on a small laptop the sidebar is a drawer; this opens it (hidden on other sizes by CSS)
+// phones have no sidebar, so the logo sits on top of the two main screens (Λίστες, Τραγούδια)
+const MBRAND=()=>`<div class="mbrand" aria-hidden="true"><span class="logo">${ic('music')}</span>My Songbook</div>`;
 const SIDETOG='<button class="ibtn sidetog" data-act="sidetoggle" aria-label="Μενού">'+'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button>';
 function sectionTitle(){
   const col=colOf(S.sec);
@@ -1661,6 +1668,7 @@ function renderList(full=true){
     if(!(col&&col.ordered)) S.reorder=false;
     pane.innerHTML=`
       <div class="lhead">
+        ${col?'':MBRAND()}
         ${parent?`<button class="crumb" data-act="sec" data-sec="col:${parent.id}">${ic('left','sm')}${esc(parent.name)}</button>`:col?`<button class="crumb" data-act="sec" data-sec="home">${ic('left','sm')}Λίστες</button>`:''}
         <div class="ltitle">${SIDETOG}
           <h2>${esc(sectionTitle())}</h2>
@@ -1738,7 +1746,7 @@ function renderHome(pane){
   // first load on a new device: GitHub hasn't answered yet, so show that (not «make your first list»)
   const loading=!tops.length&&(Store.status==='loading'||!Store.loaded.cols);
   pane.innerHTML=`
-    <div class="lhead"><div class="ltitle">${SIDETOG}<h2>Λίστες</h2><button class="btn primary sm" data-act="newlist">${ic('plus','sm')}Νέα λίστα</button></div></div>
+    <div class="lhead">${MBRAND()}<div class="ltitle">${SIDETOG}<h2>Λίστες</h2><button class="btn primary sm" data-act="newlist">${ic('plus','sm')}Νέα λίστα</button></div></div>
     <div class="list homelist">
       ${r?`<div class="resume" data-act="resume" role="button" tabindex="0">
         <div class="main"><div class="rl">Συνέχεια από εκεί που ήσουν</div><div class="tt">${esc(r.col.name)}</div>
