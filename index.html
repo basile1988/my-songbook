@@ -2,7 +2,7 @@
 <html lang="el" data-eff="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#121212">
 <title>My Songbook</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -559,6 +559,82 @@ html[data-eff=dark] .radio{background:#181818}
 #tabbar button.on{color:var(--text)}
 #tabbar button.on svg.i{color:var(--accent)}
 .reorderbar{border-radius:9999px}
+/* stage: thin header on top, one bar at the bottom */
+.stagehead{display:none}
+body.perf .stagehead{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:6;margin:-18px calc(-1 * clamp(16px,4vw,56px)) 10px;padding:calc(10px + env(safe-area-inset-top,0px)) clamp(16px,4vw,56px) 10px;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+body.perf .dtop,body.perf .meta{display:none!important}
+.shback{flex:none;display:inline-flex;align-items:center;gap:4px;min-height:40px;padding:0 14px 0 10px;border:0;border-radius:9999px;background:var(--raise);color:var(--text);font-weight:700;font-size:14px}
+.shback.round{width:40px;padding:0;justify-content:center}
+.shtitle{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.shtitle b{font-size:17px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shtitle span{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shkey{flex:none;min-width:48px;min-height:40px;padding:0 10px;border:0;border-radius:8px;background:var(--raise);color:var(--chord);font-weight:800;font-size:18px}
+.shpos{flex:none;color:var(--muted);font-variant-numeric:tabular-nums;font-weight:700}
+.cuehead+.note{margin-top:0}
+.pround{flex:none;width:48px;height:48px;border-radius:50%;border:0;background:var(--raise);color:var(--text);display:grid;place-items:center}
+.pround svg.i{width:22px;height:22px}
+.ptxt{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.pmid{align-items:center;gap:8px}
+.stagesheet{align-items:stretch;padding-bottom:20px}
+.sstep{display:flex;align-items:center;justify-content:center;gap:18px;padding:8px 0}
+.ibtn.big{width:56px;height:56px;background:var(--raise)}
+.sval{min-width:70px;text-align:center;font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+.sval.k{color:var(--chord)}
+.stagesheet .btn{align-self:center}
+.stagesheet .hint{text-align:center}
+@media (max-width:640px){.pmid{order:0;flex:0 0 auto;width:auto}.pbar{flex-wrap:nowrap;gap:6px}.pnav{flex:1 1 0;min-height:56px;font-size:14px;padding:0 10px}.pround{width:44px;height:44px}}
+/* tablet stage: two columns, each scrolls on its own */
+body.perf.stagesplit #detail{overflow:hidden}
+.split{display:grid;grid-template-columns:minmax(280px,38%) minmax(0,1fr);height:100%;min-height:0}
+.splitL,.splitR{overflow:auto;overscroll-behavior:contain;min-height:0;padding:0 clamp(14px,2.4vw,28px) 150px}
+.splitL{border-right:1px solid var(--line)}
+body.perf .split .stagehead{margin:0 calc(-1 * clamp(14px,2.4vw,28px)) 10px;padding-left:clamp(14px,2.4vw,28px);padding-right:clamp(14px,2.4vw,28px)}
+.split .secjump.stage{margin-left:calc(-1 * clamp(14px,2.4vw,28px));margin-right:calc(-1 * clamp(14px,2.4vw,28px));padding-left:clamp(14px,2.4vw,28px);padding-right:clamp(14px,2.4vw,28px);top:62px}
+.split .cuesheet .row .tt{font-size:calc(var(--fs) * .9)}
+.split .cuesheet .row{min-height:calc(var(--fs) * 2.4)}
+/* feel like an installed app on a phone, not a website */
+html{-webkit-tap-highlight-color:transparent;overscroll-behavior:none} /* no grey flash on tap, no pull-to-refresh reloading the list mid-song */
+body{overscroll-behavior:none}
+.list,.sidescroll,.dbody,#detail{overscroll-behavior:contain}
+button,[role=button],.row,.lcard,.chip,.pill{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.sheet,.note{-webkit-user-select:text;user-select:text}
+@media (pointer:coarse){input,select,textarea{font-size:16px!important}} /* under 16px iOS zooms into the field and stays zoomed */
+/* touch: a tapped element must not keep its hover look; press feedback comes from :active instead */
+@media (hover:none){
+  .row:not(.on):hover,.navitem:not(.on):hover,.mitem:hover,.ck:hover{background:transparent}
+  .btn:hover{background:transparent;border-color:var(--line2)}
+  .btn.primary:hover{background:var(--accent);filter:none;transform:none}
+  .ibtn:hover{background:transparent}
+  .ftoggle:hover,.shback:hover,.pround:hover{background:var(--raise)}
+  .frow:hover,.lcard:hover,.nextup:hover{background:var(--surface);box-shadow:none}
+  .secjump button:not(.on):hover{background:var(--raise);color:var(--text)}
+  .fplay:hover{transform:none}
+}
+.row:active,.lcard:active,.frow:active,.mitem:active,.resume:active{background:var(--raise)}
+.btn:active,.ibtn:active,.pround:active,.pnav:active,.playc:active,.shback:active,.shkey:active,.secjump button:active{transform:scale(.96)}
+.btn,.ibtn,.pround,.pnav,.playc,.shback,.shkey,.row,.lcard{transition:transform .1s ease-out,background .12s ease-out}
+/* home & search (phone-first) */
+.homelist{padding:8px 12px 24px}
+.resume{display:flex;align-items:center;gap:12px;padding:14px;border-radius:10px;background:var(--accent-weak);margin-bottom:14px;cursor:pointer}
+.resume .rl{font-size:12px;color:var(--muted);font-weight:600}
+.resume .tt{font-size:17px;font-weight:800;letter-spacing:-.01em}
+.resume .ar{font-size:13px;color:var(--muted)}
+.resume .main{flex:1;min-width:0}
+.playc{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.playc svg.i{fill:currentColor;width:20px;height:20px}
+.hfold{margin-bottom:10px}
+.hfhead{display:flex;align-items:center;gap:4px;margin:8px 0 6px}
+.hftog{flex:1;min-width:0;display:flex;align-items:center;gap:6px;border:0;background:none;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;text-align:left;padding:6px 2px;min-height:36px}
+.hftog span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hftog svg.i{transition:transform .15s}.hftog.open svg.i{transform:rotate(90deg)}
+.hflab{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:6px 2px}
+.hfempty{font-size:13px;padding:4px 2px 8px}
+.lcard{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;border-radius:8px;background:var(--surface);margin-bottom:6px;min-height:68px;cursor:pointer}
+.lcard .main{flex:1;min-width:0}
+.lcard .tt{font-size:16px;font-weight:700}
+.lcard .ar{font-size:13px;color:var(--muted)}
+.lcard .playc{width:42px;height:42px}
+.slab{font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:10px 10px 4px}
 .setbtn{align-self:flex-start;color:var(--muted)}
 .setbody{gap:4px}
 .setbody section{display:flex;flex-direction:column;gap:8px;padding:10px 0 12px;border-bottom:1px solid var(--line)}
@@ -1189,7 +1265,7 @@ const prefs=Object.assign({theme:'dark',fs:22,perfDark:true},lsGet('msb-prefs',{
 if(!prefs.look2){prefs.look2=1;if(prefs.theme==='auto')prefs.theme='dark';lsSet('msb-prefs',prefs)}
 const savePrefs=()=>lsSet('msb-prefs',prefs);
 const S={
-  sec:'all',          // 'all' | 'fav' | 'recent' | 'col:<id>'
+  sec:'home',         // 'home' | 'search' | 'all' | 'recent' | 'col:<id>'
   q:'',f:{genre:'',key:'',artist:''},sort:'title',
   songId:null,ctx:null, // ctx: {ids:[], colId}
   tr:{},              // per-song transposition (session)
@@ -1201,11 +1277,11 @@ const S={
 // where you were (list, song, position, stage) is kept on this device, so a phone that
 // drops the app in the background reopens exactly there. Not shared between devices.
 const STATE_KEY='msb-state';let stateT=0,stateReady=false; // nothing is written before the saved place has been restored
-function saveState(){if(!stateReady)return;clearTimeout(stateT);stateT=setTimeout(()=>lsSet(STATE_KEY,{sec:S.sec,songId:S.songId,ctx:S.ctx,perf:S.perf,cueMode:S.cueMode,cueIdx:S.cueIdx,cueAt:S.cueAt||{},fromCue:S.fromCue,returnTo:S.returnTo,tr:S.tr,pane:document.body.dataset.pane,at:Date.now()}),250)}
+function saveState(){if(!stateReady)return;clearTimeout(stateT);stateT=setTimeout(()=>lsSet(STATE_KEY,{sec:S.sec,songId:S.songId,ctx:S.ctx,perf:S.perf,cueMode:S.cueMode,cueIdx:S.cueIdx,cueAt:S.cueAt||{},lastCol:S.lastCol||null,fromCue:S.fromCue,returnTo:S.returnTo,tr:S.tr,pane:document.body.dataset.pane,at:Date.now()}),250)}
 function restoreState(){
   const st=lsGet(STATE_KEY,null);if(!st) return false;
   if(st.sec&&(!st.sec.startsWith('col:')||Store.cols.has(st.sec.slice(4)))) S.sec=st.sec;
-  S.cueIdx=st.cueIdx||{};S.cueAt=st.cueAt||{};S.tr=st.tr||{};
+  S.cueIdx=st.cueIdx||{};S.cueAt=st.cueAt||{};S.tr=st.tr||{};S.lastCol=st.lastCol||null;
   const okCtx=c=>c&&Array.isArray(c.list)&&(!c.colId||Store.cols.has(c.colId));
   if(okCtx(st.ctx)){S.ctx=st.ctx;S.ctx.pos=Math.max(0,Math.min(S.ctx.list.length-1,S.ctx.pos||0))}
   S.fromCue=st.fromCue&&Store.cols.has(st.fromCue)?st.fromCue:null;
@@ -1230,6 +1306,8 @@ function layout(){
   const w=window.innerWidth;
   const size=w>=1100?'l':w>=760?'m':'s';
   if(document.body.dataset.size!==size){document.body.dataset.size=size}
+  // turning a tablet or phone on stage switches between one and two columns
+  if(S.perf&&S.cueMode&&(w>=760)!==!!S.split) renderCueSheet();
 }
 function setPane(p){document.body.dataset.pane=p;renderTabbar()}
 window.addEventListener('resize',layout);
@@ -1355,8 +1433,9 @@ function renderSide(){
   $('#side').innerHTML=`
     <div class="brand"><span class="logo">${ic('music')}</span>My Songbook</div>
     <div class="sidescroll">
+      ${nav('home','listmusic','Αρχική')}
+      ${nav('search','search','Αναζήτηση')}
       ${nav('all','library','Όλα τα τραγούδια',n)}
-      ${nav('recent','clock','Πρόσφατα')}
       <div class="sidehead"><span>Λίστες</span><button class="ibtn sm" data-act="newcol" title="Νέα λίστα ή φάκελος" aria-label="Νέα λίστα ή φάκελος">${ic('plus')}</button></div>
       ${tree.length?tree.map(colRow).join(''):`<div class="muted" style="font-size:13px;padding:6px 10px 0">Φτιάξε λίστες για προγράμματα και setlist, και φακέλους για μαγαζιά ή σεζόν.</div>`}
     </div>
@@ -1372,13 +1451,15 @@ function renderSide(){
 function sectionTitle(){
   const col=colOf(S.sec);
   if(col) return col.name;
-  return {all:'Όλα τα τραγούδια',fav:'Αγαπημένα',recent:'Πρόσφατα'}[S.sec]||'Τραγούδια';
+  return {all:'Τραγούδια',recent:'Πρόσφατα'}[S.sec]||'Τραγούδια';
 }
 function renderList(full=true){
   saveState();
   const col=colOf(S.sec);
-  if(S.sec.startsWith('col:')&&!col&&Store.loaded.cols){S.sec='all'}
+  if(S.sec.startsWith('col:')&&!col&&Store.loaded.cols){S.sec='home'}
   const pane=$('#listPane');
+  if(S.sec==='home'){renderHome(pane);return}
+  if(S.sec==='search'){renderSearch(pane,full);return}
   if(isFolder(col)){renderFolder(col,pane);return}
   if(full||!pane.querySelector('.list')||pane.querySelector('.folderlist')){
     const genres=allGenres(),artists=distinct('artist'),keys=ALLKEYS.filter(k=>[...Store.songs.values()].some(s=>s.key===k));
@@ -1387,7 +1468,7 @@ function renderList(full=true){
     if(!(col&&col.ordered)) S.reorder=false;
     pane.innerHTML=`
       <div class="lhead">
-        ${parent?`<button class="crumb" data-act="sec" data-sec="col:${parent.id}">${ic('left','sm')}${esc(parent.name)}</button>`:''}
+        ${parent?`<button class="crumb" data-act="sec" data-sec="col:${parent.id}">${ic('left','sm')}${esc(parent.name)}</button>`:col?`<button class="crumb" data-act="sec" data-sec="home">${ic('left','sm')}Λίστες</button>`:''}
         <div class="ltitle">
           <h2>${esc(sectionTitle())}</h2>
           ${col?`<button class="ibtn" data-act="colmenu" title="Επιλογές λίστας" aria-label="Επιλογές λίστας">${ic('more')}</button>
@@ -1414,6 +1495,63 @@ function renderList(full=true){
 }
 // kithara.to's own search, with the title (it matches without accents and case)
 const kitharaUrl=s=>'https://kithara.to/fi?query='+encodeURIComponent(String(s.title||'').replace(/['’΄`]/g,' ').trim().slice(0,40));
+// the list last played on this device, with where it stood (for «Συνέχεια»)
+function lastPlayed(){
+  const c=S.lastCol&&Store.cols.get(S.lastCol);if(!c) return null;
+  const sl=songItems(c);if(!sl.length) return null;
+  let i=S.cueIdx[c.id]||0;const at=(S.cueAt||{})[c.id];if(at){const k=sl.findIndex(x=>x.i===at);if(k>=0)i=k}
+  i=Math.max(0,Math.min(sl.length-1,i));
+  let sec=null;for(const x of itemsOf(c)){if(x===sl[i])break;if(x.sec!=null)sec=x}
+  return {col:c,i,n:sl.length,sec,song:Store.songs.get(sl[i].s)};
+}
+const listCard=c=>{
+  const n=songItems(c).length,secs=itemsOf(c).filter(x=>x.sec!=null).length;
+  return `<div class="lcard" data-act="sec" data-sec="col:${c.id}" role="button" tabindex="0">
+    <div class="main"><div class="tt">${esc(c.name)}</div><div class="ar">${n} τραγούδι${n===1?'':'α'}${secs?` · ${secs} πακέτ${secs===1?'ο':'α'}`:''}</div></div>
+    ${n?`<button class="playc" data-act="playsub" data-col="${c.id}" aria-label="Παίξιμο: ${esc(c.name)}">${ic('play')}</button>`:''}
+  </div>`;
+};
+// home: where a night starts. «Συνέχεια» on top, then every folder with its lists as cards
+function renderHome(pane){
+  const r=lastPlayed();const closed=new Set(prefs.closed||[]);
+  const tops=[...Store.cols.values()].filter(c=>!c.parent||!Store.cols.has(c.parent)).sort((a,b)=>collator.compare(a.name,b.name));
+  const folders=tops.filter(isFolder),loose=tops.filter(c=>!isFolder(c));
+  const folderBlock=(f,d=0)=>{const kids=childrenOf(f.id),open=!closed.has(f.id);
+    return `<section class="hfold">
+      <div class="hfhead"><button class="hftog ${open?'open':''}" data-act="foldtoggle" data-id="${f.id}" aria-expanded="${open}">${ic('right','sm')}<span>${esc(f.name)}</span></button>
+        <button class="ibtn" data-act="foldermenu" data-col="${f.id}" aria-label="Επιλογές φακέλου">${ic('more','sm')}</button></div>
+      ${open?kids.map(k=>isFolder(k)?folderBlock(k,d+1):listCard(k)).join('')||`<div class="muted hfempty">Άδειος φάκελος.</div>`:''}
+    </section>`};
+  pane.innerHTML=`
+    <div class="lhead"><div class="ltitle"><h2>Λίστες</h2><button class="ibtn" data-act="newcol" aria-label="Νέα λίστα ή φάκελος" title="Νέα λίστα ή φάκελος">${ic('plus')}</button></div></div>
+    <div class="list homelist">
+      ${r?`<div class="resume" data-act="resume" role="button" tabindex="0">
+        <div class="main"><div class="rl">Συνέχεια από εκεί που ήσουν</div><div class="tt">${esc(r.col.name)}</div>
+        <div class="ar">${r.i+1} / ${r.n}${r.sec?' · '+esc(secShort(r.sec)):''}${r.song?' · '+esc(r.song.title):''}</div></div>
+        <span class="playc">${ic('play')}</span></div>`:''}
+      ${folders.map(f=>folderBlock(f)).join('')}
+      ${loose.length?`<section class="hfold">${folders.length?`<div class="hfhead"><span class="hflab">Άλλες λίστες</span></div>`:''}${loose.map(listCard).join('')}</section>`:''}
+      ${!tops.length?`<div class="empty"><h3>Φτιάξε την πρώτη σου λίστα</h3><p>Ένα πρόγραμμα, ένα setlist ή μια βραδιά. Τα τραγούδια μπαίνουν από τη βιβλιοθήκη.</p><div class="acts"><button class="btn primary" data-act="newcol">${ic('plus','sm')}Νέα λίστα</button></div></div>`:''}
+    </div>`;
+}
+// search tab: the keyboard comes up ready; recent songs below
+function renderSearch(pane,full){
+  if(full||!pane.querySelector('#sq')){
+    pane.innerHTML=`<div class="lhead"><div class="ltitle"><h2>Αναζήτηση</h2></div>
+      <div class="search">${ic('search')}<input id="sq" type="search" placeholder="Τίτλος, καλλιτέχνης ή στίχος" value="${esc(S.q)}" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση σε όλα τα τραγούδια"></div></div>
+      <div class="list" id="sres"></div>`;
+  }
+  renderSearchResults();
+}
+function renderSearchResults(){
+  const el=$('#sres');if(!el) return;
+  const inLists=id=>[...Store.cols.values()].filter(c=>hasSong(c,id)).length;
+  const row=s=>{const n=inLists(s.id);return `<div class="row" data-act="opensong" data-id="${s.id}" role="button" tabindex="0"><div class="main"><div class="tt">${esc(s.title)}</div><div class="ar">${esc([s.artist,n?`σε ${n} λίστ${n===1?'α':'ες'}`:''].filter(Boolean).join(' · '))}</div></div><span class="keyb ${s.key?'':'none'}">${esc(s.key||'—')}</span></div>`};
+  const q=S.q.trim();
+  if(q){const r=searchSongs(q,60);el.innerHTML=r.length?r.map(row).join(''):`<div class="empty"><h3>Δεν βρέθηκε</h3><p>Κανένα τραγούδι για «${esc(q)}».</p><div class="acts"><button class="btn" data-act="newsong" data-title="${esc(q)}">${ic('plus','sm')}Νέο «${esc(q.length>24?q.slice(0,24)+'…':q)}»</button></div></div>`;return}
+  const rec=[...Store.songs.values()].filter(s=>s.openedAt).sort((a,b)=>b.openedAt-a.openedAt).slice(0,15);
+  el.innerHTML=rec.length?`<div class="slab">Πρόσφατα</div>${rec.map(row).join('')}`:`<div class="muted" style="padding:14px 8px">Γράψε μερικά γράμματα από τον τίτλο, τον καλλιτέχνη ή τους στίχους.</div>`;
+}
 // short name for a section chip: «Ζεϊμπέκικα» + «2η ΕΝΟΤΗΤΑ» → «Ζεϊμπέκικα 2»
 function secShort(it){const n=String(it.sub||'').match(/\d+/);return (it.sec||'Ενότητα')+(n?' '+n[0]:'')}
 // a folder (e.g. «Φάρος · Χειμώνας»): its lists, each with its size and a play button
@@ -1524,7 +1662,7 @@ function renderDetail(force=false){
   }
   const n=curShift(s);
   const cx=ctxInfo();const it=cx&&cx.it;
-  const key=s.id+'|'+s.updatedAt+'|'+n+'|'+(S.ctx?S.ctx.colId+'@'+S.ctx.pos+'/'+S.ctx.list.length:'')+'|'+(it?it.key+'~'+it.note:'')+'|'+(cx&&cx.col?cx.col.updatedAt:'')+'|'+S.perf;
+  const key=s.id+'|'+s.updatedAt+'|'+n+'|'+(S.ctx?S.ctx.colId+'@'+S.ctx.pos+'/'+S.ctx.list.length:'')+'|'+(it?it.key+'~'+it.note:'')+'|'+(cx&&cx.col?cx.col.updatedAt:'')+'|'+S.perf+'|'+(S.fromCue||'')+(S.returnTo?'r':'');
   if(!force&&key===lastDetailKey){renderPbar();return}
   const keep=d.scrollTop;const sameSong=lastDetailKey.split('|')[0]===s.id;
   lastDetailKey=key;
@@ -1537,7 +1675,11 @@ function renderDetail(force=false){
   if(s.rhythm) chips.push(`<span class="chip">Ρυθμός <b>${esc(s.rhythm)}</b></span>`);
   (s.genres||[]).forEach(g=>chips.push(`<span class="chip">${esc(g)}</span>`));
   const hasC=songHasChords(s);
+  // on stage: one thin line on top — the way back, the title, the key (tap it to change)
+  const shownKey=hasC&&s.key?trKey(s.key,n,flat):itemKey(it,s);
+  const back=S.returnTo?`<button class="shback" data-act="stageback">${ic('left','sm')}Πίσω</button>`:S.fromCue?`<button class="shback" data-act="cueback">${ic('left','sm')}Λίστα</button>`:`<button class="shback round" data-act="perfx" aria-label="Έξοδος από τη σκηνή">${ic('x','sm')}</button>`;
   d.innerHTML=`<div class="dwrap">
+    <div class="stagehead">${back}<div class="shtitle"><b>${esc(s.title||'Χωρίς τίτλο')}</b>${s.artist?`<span>${esc(s.artist)}</span>`:''}</div>${shownKey?`<button class="shkey" ${hasC?'data-act="stagesheet" data-sheet="key"':''} aria-label="Τόνος ${esc(shownKey)}">${esc(shownKey)}</button>`:''}</div>
     ${cx&&cx.col?`<div class="ctxbar"><button class="ctxname" data-act="sec" data-sec="col:${cx.col.id}" title="Πίσω στη λίστα">${ic(cx.col.ordered?'listmusic':'folder','sm')}<span>${esc(cx.col.name)}</span></button><span class="pos">${cx.i+1}/${cx.n}</span>${it?`<button class="btn sm ghost ctxedit" data-act="itemmenu" data-item="${it.i}" data-col="${cx.col.id}" title="Τόνος και σημείωση σε αυτή τη λίστα" aria-label="Τόνος και σημείωση σε αυτή τη λίστα">${ic('settings','sm')}<span>Τόνος/σημείωση</span></button>`:''}</div>`:''}
     <div class="dtop">
       <button class="ibtn back" data-act="back" aria-label="Πίσω">${ic('left')}</button>
@@ -1574,31 +1716,48 @@ function renderPbar(){
   // stage bar: big labelled prev/next at the ends, a few labelled controls in the middle
   // sub: what is next/previous («Ήλιε Μου · G»), so the player sees it without leaving the lyrics
   const nav=(act,dir,label,on,sub)=>`<button class="pnav ${dir==='prev'?'back':'fwd'}" data-act="${act}" ${act==='cue'?`data-d="${dir==='prev'?-1:1}"`:''} ${on?'':'disabled'}>${dir==='prev'?ic('left'):''}<span class="pnl"><span>${label}</span>${sub?`<small>${esc(sub)}</small>`:''}</span>${dir==='next'?ic('right'):''}</button>`;
-  const srchBtn=`<button class="pbtn" data-act="stagesearch">${ic('search')}<span>Αναζήτηση</span></button>`;
-  const grp=(label,inner,cls='')=>`<div class="pgrp ${cls}"><span class="plab">${label}</span><div class="prow">${inner}</div></div>`;
-  const fsGrp=grp('Γράμματα',`<button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus')}</button><span class="val">${prefs.fs}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus')}</button>`);
-  const exitBtn=`<button class="ibtn pexit" data-act="perfx" aria-label="Έξοδος από το παίξιμο" title="Έξοδος">${ic('x')}</button>`;
+  // one bar: the two big buttons at the ends, a few round ones in the middle, the rest in ⋯
+  const rb=(act,inner,label,extra='')=>`<button class="pround" data-act="${act}" aria-label="${label}" title="${label}" ${extra}>${inner}</button>`;
+  const srch=rb('stagesearch',ic('search'),'Αναζήτηση σε όλα τα τραγούδια');
+  const more=rb('stagesheet',ic('more'),'Περισσότερα','data-sheet="more"');
+  const aa=rb('stagesheet','<b class="ptxt">Aa</b>','Μέγεθος γραμμάτων','data-sheet="fs"');
+  pn.classList.remove('show');
+  if(S.split){ // tablet: the list and the lyrics share the stage, so one bar for both
+    const col=Store.cols.get(S.ctx&&S.ctx.colId);const list=col?songItems(col):[];const cur=col?S.cueIdx[col.id]||0:0;
+    const s=list[cur]&&Store.songs.get(list[cur].s);const nx=list[cur+1],ns=nx&&Store.songs.get(nx.s);
+    pb.innerHTML=`${nav('cue','prev','Προηγ.',cur>0)}<div class="pmid">${srch}${aa}${s&&songHasChords(s)?rb('stagesheet','<b class="ptxt">♯♭</b>','Τόνος','data-sheet="key"'):''}${more}</div>
+      ${nav('cue','next','Επόμ.',cur<list.length-1,ns?ns.title+(itemKey(nx,ns)?' · '+itemKey(nx,ns):''):'')}`;
+    return;
+  }
   if(S.cueMode){
     const col=Store.cols.get(S.ctx&&S.ctx.colId);const list=col?songItems(col):[];const cur=col?S.cueIdx[col.id]||0:0;
-    const it=list[cur],s=it&&Store.songs.get(it.s);
     const nx=list[cur+1],ns=nx&&Store.songs.get(nx.s);
-    pb.innerHTML=`${nav('cue','prev','Προηγ.',cur>0)}
-      <div class="pmid">${srchBtn}${fsGrp}${s&&(s.lines||[]).length?`<button class="pbtn" data-act="cueopen">${ic('music')}<span>Στίχοι</span></button>`:''}${exitBtn}</div>
+    pb.innerHTML=`${nav('cue','prev','Προηγ.',cur>0)}<div class="pmid">${srch}${more}</div>
       ${nav('cue','next','Επόμ.',cur<list.length-1,ns?ns.title+(itemKey(nx,ns)?' · '+itemKey(nx,ns):''):'')}`;
-    pn.classList.remove('show');return;
+    return;
   }
-  const s=Store.songs.get(S.songId);if(!s){pb.innerHTML=`<div class="pmid">${exitBtn}</div>`;return} // song gone (deleted elsewhere): leave only the way out
-  const n=curShift(s);const flat=preferFlat(s,n);const cx=ctxInfo();const hasLines=(s.lines||[]).length>0;
+  const s=Store.songs.get(S.songId);if(!s){pb.innerHTML=`<div class="pmid">${rb('perfx',ic('x'),'Έξοδος')}</div>`;return} // song gone (deleted elsewhere): only the way out
+  const cx=ctxInfo();const hasLines=(s.lines||[]).length>0;
   pb.innerHTML=`${S.returnTo?`<button class="pnav back ret" data-act="stageback">${ic('left')}<span class="pnl"><span>Πίσω</span><small>στη λίστα</small></span></button>`:nav('prev','prev','Προηγ.',cx&&cx.prev)}
-    <div class="pmid">
-      ${S.fromCue&&!S.returnTo?`<button class="pbtn" data-act="cueback">${ic('listmusic')}<span>Λίστα</span></button>`:''}
-      ${srchBtn}
-      ${songHasChords(s)?grp('Τόνος',`<button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus')}</button>`):''}
-      ${hasLines?fsGrp:''}
-      ${exitBtn}
-    </div>
+    <div class="pmid">${hasLines?aa:''}${songHasChords(s)?rb('stagesheet','<b class="ptxt">♯♭</b>','Τόνος','data-sheet="key"'):''}${more}</div>
     ${S.returnTo?'':nav('next','next','Επόμ.',cx&&cx.next,cx&&cx.next?cx.next.title+(cx.nextKey?' · '+cx.nextKey:''):'')}`;
-  pn.classList.remove('show'); // the next title now lives inside the «Επόμ.» button
+}
+// a stage sheet that is open shows the new value right away
+function refreshSheet(){const sh=document.querySelector('#modal [data-sheet]');if(sh)stageSheet(sh.dataset.sheet)}
+// small sheets from the stage bar: font size, key, and «more» (search, back to list, exit)
+function stageSheet(kind){
+  const s=Store.songs.get(S.songId);
+  const stepper=(act,dl,dr,val,cls='')=>`<div class="sstep"><button class="ibtn big" data-act="${act}" data-d="${dl}" aria-label="Λιγότερο">${ic('minus')}</button><span class="sval ${cls}">${val}</span><button class="ibtn big" data-act="${act}" data-d="${dr}" aria-label="Περισσότερο">${ic('plus')}</button></div>`;
+  let body='',title='';
+  if(kind==='fs'){title='Μέγεθος γραμμάτων';body=stepper('fs',-2,2,prefs.fs)}
+  else if(kind==='key'&&s){title='Τόνος';const n=curShift(s),flat=preferFlat(s,n);
+    body=stepper('tr',-1,1,esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n)),'k')+(n!==defShift(s)?`<button class="btn" data-act="tr0">${ic('undo','sm')}Πίσω στον αρχικό τόνο</button>`:'')+`<div class="hint">Ισχύει τώρα. Για μόνιμη αλλαγή: έξοδος από τη σκηνή → τόνος → «Κράτα».</div>`}
+  else{title='Σκηνή';const b=(act,icon,label)=>`<button class="mitem" data-act="${act}">${ic(icon)}<span><b>${label}</b></span></button>`;
+    body=`${S.cueMode||S.split?'':b('stagesearch','search','Αναζήτηση σε όλα τα τραγούδια')}
+      ${S.fromCue&&!S.returnTo&&!S.cueMode?b('cueback','listmusic','Πίσω στη λίστα'):''}
+      ${S.cueMode&&!S.split?stepper('fs',-2,2,prefs.fs):''}
+      ${b('perfx','x','Έξοδος από τη σκηνή')}`}
+  openModal(`${dhead(title)}<div class="dbody stagesheet" data-sheet="${kind}">${body}</div>`);
 }
 function renderCueSheet(){
   saveState();
@@ -1617,22 +1776,41 @@ function renderCueSheet(){
     const ly=(s.lines||[]).length>0;
     return `<div class="row ${i===cur?'cur':''} ${i<cur?'done':''}" data-act="cuepick" data-i="${i}" role="button" tabindex="0" ${ly?'aria-label="'+esc(s.title)+', άνοιγμα στίχων"':''}><span class="num">${num}</span><div class="main"><div class="tt">${esc(s.title)}</div>${it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${esc(s.artist||'')}${ly?`<span class="lymark">${ic('music','sm')}στίχοι</span>`:''}</div></div><span class="keyb ${k?'':'none'}">${esc(k||'—')}</span></div>`;
   }).join('');
-  d.innerHTML=`<div class="dwrap"><div class="dtitle" style="margin-bottom:14px"><h1>${esc(col.name)}</h1><div class="ar">${p} τραγούδια</div></div>
+  const listHTML=`<div class="stagehead cuehead"><button class="shback round" data-act="perfx" aria-label="Έξοδος από τη σκηνή">${ic('x','sm')}</button><div class="shtitle"><b>${esc(col.name)}</b><span>${p} τραγούδια</span></div><span class="shpos">${cur+1}/${p}</span></div>
     ${col.notes?`<div class="note inl" style="margin:0 0 14px"><span class="nl">Σημειώσεις προγράμματος</span>${esc(col.notes)}</div>`:''}
     ${jumps.length>1?`<div class="secjump stage" role="navigation" aria-label="Πήγαινε σε ενότητα">${jumps.map(([l,i])=>`<button data-act="cuejump" data-i="${i}" class="${cur>=i&&!jumps.some(([,j])=>j>i&&j<=cur)?'on':''}">${esc(l)}</button>`).join('')}</div>`:''}
-    <div class="cuesheet" style="--fs:${prefs.fs}px">${rows}</div></div>`;
-  // keep the current song in the middle of the screen (instant: on stage there is no time for animation)
-  const el=d.querySelector('.row.cur');
-  if(el){const r=el.getBoundingClientRect(),b=d.getBoundingClientRect();d.scrollTop+=r.top-b.top-(d.clientHeight-r.height)/2}
+    <div class="cuesheet" style="--fs:${prefs.fs}px">${rows}</div>`;
+  // tablet / landscape: the list on the left, the current song's lyrics on the right, both always visible
+  S.split=window.innerWidth>=760;document.body.classList.toggle('stagesplit',S.split);
+  if(S.split){
+    const it=sl[cur],s=it&&Store.songs.get(it.s);
+    S.ctx={list:sl.map(x=>({s:x.s,it:x.i})),colId:col.id,pos:cur};S.songId=s?s.id:null; // so the list's own key applies
+    const R=d.querySelector('.splitR'),same=R&&R.dataset.song===(it&&it.i);const keepL=d.querySelector('.splitL')?.scrollTop||0,keepR=same?R.scrollTop:0;
+    let right='';
+    if(s){const n=curShift(s),flat=preferFlat(s,n),hasC=songHasChords(s),k=hasC&&s.key?trKey(s.key,n,flat):itemKey(it,s);
+      right=`<div class="stagehead"><div class="shtitle"><b>${esc(s.title)}</b>${s.artist?`<span>${esc(s.artist)}</span>`:''}</div>${k?`<button class="shkey" ${hasC?'data-act="stagesheet" data-sheet="key"':''}>${esc(k)}</button>`:''}</div>
+        ${it.note?`<div class="note inl"><span class="nl">${esc(col.name)}</span>${esc(it.note)}</div>`:''}
+        ${(s.lines||[]).length?`<div class="sheet" style="--fs:${prefs.fs}px">${sheetHTML(s,n)}</div>`:`<div class="nolyr"><div class="bigkey"><span>Τόνος</span><b class="${k?'':'none'}">${esc(k||'—')}</b></div><div class="muted">Χωρίς στίχους ακόμα.</div></div>`}`}
+    d.innerHTML=`<div class="split"><div class="splitL">${listHTML}</div><div class="splitR" data-song="${it?it.i:''}">${right}</div></div>`;
+    const L=d.querySelector('.splitL');L.scrollTop=keepL;d.querySelector('.splitR').scrollTop=keepR;
+    const el=L.querySelector('.row.cur');if(el){const r=el.getBoundingClientRect(),b=L.getBoundingClientRect();if(r.top<b.top+80||r.bottom>b.bottom-120)L.scrollTop+=r.top-b.top-(L.clientHeight-r.height)/2}
+  }else{
+    d.innerHTML=`<div class="dwrap">${listHTML}</div>`;
+    // keep the current song in the middle of the screen (instant: on stage there is no time for animation)
+    const el=d.querySelector('.row.cur');
+    if(el){const r=el.getBoundingClientRect(),b=d.getBoundingClientRect();d.scrollTop+=r.top-b.top-(d.clientHeight-r.height)/2}
+  }
   const on=d.querySelector('.secjump .on');if(on){const j=on.parentElement;j.scrollLeft+=on.getBoundingClientRect().left-j.getBoundingClientRect().left-(j.clientWidth-on.offsetWidth)/2}
   renderPbar();
 }
 function renderTabbar(){
   const p=document.body.dataset.pane;
-  // phone: the lists first (that is where a night starts), then the library, then settings
+  // phone: the lists first (that is where a night starts), search for requests, the library, settings
+  const on=t=>t==='home'?(S.sec==='home'||S.sec.startsWith('col:')):t==='search'?S.sec==='search':(S.sec==='all'||S.sec==='recent');
   $('#tabbar').innerHTML=`
-    <button class="${p==='side'||S.sec.startsWith('col:')&&p==='list'?'on':''}" data-act="tab" data-t="cols">${ic('listmusic')}Λίστες</button>
-    <button class="${p==='list'&&!S.sec.startsWith('col:')?'on':''}" data-act="tab" data-t="songs">${ic('library')}Τραγούδια</button>
+    <button class="${on('home')?'on':''}" data-act="tab" data-t="home">${ic('listmusic')}Λίστες</button>
+    <button class="${on('search')?'on':''}" data-act="tab" data-t="search">${ic('search')}Αναζήτηση</button>
+    <button class="${on('songs')?'on':''}" data-act="tab" data-t="songs">${ic('library')}Τραγούδια</button>
     <button data-act="settings">${ic('settings')}Ρυθμίσεις</button>`;
 }
 function renderAll(){renderSide();renderList(true);renderDetail(true);renderTabbar()}
@@ -2118,6 +2296,7 @@ function enterPerf(){
 }
 function exitPerf(){
   const wasCue=S.cueMode;
+  if(S.split){S.split=false;document.body.classList.remove('stagesplit');S.songId=null}
   S.perf=false;S.cueMode=false;S.fromCue=null;S.returnTo=null;if(wasCue&&document.body.dataset.size!=='l')setPane('list');document.body.classList.remove('perf','uihidden');
   try{wakeLock&&wakeLock.release&&wakeLock.release()}catch(e){}wakeLock=null;try{nsVideo&&nsVideo.pause()}catch(e){}
   try{document.fullscreenElement&&document.exitFullscreen().catch(()=>{})}catch(e){}
@@ -2135,7 +2314,13 @@ function cueMove(d){
 
 const A={
   sec(el){S.sec=el.dataset.sec;S.reorder=false;S.f={genre:'',key:'',artist:''};S.q='';renderSide();renderList(true);if(document.body.dataset.size==='s')setPane('list');else if(document.body.dataset.size==='m'&&document.body.dataset.pane==='detail')setPane('list');renderTabbar()},
-  tab(el){if(el.dataset.t==='songs'){if(S.sec.startsWith('col:')){S.sec='all';renderSide();renderList(true)}setPane('list')}else setPane('side')},
+  // phone tabs: each one is a view of the list pane
+  tab(el){const t={home:'home',search:'search',songs:'all'}[el.dataset.t]||'home';
+    if(S.sec!==t||document.body.dataset.pane!=='list'){S.sec=t;S.q='';S.reorder=false;renderSide();renderList(true)}
+    setPane('list');
+    if(t==='search')setTimeout(()=>{const q=$('#sq');if(q)q.focus()},60)},
+  resume(){const r=lastPlayed();if(!r)return;S.sec='col:'+r.col.id;renderSide();renderList(true);A.playcol()},
+  opensong(el){const id=el.dataset.id;guardEdit(()=>openSong(id,[{s:id,it:null}],null,0))},
   open(el){const col=colOf(S.sec),id=el.dataset.id,pos=+el.dataset.pos,list=playList();guardEdit(()=>openSong(id,list,col?col.id:null,pos))},
   itemmenu(el){const colId=el.dataset.col||(colOf(S.sec)||{}).id;itemModal(colId,el.dataset.item)},
   async saveItem(el){
@@ -2169,8 +2354,9 @@ const A={
   saveEdit(){saveEditor()},
   edtab(el){S.edit.showPrev=el.dataset.p==='1';$('.edbody').classList.toggle('showprev',S.edit.showPrev);document.querySelectorAll('.edtabs button').forEach(b=>b.classList.toggle('on',b===el));if(S.edit.showPrev)updatePreview()},
   tgGenre(el){const E=S.edit;const g=el.dataset.g;E.draft.genres=E.draft.genres||[];const on=E.draft.genres.includes(g);E.draft.genres=on?E.draft.genres.filter(x=>x!==g):E.draft.genres.concat(g);el.classList.toggle('on',!on);el.setAttribute('aria-pressed',!on);E.dirty=true},
-  tr(el){const s=Store.songs.get(S.songId);if(!s)return;let n=curShift(s)+(+el.dataset.d);if(n>11)n-=12;if(n<-11)n+=12;S.tr[trSlot(s)]=n;renderDetail(true)},
-  tr0(){const s=Store.songs.get(S.songId);if(!s)return;delete S.tr[trSlot(s)];renderDetail(true)},
+  tr(el){const s=Store.songs.get(S.songId);if(!s)return;let n=curShift(s)+(+el.dataset.d);if(n>11)n-=12;if(n<-11)n+=12;S.tr[trSlot(s)]=n;S.cueMode?renderCueSheet():renderDetail(true);refreshSheet()},
+  tr0(){const s=Store.songs.get(S.songId);if(!s)return;delete S.tr[trSlot(s)];S.cueMode?renderCueSheet():renderDetail(true);refreshSheet()},
+  stagesheet(el){stageSheet(el.dataset.sheet)},
   async keeptr(){const s=Store.songs.get(S.songId);if(!s)return;const n=curShift(s);const flat=preferFlat(s,n);
     const cx=ctxInfo();
     if(cx&&cx.it){ // remember the key for this list position only; the song itself stays as it is
@@ -2183,9 +2369,9 @@ const A={
       // lists that had their own key keep sounding the same
       await Store.addVersion(prev).catch(()=>{});await Store.saveSong(ns);toast('Ο νέος τόνος αποθηκεύτηκε')};
     openModal(`${dhead('Αλλαγή τόνου μόνιμα;')}<div class="dbody"><p style="margin:0">Τα ακόρντα θα γραφτούν στον νέο τόνο${s.key?` (${esc(s.key)} → ${esc(trKey(s.key,n,flat))})`:''}. Η τωρινή μορφή μένει στο ιστορικό εκδόσεων.</p></div><div class="dfoot"><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="confirmOk">Αποθήκευση τόνου</button></div>`)},
-  fs(el){prefs.fs=Math.max(14,Math.min(48,prefs.fs+(+el.dataset.d)));savePrefs();document.querySelectorAll('.sheet,.cuesheet').forEach(x=>x.style.setProperty('--fs',prefs.fs+'px'));S.cueMode?renderCueSheet():renderDetail(true)},
+  fs(el){prefs.fs=Math.max(14,Math.min(48,prefs.fs+(+el.dataset.d)));savePrefs();document.querySelectorAll('.sheet,.cuesheet').forEach(x=>x.style.setProperty('--fs',prefs.fs+'px'));S.cueMode?renderCueSheet():renderDetail(true);refreshSheet()},
   perf(){enterPerf()},
-  perfx(){exitPerf()},
+  perfx(){if(!$('#modal').hidden)closeModal();exitPerf()},
   prev(){go(-1)},next(){go(1)},
   tocol(){toColModal(S.songId)},
   tcCreate(el){const inp=$('#tcNew');const name=inp.value.trim();if(!name){inp.focus();return}const c={id:uid(),name,ordered:true,mode:'full',parent:null,items:[{i:uid(),s:el.dataset.id}],createdAt:now()};Store.saveCol(c);closeModal();toColModal(el.dataset.id);toast('Δημιουργήθηκε η «'+name+'»')},
@@ -2275,8 +2461,8 @@ const A={
     l.scrollTop+=r.getBoundingClientRect().top-l.getBoundingClientRect().top-4},
   cuejump(el){const c=Store.cols.get(S.ctx&&S.ctx.colId);if(!c)return;setCue(c.id,Math.min(+el.dataset.i,songItems(c).length-1));renderCueSheet()},
   newsubcol(el){colModal(null,{parent:el.dataset.parent})},
-  playsub(el){S.sec='col:'+el.dataset.col;S.q='';S.f={genre:'',key:'',artist:''};renderAll();if(document.body.dataset.size==='s')setPane('list');A.playcol()},
-  foldtoggle(el){const id=el.dataset.id;const s=new Set(prefs.closed||[]);s.has(id)?s.delete(id):s.add(id);prefs.closed=[...s];savePrefs();renderSide()},
+  playsub(el){S.sec='col:'+el.dataset.col;S.q='';S.f={genre:'',key:'',artist:''};S.reorder=false;renderAll();if(document.body.dataset.size==='s')setPane('list');A.playcol()},
+  foldtoggle(el){const id=el.dataset.id;const s=new Set(prefs.closed||[]);s.has(id)?s.delete(id):s.add(id);prefs.closed=[...s];savePrefs();renderSide();if(S.sec==='home')renderList(true)},
   editcol(){const c=colOf(S.sec);if(c)colModal(c)},
   async saveColModal(el){
     const name=$('#cName').value.trim();if(!name){$('#cErr').textContent='Γράψε όνομα.';$('#cName').focus();return}
@@ -2292,7 +2478,7 @@ const A={
     await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));
     renderSide();renderList(true);if(document.body.dataset.size==='s')setPane('list');toast(id?'Αποθηκεύτηκε':'Η λίστα δημιουργήθηκε');
   },
-  delcol(){const c=colOf(S.sec);if(!c)return;confirmDlg('Διαγραφή;',`Η «${c.name}» θα σβηστεί. Τα τραγούδια μένουν στη βιβλιοθήκη.`,'Διαγραφή',async()=>{S.sec='all';await Store.deleteCol(c.id).catch(()=>toast('Δεν σβήστηκε.'));renderAll();toast('Διαγράφηκε')})},
+  delcol(){const c=colOf(S.sec);if(!c)return;confirmDlg('Διαγραφή;',`Η «${c.name}» θα σβηστεί. Τα τραγούδια μένουν στη βιβλιοθήκη.`,'Διαγραφή',async()=>{S.sec='home';await Store.deleteCol(c.id).catch(()=>toast('Δεν σβήστηκε.'));renderAll();toast('Διαγράφηκε')})},
   async exportcol(){const c=colOf(S.sec);if(!c)return;
     // a running order (title · key · note) followed by the full songs
     let num=0;const order=[],full=[];
@@ -2307,15 +2493,16 @@ const A={
   pickcol(){const c=colOf(S.sec);if(c)pickModal(c.id)},
   pkSave(){pickModal.save&&pickModal.save()},
   // Παίξιμο always opens the stage list (title + key); a tap on a song with lyrics opens them
-  playcol(){const c=colOf(S.sec);if(!c||!songItems(c).length)return;
+  playcol(){const c=colOf(S.sec);if(!c||!songItems(c).length)return;S.lastCol=c.id;
     S.ctx={list:songItems(c).map(x=>({s:x.s,it:x.i})),colId:c.id,pos:0};S.fromCue=null;S.returnTo=null;S.edit=null;S.cueMode=true;S.songId=null;
     S.cueIdx[c.id]=S.cueIdx[c.id]||0;if(document.body.dataset.size!=='l')setPane('detail');enterPerf();renderCueSheet()},
   // stage list: tapping a song makes it current; if it has lyrics they open, and «Λίστα» comes back here
-  cuepick(el){const c=Store.cols.get(S.ctx.colId);setCue(c.id,+el.dataset.i);const it=songItems(c)[+el.dataset.i],s=it&&Store.songs.get(it.s);
+  cuepick(el){const c=Store.cols.get(S.ctx.colId);setCue(c.id,+el.dataset.i);if(S.split){renderCueSheet();return} // tablet: the lyrics are already on the right
+    const it=songItems(c)[+el.dataset.i],s=it&&Store.songs.get(it.s);
     if(s&&(s.lines||[]).length){A.cueopen();return}renderCueSheet()},
   cueopen(){const c=Store.cols.get(S.ctx&&S.ctx.colId);if(!c)return;const list=songItems(c).map(x=>({s:x.s,it:x.i}));const i=S.cueIdx[c.id]||0;if(!list[i])return;
     S.fromCue=c.id;openSong(list[i].s,list,c.id,i);document.body.classList.remove('uihidden')},
-  cueback(){const c=Store.cols.get(S.fromCue);if(!c){S.fromCue=null;renderPbar();return}
+  cueback(){if(!$('#modal').hidden)closeModal();const c=Store.cols.get(S.fromCue);if(!c){S.fromCue=null;renderPbar();return}
     setCue(c.id,S.ctx&&S.ctx.colId===c.id?S.ctx.pos:(S.cueIdx[c.id]||0));S.cueMode=true;S.songId=null;S.fromCue=null;document.body.classList.remove('uihidden');renderCueSheet();renderRows()},
   cue(el){cueMove(+el.dataset.d)},
   settings(){backupModal()},
@@ -2384,6 +2571,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('input',e=>{
   if(e.target.id==='q'){S.q=e.target.value;renderRows();return}
+  if(e.target.id==='sq'){S.q=e.target.value;renderSearchResults();return}
   if(S.edit&&e.target.closest('.ed')) editorInput(e);
 });
 document.addEventListener('change',e=>{
@@ -2404,6 +2592,12 @@ document.addEventListener('keydown',e=>{
   if(t.classList&&t.classList.contains('handle')&&e.altKey&&(e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();moveItem(t.dataset.drag,e.key==='ArrowUp'?-1:1);return}
   if(t.classList&&t.classList.contains('row')&&e.key==='Enter'){t.click();return}
   // stage list: Enter opens the lyrics (a focused button keeps its own Enter), arrows/pedal move
+  if(S.cueMode&&S.split){ // tablet: the pedal pages through the lyrics on the right, then goes on to the next song
+    const R=$('.splitR');const dn=['PageDown','ArrowDown',' '].includes(e.key),upk=['PageUp','ArrowUp'].includes(e.key);
+    if(e.key==='ArrowRight'){e.preventDefault();cueMove(1)}else if(e.key==='ArrowLeft'){e.preventDefault();cueMove(-1)}
+    else if(dn&&R){e.preventDefault();if(R.scrollTop+R.clientHeight>=R.scrollHeight-4)cueMove(1);else R.scrollTop+=Math.round(R.clientHeight*.8)}
+    else if(upk&&R){e.preventDefault();if(R.scrollTop<=4)cueMove(-1);else R.scrollTop-=Math.round(R.clientHeight*.8)}
+    return}
   if(S.cueMode){if(e.key==='Enter'){if(t.closest&&t.closest('button,a'))return;e.preventDefault();A.cueopen();return}if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();cueMove(1)}else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();cueMove(-1)}return}
   if(!S.songId||S.edit) return;
   // page turner / pedal: down pages through the song and, at its end, goes on to the next one; up does the reverse
