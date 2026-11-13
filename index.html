@@ -285,6 +285,8 @@ html[data-eff=dark] .parseinfo .warn{color:#f0b54a}
 .vrow .s{font-size:12.5px;color:var(--muted)}
 .codebox{width:100%;min-height:200px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;border:1px solid var(--line2);border-radius:9px;padding:10px;background:var(--surface)}
 .muted{color:var(--muted)}
+.devcopy{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted);background:var(--surface);border-radius:9px;padding:9px 11px}
+.devcopy b{color:var(--text);font-size:13px}
 .lsgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .lsgrid div{background:var(--surface);border-radius:10px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:2px}
 .lsgrid b{font-size:22px;font-variant-numeric:tabular-nums}
@@ -671,6 +673,71 @@ const GH={
 const FILE_RE=/^(songs|collections)\/([A-Za-z0-9-]{1,64})\.json$/;
 
 /* =====================================================================
+   LOCAL — this device's full copy of the library, so the app opens and plays offline.
+   IndexedDB (room for hundreds of MB): one record per song/list, keyed by its repo path,
+   plus 'state' (last commit + file shas) and 'outbox' (changes not yet on GitHub).
+   Saves write only what changed. Falls back to localStorage where IndexedDB is missing.
+   ===================================================================== */
+const Local={
+  db:null,name:'',repo:'',saved:new Map(),persisted:null,
+  lsKey(){return 'msb-gh-state:'+this.repo},
+  lsOutKey(){return 'msb-outbox-v1:'+this.repo},
+  async open(repo){
+    this.repo=repo;this.name='msb:'+repo;
+    try{
+      this.db=await new Promise((res,rej)=>{
+        const r=indexedDB.open(this.name,1);
+        r.onupgradeneeded=()=>{r.result.createObjectStore('items');r.result.createObjectStore('meta')};
+        r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);r.onblocked=()=>rej(new Error('blocked'));
+      });
+    }catch(e){console.warn('IndexedDB unavailable, using localStorage',e);this.db=null}
+  },
+  done(t){return new Promise((res,rej)=>{t.oncomplete=()=>res();t.onerror=t.onabort=()=>rej(t.error||new Error('tx'))})},
+  req(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+  // -> {items:[[path,obj]], head, shas, outbox, migrated}
+  async load(){
+    const old=lsGet(this.lsKey(),null),oldOut=lsGet(this.lsOutKey(),null);
+    const fromOld=()=>{const items=[];if(old&&old.data){for(const s of old.data.songs||[])items.push(['songs/'+s.id+'.json',s]);for(const c of old.data.collections||[])items.push(['collections/'+c.id+'.json',c])}
+      return {items,head:old&&old.head||null,shas:old&&old.shas||{},outbox:oldOut||[]}};
+    if(!this.db){const o=fromOld();o.items.forEach(([p,v])=>this.saved.set(p,v));return Object.assign(o,{migrated:false})}
+    const t=this.db.transaction(['items','meta'],'readonly');const it=t.objectStore('items'),mt=t.objectStore('meta');
+    const [keys,vals,state,outbox]=await Promise.all([this.req(it.getAllKeys()),this.req(it.getAll()),this.req(mt.get('state')),this.req(mt.get('outbox'))]);
+    if(!keys.length&&!state&&(old||oldOut)) return Object.assign(fromOld(),{migrated:true}); // first run after the move from localStorage
+    const items=keys.map((k,i)=>[k,vals[i]]);items.forEach(([p,v])=>this.saved.set(p,v));
+    return {items,head:state&&state.head||null,shas:state&&state.shas||{},outbox:outbox||[],migrated:false};
+  },
+  async save(songs,cols,state){
+    const cur=new Map();for(const [id,s] of songs)cur.set('songs/'+id+'.json',s);for(const [id,c] of cols)cur.set('collections/'+id+'.json',c);
+    if(!this.db){lsSet(this.lsKey(),Object.assign({},state,{data:{songs:[...songs.values()],collections:[...cols.values()]}}));
+      if(!localStorage.getItem(this.lsKey()))throw new Error('localStorage full');return}
+    const t=this.db.transaction(['items','meta'],'readwrite');const it=t.objectStore('items');
+    const put=[],del=[];
+    for(const [p,v] of cur) if(this.saved.get(p)!==v){it.put(v,p);put.push([p,v])}
+    for(const p of this.saved.keys()) if(!cur.has(p)){it.delete(p);del.push(p)}
+    t.objectStore('meta').put(state,'state');
+    await this.done(t);
+    put.forEach(([p,v])=>this.saved.set(p,v));del.forEach(p=>this.saved.delete(p));
+    // the old localStorage copy is no longer needed once IndexedDB holds everything
+    try{localStorage.removeItem(this.lsKey())}catch(e){}
+  },
+  saveOutbox(outbox){
+    if(!this.db){lsSet(this.lsOutKey(),outbox);return Promise.resolve()}
+    const t=this.db.transaction('meta','readwrite');t.objectStore('meta').put(outbox,'outbox');
+    return this.done(t).then(()=>{try{localStorage.removeItem(this.lsOutKey())}catch(e){}}).catch(e=>console.warn(e));
+  },
+  async clear(){
+    try{localStorage.removeItem(this.lsKey());localStorage.removeItem(this.lsOutKey())}catch(e){}
+    if(this.db){this.db.close();await new Promise(res=>{const r=indexedDB.deleteDatabase(this.name);r.onsuccess=r.onerror=r.onblocked=()=>res()})}
+  },
+  // ask the browser not to wipe this copy when space runs low (installed apps usually get it)
+  async persist(){
+    try{if(navigator.storage&&navigator.storage.persisted){this.persisted=await navigator.storage.persisted();if(!this.persisted&&navigator.storage.persist)this.persisted=await navigator.storage.persist()}}catch(e){}
+    return this.persisted;
+  },
+  async usage(){try{return navigator.storage&&navigator.storage.estimate?await navigator.storage.estimate():null}catch(e){return null}}
+};
+
+/* =====================================================================
    STORE — the only part that talks to storage.
    'github': a private GitHub repo (see GH above) → every device, anywhere, also offline
    'setup' : not connected to GitHub yet on this device (nothing is saved)
@@ -686,11 +753,17 @@ const Store={
   /* ---------- github ---------- */
   async _ghInit(){
     this.mode='github';this.status='cache';
-    const st=lsGet(GH.stateKey(),null);
-    this.gh={head:st&&st.head||null,shas:st&&st.shas||{},etag:null,committing:false,timer:0};
-    if(st&&st.data){this._fill(st.data)}else{this.songs=new Map();this.cols=new Map();this.status='loading'}
-    this.outbox=lsGet(OUTBOX_KEY+':'+GH.cfg.owner+'/'+GH.cfg.repo,[]);
+    await Local.open(GH.cfg.owner+'/'+GH.cfg.repo);
+    const L=await Local.load();
+    this.gh={head:L.head,shas:L.shas,etag:null,committing:false,timer:0};
+    this.songs=new Map();this.cols=new Map();
+    for(const [p,obj] of L.items){const m=p.match(FILE_RE);if(m)(m[1]==='songs'?this.songs:this.cols).set(m[2],obj)}
+    if(!L.items.length)this.status='loading';
+    this.loaded={songs:true,cols:true};
+    this.outbox=L.outbox;
+    if(L.migrated){this._ghSave();Local.saveOutbox(this.outbox)}
     this.onChange('all');
+    Local.persist().then(()=>this.onChange('status'));
     await this._ghSync(true);
     this._ghFlush();
     // a library brought over from this device when connecting
@@ -699,8 +772,11 @@ const Store={
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')this._tick()});
     window.addEventListener('online',()=>this._tick());
   },
-  _ghOutboxKey(){return OUTBOX_KEY+':'+GH.cfg.owner+'/'+GH.cfg.repo},
-  _ghSave(){clearTimeout(this._cacheT);this._cacheT=setTimeout(()=>lsSet(GH.stateKey(),{head:this.gh.head,shas:this.gh.shas,data:this._dump()}),600)},
+  // the device copy: only what changed since the last save is written
+  _ghSave(){clearTimeout(this._cacheT);this._cacheT=setTimeout(()=>{
+    Local.save(this.songs,this.cols,{head:this.gh.head,shas:this.gh.shas}).catch(e=>{
+      console.warn(e);if(!this._fullWarned){this._fullWarned=true;toast('Η συσκευή δεν έχει χώρο για το αντίγραφο. Στο GitHub όλα αποθηκεύονται κανονικά.')}});
+  },400)},
   _ghFail(e){
     const was=this.status;
     if(e&&(e.status===401||e.status===403&&!/rate limit/i.test(e.gh||'')))this.status='autherr';
@@ -747,7 +823,7 @@ const Store={
   },
   _ghStatus(quiet){const was=this.status;this.status=this.outbox.length?'pending':'live';if(!quiet&&was!==this.status)this.onChange('status')},
   _ghQueue(op){
-    this.outbox=this.outbox.filter(o=>o.p!==op.p);this.outbox.push(op);lsSet(this._ghOutboxKey(),this.outbox);
+    this.outbox=this.outbox.filter(o=>o.p!==op.p);this.outbox.push(op);Local.saveOutbox(this.outbox);
     if(this.status==='live')this.status='pending';this.onChange('status');
     clearTimeout(this.gh.timer);this.gh.timer=setTimeout(()=>this._ghFlush(),900);
   },
@@ -775,7 +851,7 @@ const Store={
           for(const [p,txt] of Object.entries(written)){if(txt==null)delete g.shas[p];else g.shas[p]=await GH.blobSha(txt)}
           if(g.head===head)g.head=nc.sha; // otherwise the next sync fetches what the other device changed
         }
-        this.outbox=this.outbox.filter(o=>!ops.includes(o));lsSet(this._ghOutboxKey(),this.outbox);
+        this.outbox=this.outbox.filter(o=>!ops.includes(o));Local.saveOutbox(this.outbox);
         this._ghSave();break;
       }
       this._ghStatus();
@@ -829,7 +905,7 @@ const Store={
     if(this.mode==='github'){
       for(const s of songs){const b=clone(s);delete b.id;this.outbox=this.outbox.filter(o=>o.p!=='songs/'+s.id);this.outbox.push({m:'PUT',p:'songs/'+s.id,b})}
       for(const c of cols){const b=clone(c);delete b.id;this.outbox=this.outbox.filter(o=>o.p!=='collections/'+c.id);this.outbox.push({m:'PUT',p:'collections/'+c.id,b})}
-      lsSet(this._ghOutboxKey(),this.outbox);this._ghSave();this.status='pending';this.onChange('status');
+      Local.saveOutbox(this.outbox);this._ghSave();this.status='pending';this.onChange('status');
       await this._ghFlush(); // if offline, the commit goes out as soon as GitHub is reachable again
     }
     return {songs:songs.length,cols:cols.length};
@@ -1486,7 +1562,15 @@ function backupModal(){
     <button class="btn" data-act="doRestore">${ic('upload','sm')}Επαναφορά από αρχείο</button>
     <button class="btn" data-act="doLiveSetlist">${ic('listmusic','sm')}Εισαγωγή λιστών από Live Setlist (.html)</button>
     <p style="margin:0;font-size:12.5px" class="muted">Η επαναφορά προσθέτει ή ενημερώνει τραγούδια και συλλογές. Δεν σβήνει όσα δεν υπάρχουν στο αρχείο.</p>
+    ${Store.mode==='github'?`<div class="devcopy" id="devCopy"><b>Αντίγραφο σε αυτή τη συσκευή</b><span>Έλεγχος…</span></div>`:''}
   </div><div class="dfoot"><button class="btn" data-act="closeModal">Κλείσιμο</button></div>`);
+  if(Store.mode==='github') Local.usage().then(u=>{
+    const el=$('#devCopy span');if(!el) return;
+    const mb=b=>b>=1073741824?(b/1073741824).toFixed(1).replace('.',',')+' GB':b>=1048576?(b/1048576).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(b/1024))+' KB';
+    const where=Local.db?'βάση του browser':'μικρή μνήμη του browser (περιορισμένη)';
+    const keep=Local.persisted?'Μόνιμο: ο browser δεν θα το σβήσει μόνος του.':'Όχι μόνιμο: αν η συσκευή μείνει από χώρο, ο browser μπορεί να το σβήσει. Πρόσθεσε την εφαρμογή στην αρχική οθόνη. Στο GitHub δεν χάνεται τίποτα.';
+    el.innerHTML=`${Store.songs.size} τραγούδια στη ${esc(where)}${u&&u.usage!=null?` · πιάνει ${mb(u.usage)}${u.quota?` από ${mb(u.quota)} διαθέσιμα`:''}`:''}.<br>${esc(keep)}`;
+  });
 }
 
 /* =====================================================================
@@ -1783,8 +1867,8 @@ const A={
   },
   ghOff(){confirmDlg('Αποσύνδεση από το GitHub;','Σε αυτή τη συσκευή σβήνονται το token και το τοπικό αντίγραφο. Τα τραγούδια στο GitHub μένουν όπως είναι.','Αποσύνδεση',()=>{
     if(Store.outbox.length&&!window.confirm(Store.outbox.length+' αλλαγές δεν έχουν ανέβει ακόμα και θα χαθούν. Συνέχεια;'))return;
-    try{localStorage.removeItem(GH.stateKey());localStorage.removeItem(Store._ghOutboxKey())}catch(e){}
-    try{localStorage.removeItem(GH_KEY)}catch(e){}location.reload()})},
+    try{localStorage.removeItem(GH_KEY)}catch(e){}
+    Local.clear().finally(()=>location.reload())})},
   doLiveSetlist(){$('#lsIn').click()},
   async lsGo(el){
     const plan=lsModal.plan;if(!plan)return;el.disabled=true;el.textContent='Εισαγωγή…';
