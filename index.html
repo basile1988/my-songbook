@@ -277,6 +277,22 @@ body.perf.uihidden .pbar{opacity:0;transform:translate(-50%,24px);pointer-events
 .pnav{display:flex;align-items:center;justify-content:center;gap:6px;min-height:56px;min-width:104px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--text);font-size:16px;font-weight:700;flex:none}
 .pnav.fwd{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .pnav:disabled{opacity:.3}
+.pnl{display:flex;flex-direction:column;align-items:center;min-width:0;line-height:1.15}
+.pnl small{font-size:11.5px;font-weight:600;opacity:.85;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnav.ret{background:var(--note);border-color:var(--note);color:#1a1200}
+.tcrow{border-radius:10px}
+.tcrow.on{background:var(--surface)}
+.tcrow .ck{padding-bottom:4px}
+.tcopts{display:none;gap:6px;padding:0 8px 10px 40px;flex-wrap:wrap}
+.tcrow.on .tcopts{display:flex}
+.tcopts select,.tcopts input{min-height:38px;border:1px solid var(--line2);border-radius:9px;background:var(--raise);padding:0 10px;font-size:15px}
+.tcopts input{width:120px}
+.tcfold{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted);padding:10px 8px 2px}
+.pksec{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted);flex-wrap:wrap}
+.pksec select{min-height:38px;border:1px solid var(--line2);border-radius:9px;background:var(--raise);padding:0 10px;font-size:15px}
+.pkn{flex:none;min-width:24px;height:24px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:12.5px;font-weight:800;display:grid;place-items:center;padding:0 6px}
+.sslist{min-height:120px}
+.sslist .row{min-height:52px}
 .pnav svg.i{width:22px;height:22px}
 .pnext{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));z-index:30;display:none;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--raise) 90%,transparent);border:1px solid var(--line);border-radius:999px;padding:5px 12px;max-width:min(60vw,420px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .25s}
 body.perf .pnext.show{display:block}
@@ -1002,7 +1018,26 @@ const S={
   tr:{},              // per-song transposition (session)
   edit:null,          // editor draft
   perf:false,cueIdx:{},cueMode:false,
+  fromCue:null,       // stage list the open song came from («Λίστα» goes back there)
+  returnTo:null,      // where a song picked with the stage search should return to
 };
+// where you were (list, song, position, stage) is kept on this device, so a phone that
+// drops the app in the background reopens exactly there. Not shared between devices.
+const STATE_KEY='msb-state';let stateT=0;
+function saveState(){clearTimeout(stateT);stateT=setTimeout(()=>lsSet(STATE_KEY,{sec:S.sec,songId:S.songId,ctx:S.ctx,perf:S.perf,cueMode:S.cueMode,cueIdx:S.cueIdx,fromCue:S.fromCue,returnTo:S.returnTo,tr:S.tr,pane:document.body.dataset.pane,at:Date.now()}),250)}
+function restoreState(){
+  const st=lsGet(STATE_KEY,null);if(!st) return false;
+  if(st.sec&&(!st.sec.startsWith('col:')||Store.cols.has(st.sec.slice(4)))) S.sec=st.sec;
+  S.cueIdx=st.cueIdx||{};S.tr=st.tr||{};
+  const okCtx=c=>c&&Array.isArray(c.list)&&(!c.colId||Store.cols.has(c.colId));
+  if(okCtx(st.ctx)){S.ctx=st.ctx;S.ctx.pos=Math.max(0,Math.min(S.ctx.list.length-1,S.ctx.pos||0))}
+  S.fromCue=st.fromCue&&Store.cols.has(st.fromCue)?st.fromCue:null;
+  S.returnTo=st.returnTo&&okCtx(st.returnTo.ctx)?st.returnTo:null;
+  if(st.cueMode&&S.ctx&&S.ctx.colId){S.cueMode=true;S.songId=null}
+  else if(st.songId&&Store.songs.has(st.songId)) S.songId=st.songId;
+  if(st.pane&&document.body.dataset.size!=='l') document.body.dataset.pane=(S.songId||S.cueMode)&&st.pane==='detail'?'detail':st.pane==='detail'?'list':st.pane;
+  return !!st.perf&&(S.cueMode||!!S.songId);
+}
 
 /* =====================================================================
    THEME & LAYOUT
@@ -1083,6 +1118,15 @@ function currentEntries(){
   return arr;
 }
 function currentIds(){return currentEntries().filter(e=>e.s).map(e=>e.s)}
+// the whole library, best matches first: every word in title/artist, then lyrics
+function searchSongs(q,limit=40){
+  q=norm(String(q||'').trim());if(!q) return [];
+  const words=q.split(/\s+/),a=[],b=[];
+  for(const s of Store.songs.values()){const k=searchKey(s);
+    if(words.every(w=>k.meta.includes(w))) (norm(s.title).startsWith(q)?a.unshift(s):a.push(s));
+    else if(k.ly.includes(q)) b.push(s);}
+  return a.concat(b).slice(0,limit);
+}
 const playList=()=>currentEntries().filter(e=>e.s).map(e=>({s:e.s.id,it:e.it?e.it.i:null}));
 // semitones from one key's root to another's, in −5…+6
 function keyShift(from,to){
@@ -1103,7 +1147,7 @@ function colTree(opts={}){
 }
 const childrenOf=id=>[...Store.cols.values()].filter(c=>c.parent===id).sort((a,b)=>collator.compare(a.name,b.name));
 // a folder holds lists, not songs: it gets its own view
-const isFolder=c=>!!c&&childrenOf(c.id).length>0&&!songItems(c).length;
+const isFolder=c=>!!c&&(!!c.folder||childrenOf(c.id).length>0&&!songItems(c).length);
 
 /* =====================================================================
    RENDER: SIDEBAR
@@ -1159,6 +1203,7 @@ function sectionTitle(){
   return {all:'Όλα τα τραγούδια',fav:'Αγαπημένα',recent:'Πρόσφατα'}[S.sec]||'Τραγούδια';
 }
 function renderList(full=true){
+  saveState();
   const col=colOf(S.sec);
   if(S.sec.startsWith('col:')&&!col&&Store.loaded.cols){S.sec='all'}
   const pane=$('#listPane');
@@ -1214,7 +1259,8 @@ function renderFolder(col,pane){
   };
   pane.innerHTML=`
     <div class="lhead">
-      <div class="ltitle"><h2>${esc(col.name)}</h2><button class="ibtn" data-act="editcol" title="Ρυθμίσεις φακέλου" aria-label="Ρυθμίσεις φακέλου">${ic('settings')}</button></div>
+      ${col.parent&&Store.cols.get(col.parent)?`<button class="crumb" data-act="sec" data-sec="col:${col.parent}">${ic('left','sm')}${esc(Store.cols.get(col.parent).name)}</button>`:''}
+      <div class="ltitle"><h2>${esc(col.name)}</h2><button class="ibtn" data-act="foldermenu" data-col="${col.id}" title="Επιλογές φακέλου" aria-label="Επιλογές φακέλου">${ic('more')}</button></div>
       <div class="fsum">${ic('folder','sm')}${kids.length} λίστ${kids.length===1?'α':'ες'} · ${total} θέσεις</div>
       ${col.notes?`<div class="colnotes">${esc(col.notes)}</div>`:''}
     </div>
@@ -1293,6 +1339,7 @@ function ctxInfo(){
 }
 let lastDetailKey='';
 function renderDetail(force=false){
+  saveState();
   const d=$('#detail');
   if(S.edit){return}
   document.body.classList.remove('editing');
@@ -1355,31 +1402,36 @@ function renderPbar(){
   const pb=$('#pbar'),pn=$('#pnext');
   if(!S.perf){pb.innerHTML='';pn.classList.remove('show');return}
   // stage bar: big labelled prev/next at the ends, a few labelled controls in the middle
-  const nav=(act,dir,label,on)=>`<button class="pnav ${dir==='prev'?'back':'fwd'}" data-act="${act}" ${act==='cue'?`data-d="${dir==='prev'?-1:1}"`:''} ${on?'':'disabled'}>${dir==='prev'?ic('left'):''}<span>${label}</span>${dir==='next'?ic('right'):''}</button>`;
+  // sub: what is next/previous («Ήλιε Μου · G»), so the player sees it without leaving the lyrics
+  const nav=(act,dir,label,on,sub)=>`<button class="pnav ${dir==='prev'?'back':'fwd'}" data-act="${act}" ${act==='cue'?`data-d="${dir==='prev'?-1:1}"`:''} ${on?'':'disabled'}>${dir==='prev'?ic('left'):''}<span class="pnl"><span>${label}</span>${sub?`<small>${esc(sub)}</small>`:''}</span>${dir==='next'?ic('right'):''}</button>`;
+  const srchBtn=`<button class="pbtn" data-act="stagesearch">${ic('search')}<span>Αναζήτηση</span></button>`;
   const grp=(label,inner,cls='')=>`<div class="pgrp ${cls}"><span class="plab">${label}</span><div class="prow">${inner}</div></div>`;
   const fsGrp=grp('Γράμματα',`<button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus')}</button><span class="val">${prefs.fs}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus')}</button>`);
   const exitBtn=`<button class="ibtn pexit" data-act="perfx" aria-label="Έξοδος από το παίξιμο" title="Έξοδος">${ic('x')}</button>`;
   if(S.cueMode){
     const col=Store.cols.get(S.ctx&&S.ctx.colId);const list=col?songItems(col):[];const cur=col?S.cueIdx[col.id]||0:0;
     const it=list[cur],s=it&&Store.songs.get(it.s);
+    const nx=list[cur+1],ns=nx&&Store.songs.get(nx.s);
     pb.innerHTML=`${nav('cue','prev','Προηγ.',cur>0)}
-      <div class="pmid">${fsGrp}${s&&(s.lines||[]).length?`<button class="pbtn" data-act="cueopen">${ic('music')}<span>Στίχοι</span></button>`:''}${exitBtn}</div>
-      ${nav('cue','next','Επόμ.',cur<list.length-1)}`;
+      <div class="pmid">${srchBtn}${fsGrp}${s&&(s.lines||[]).length?`<button class="pbtn" data-act="cueopen">${ic('music')}<span>Στίχοι</span></button>`:''}${exitBtn}</div>
+      ${nav('cue','next','Επόμ.',cur<list.length-1,ns?ns.title+(itemKey(nx,ns)?' · '+itemKey(nx,ns):''):'')}`;
     pn.classList.remove('show');return;
   }
   const s=Store.songs.get(S.songId);if(!s) return;
   const n=curShift(s);const flat=preferFlat(s,n);const cx=ctxInfo();const hasLines=(s.lines||[]).length>0;
-  pb.innerHTML=`${nav('prev','prev','Προηγ.',cx&&cx.prev)}
+  pb.innerHTML=`${S.returnTo?`<button class="pnav back ret" data-act="stageback">${ic('left')}<span class="pnl"><span>Πίσω</span><small>στη λίστα</small></span></button>`:nav('prev','prev','Προηγ.',cx&&cx.prev)}
     <div class="pmid">
-      ${S.fromCue?`<button class="pbtn" data-act="cueback">${ic('listmusic')}<span>Λίστα</span></button>`:''}
+      ${S.fromCue&&!S.returnTo?`<button class="pbtn" data-act="cueback">${ic('listmusic')}<span>Λίστα</span></button>`:''}
+      ${srchBtn}
       ${songHasChords(s)?grp('Τόνος',`<button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus')}</button>`):''}
       ${hasLines?fsGrp:''}
       ${exitBtn}
     </div>
-    ${nav('next','next','Επόμ.',cx&&cx.next)}`;
-  if(cx&&cx.next){pn.textContent='Επόμενο: '+cx.next.title+(cx.nextKey?' · '+cx.nextKey:'');pn.classList.add('show')}else pn.classList.remove('show');
+    ${S.returnTo?'':nav('next','next','Επόμ.',cx&&cx.next,cx&&cx.next?cx.next.title+(cx.nextKey?' · '+cx.nextKey:''):'')}`;
+  pn.classList.remove('show'); // the next title now lives inside the «Επόμ.» button
 }
 function renderCueSheet(){
+  saveState();
   const d=$('#detail');const col=Store.cols.get(S.ctx&&S.ctx.colId);
   if(!col){S.cueMode=false;exitPerf();return}
   const cur=S.cueIdx[col.id]||0;
@@ -1554,10 +1606,11 @@ function confirmDlg(title,text,okLabel,fn){
 function colModal(col,opts={}){
   const c=col||{name:'',ordered:true,mode:'full',parent:opts.parent||null};
   const others=colTree().filter(x=>!col||x.c.id!==col.id);
-  openModal(`${dhead(isFolder(col)?'Ρυθμίσεις φακέλου':col?'Ρυθμίσεις συλλογής':opts.parent?'Νέα λίστα':'Νέα συλλογή')}
+  const folder=isFolder(col)||!!opts.folder;
+  openModal(`${dhead(isFolder(col)?'Ρυθμίσεις φακέλου':col?'Ρυθμίσεις λίστας':opts.folder?'Νέος φάκελος':'Νέα λίστα')}
     <div class="dbody">
       <div class="field"><label for="cName">Όνομα</label><input id="cName" value="${esc(c.name)}" placeholder="π.χ. Παρασκευή στο μαγαζί" autofocus></div>
-      ${isFolder(col)?'':`<div class="field"><label>Σειρά</label><div class="radios">
+      ${folder?'':`<div class="field"><label>Σειρά</label><div class="radios">
         <label class="radio"><input type="radio" name="cOrd" value="1" ${c.ordered?'checked':''}><div><b>Με σειρά (setlist)</b><div class="d">Ορίζεις τη σειρά με σύρσιμο και παίζεις από την αρχή ως το τέλος.</div></div></label>
         <label class="radio"><input type="radio" name="cOrd" value="0" ${!c.ordered?'checked':''}><div><b>Χωρίς σειρά</b><div class="d">Ομάδα τραγουδιών, π.χ. «Νησιώτικα». Ταξινόμηση αλφαβητικά.</div></div></label>
       </div></div>
@@ -1569,7 +1622,7 @@ function colModal(col,opts={}){
       ${others.length?`<div class="field"><label for="cParent">Μέσα στη συλλογή</label><select id="cParent"><option value="">— Καμία (κορυφή) —</option>${others.map(({c:o,d})=>`<option value="${o.id}" ${c.parent===o.id?'selected':''}>${'— '.repeat(d)}${esc(o.name)}</option>`).join('')}</select></div>`:''}
       <span class="err" id="cErr"></span>
     </div>
-    <div class="dfoot">${col?`<button class="btn danger left" data-act="delcol">${ic('trash','sm')}Διαγραφή</button><button class="btn" data-act="exportcol">${ic('download','sm')}Εξαγωγή</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveColModal" data-id="${col?col.id:''}" data-add="${opts.addSong||''}">${col?'Αποθήκευση':'Δημιουργία'}</button></div>`);
+    <div class="dfoot">${col?`<button class="btn danger left" data-act="delcol">${ic('trash','sm')}Διαγραφή</button><button class="btn" data-act="exportcol">${ic('download','sm')}Εξαγωγή</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveColModal" data-id="${col?col.id:''}" data-add="${opts.addSong||''}" data-folder="${opts.folder?1:''}">${col?'Αποθήκευση':'Δημιουργία'}</button></div>`);
   const inp=$('#cName');inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('[data-act=saveColModal]').click()}});
 }
 // a song's place in one list: its own key and note there
@@ -1581,52 +1634,93 @@ function itemModal(colId,iid){
       <div class="field"><label for="iKey">Τόνος σε αυτή τη λίστα</label><input id="iKey" list="dlKeys" value="${esc(it.key||'')}" placeholder="${s.key?'Όπως το τραγούδι: '+esc(s.key):'π.χ. Em'}" autocomplete="off" autocapitalize="off"><datalist id="dlKeys">${ALLKEYS.map(k=>`<option value="${k}">`).join('')}</datalist>
         <div class="hint">${songHasChords(s)&&baseKey(s)?'Τα ακόρντα θα ανοίγουν μεταφερμένα σε αυτόν τον τόνο.':'Γράφεται και ελεύθερα, π.χ. «Em/Fm».'}</div></div>
       <div class="field"><label for="iNote">Σημείωση σε αυτή τη λίστα</label><textarea id="iNote" rows="3" placeholder="π.χ. Ντουέτο · Μπαίνουμε από το ρεφρέν · Κλείνει και μπαίνει ρούμπα">${esc(it.note||'')}</textarea></div>
+      ${c.ordered?`<button class="mitem" data-act="secHere" data-col="${c.id}" data-item="${it.i}">${ic('section')}<span><b>Νέο πακέτο από εδώ</b><small>Ξεκινά πακέτο ακριβώς πριν από αυτό το τραγούδι</small></span></button>`:''}
     </div>
     <div class="dfoot"><button class="btn danger left" data-act="rmItem" data-col="${c.id}" data-item="${it.i}">${ic('x','sm')}Αφαίρεση από τη λίστα</button><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveItem" data-col="${c.id}" data-item="${it.i}">Αποθήκευση</button></div>`,
     m=>{const h=e=>{if(e.key==='Enter'&&e.target.id==='iKey'){e.preventDefault();m.querySelector('[data-act=saveItem]').click()}};m.addEventListener('keydown',h);return()=>m.removeEventListener('keydown',h)});
 }
-function secModal(colId,iid){
-  const it=iid?itemById(colId,iid):null;
+// opts.before: a new section starts right before this item (instead of at the end)
+function secModal(colId,iid,opts={}){
+  const it=iid?itemById(colId,iid):null;const bef=opts.before&&itemById(colId,opts.before);const bs=bef&&Store.songs.get(bef.s);
   openModal(`${dhead(it?'Ενότητα':'Νέα ενότητα')}
     <div class="dbody">
       <div class="field"><label for="sName">Όνομα</label><input id="sName" value="${esc(it?it.sec:'')}" placeholder="π.χ. Ζεϊμπέκικα" autofocus autocomplete="off"></div>
       <div class="field"><label for="sSub">Υπότιτλος</label><input id="sSub" value="${esc(it&&it.sub||'')}" placeholder="π.χ. 2ο πακέτο" autocomplete="off"></div>
-      ${it?'':'<div class="hint">Μπαίνει στο τέλος της λίστας. Σύρ’ την στη θέση της· τα τραγούδια από κάτω της ανήκουν σε αυτή.</div>'}
+      ${it?'':bs?`<div class="hint">Ξεκινά πριν από το «${esc(bs.title)}». Αυτό και όσα ακολουθούν ως το επόμενο πακέτο ανήκουν σε αυτό.</div>`:'<div class="hint">Μπαίνει στο τέλος της λίστας. Για να ξεκινά από ένα συγκεκριμένο τραγούδι, πάτα το ⋯ εκείνου του τραγουδιού → «Νέο πακέτο από εδώ».</div>'}
     </div>
-    <div class="dfoot">${it?`<button class="btn danger left" data-act="delSec" data-col="${colId}" data-item="${it.i}">${ic('trash','sm')}Διαγραφή</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveSec" data-col="${colId}" data-item="${it?it.i:''}">${it?'Αποθήκευση':'Προσθήκη'}</button></div>`,
+    <div class="dfoot">${it?`<button class="btn danger left" data-act="delSec" data-col="${colId}" data-item="${it.i}">${ic('trash','sm')}Διαγραφή</button>`:''}<button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveSec" data-col="${colId}" data-item="${it?it.i:''}" data-before="${bef?bef.i:''}">${it?'Αποθήκευση':'Προσθήκη'}</button></div>`,
     m=>{const h=e=>{if(e.key==='Enter'&&e.target.matches('input')){e.preventDefault();m.querySelector('[data-act=saveSec]').click()}};m.addEventListener('keydown',h);return()=>m.removeEventListener('keydown',h)});
 }
+// put new items at the end of a section (pack), or at the end of the list when secId is empty
+function insertInSection(items,add,secId){
+  const at=secId?items.findIndex(x=>x.i===secId):-1;
+  if(at<0){items.push(...add);return items}
+  let end=items.findIndex((x,k)=>k>at&&x.sec!=null);if(end<0)end=items.length;
+  items.splice(end,0,...add);return items;
+}
+// a song in lists: tick a list, choose its pack and its key there, all in one place
 function toColModal(songId){
   const s=Store.songs.get(songId);if(!s) return;
   const tree=colTree();
-  openModal(`${dhead('Συλλογές')}
-    <div class="dbody"><div class="muted" style="font-size:13.5px">«${esc(s.title)}» σε:</div>
-      <div id="tcList">${tree.length?tree.map(({c,d})=>`<label class="ck" style="padding-left:${8+d*18}px"><input type="checkbox" data-col="${c.id}" ${hasSong(c,songId)?'checked':''}><div class="main"><div class="tt">${esc(c.name)}</div><div class="ar">${songItems(c).length} τραγούδια${c.ordered?' · με σειρά':''}</div></div></label>`).join(''):'<div class="muted">Δεν έχεις συλλογές ακόμα.</div>'}</div>
-      <div style="display:flex;gap:8px"><input id="tcNew" class="field" style="flex:1;border:1px solid var(--line2);border-radius:9px;padding:8px 11px;min-height:40px;background:var(--raise);font-size:16px" placeholder="Νέα συλλογή…" aria-label="Όνομα νέας συλλογής"><button class="btn" data-act="tcCreate" data-id="${songId}">${ic('plus','sm')}Δημιουργία</button></div>
+  const row=({c,d})=>{
+    if(isFolder(c)) return `<div class="tcfold" style="padding-left:${8+d*18}px">${ic('folder','sm')}${esc(c.name)}</div>`;
+    const it=itemsOf(c).find(x=>x.s===songId),secs=c.ordered?itemsOf(c).filter(x=>x.sec!=null):[];
+    let curSec='';if(it){for(const x of itemsOf(c)){if(x===it)break;if(x.sec!=null)curSec=x.i}}
+    return `<div class="tcrow ${it?'on':''}" style="padding-left:${d*18}px">
+      <label class="ck"><input type="checkbox" data-col="${c.id}" ${it?'checked':''}><div class="main"><div class="tt">${esc(c.name)}</div><div class="ar">${songItems(c).length} τραγούδια</div></div></label>
+      <div class="tcopts">
+        ${secs.length?`<select data-secfor="${c.id}" aria-label="Πακέτο στη «${esc(c.name)}»"><option value="">Στο τέλος</option>${secs.map(x=>`<option value="${x.i}" ${x.i===curSec?'selected':''}>${esc(secShort(x))}</option>`).join('')}</select>`:''}
+        <input data-keyfor="${c.id}" list="dlKeys" value="${esc(it&&it.key||'')}" placeholder="Τόνος${s.key?' ('+esc(s.key)+')':''}" aria-label="Τόνος στη «${esc(c.name)}»" autocomplete="off" autocapitalize="off">
+      </div></div>`;
+  };
+  openModal(`${dhead('Σε λίστες')}
+    <div class="dbody"><div class="muted" style="font-size:13.5px">«${esc(s.title)}»: τσέκαρε λίστες, διάλεξε πακέτο και, αν θες, άλλον τόνο για εκείνη τη λίστα.</div>
+      <datalist id="dlKeys">${ALLKEYS.map(k=>`<option value="${k}">`).join('')}</datalist>
+      <div id="tcList">${tree.length?tree.map(row).join(''):'<div class="muted">Δεν έχεις λίστες ακόμα.</div>'}</div>
+      <div style="display:flex;gap:8px"><input id="tcNew" class="field" style="flex:1;border:1px solid var(--line2);border-radius:9px;padding:8px 11px;min-height:40px;background:var(--raise);font-size:16px" placeholder="Νέα λίστα…" aria-label="Όνομα νέας λίστας"><button class="btn" data-act="tcCreate" data-id="${songId}">${ic('plus','sm')}Δημιουργία</button></div>
     </div><div class="dfoot"><button class="btn primary" data-act="closeModal">Τέλος</button></div>`,m=>{
-      const h=async e=>{const cb=e.target.closest('input[data-col]');if(!cb) return;const c=clone(Store.cols.get(cb.dataset.col));const items=itemsOf(c);
-        if(cb.checked){if(!hasSong(c,songId))items.push({i:uid(),s:songId})}else c.items=items.filter(x=>x.s!==songId);
-        await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));};
+      const h=async e=>{
+        const t=e.target,cid=t.dataset.col||t.dataset.secfor||t.dataset.keyfor;if(!cid) return;
+        const c=clone(Store.cols.get(cid));let items=itemsOf(c);
+        const sec=(m.querySelector(`[data-secfor="${cid}"]`)||{}).value||'';
+        const key=((m.querySelector(`[data-keyfor="${cid}"]`)||{}).value||'').trim().replace(/^H/,'B');
+        const cur=items.find(x=>x.s===songId);
+        if(t.dataset.col){
+          if(t.checked&&!cur){const ni={i:uid(),s:songId};if(key&&key!==s.key)ni.key=key;insertInSection(items,[ni],sec)}
+          else if(!t.checked) c.items=items.filter(x=>x.s!==songId);
+          t.closest('.tcrow').classList.toggle('on',t.checked);
+        }else if(t.dataset.secfor){if(!cur)return;items=items.filter(x=>x!==cur);c.items=insertInSection(items,[cur],sec)}
+        else if(t.dataset.keyfor){if(!cur)return;if(key&&key!==s.key)cur.key=key;else delete cur.key;delete S.tr['i:'+cur.i]}
+        await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));
+      };
       m.addEventListener('change',h);
       return ()=>m.removeEventListener('change',h);
     });
 }
 function pickModal(colId){
   const col=Store.cols.get(colId);if(!col) return;
-  const sel=new Set(itemsOf(col).filter(x=>x.s).map(x=>x.s));let q='';
+  const had=new Set(itemsOf(col).filter(x=>x.s).map(x=>x.s));
+  const sel=new Set(had);const order=[];let q=''; // order: songs ticked now, in the order they were ticked
+  const secs=col.ordered?itemsOf(col).filter(x=>x.sec!=null):[];
   const draw=()=>{
     const nq=norm(q);
     const arr=[...Store.songs.values()].filter(s=>!nq||searchKey(s).meta.includes(nq)).sort((a,b)=>collator.compare(a.title,b.title));
-    $('#pkList').innerHTML=arr.length?arr.map(s=>`<label class="ck"><input type="checkbox" data-sid="${s.id}" ${sel.has(s.id)?'checked':''}><div class="main"><div class="tt">${esc(s.title)}</div><div class="ar">${esc(s.artist||'')}</div></div><span class="keyb ${s.key?'':'none'}">${esc(s.key||'—')}</span></label>`).join(''):`<div class="muted" style="padding:12px 4px">${Store.songs.size?'Τίποτα για αυτή την αναζήτηση.':'Η βιβλιοθήκη είναι άδεια.'}</div>`;
-    $('#pkCount').textContent=sel.size+' επιλεγμένα';
+    $('#pkList').innerHTML=arr.length?arr.map(s=>{const n=order.indexOf(s.id);return `<label class="ck"><input type="checkbox" data-sid="${s.id}" ${sel.has(s.id)?'checked':''}><div class="main"><div class="tt">${esc(s.title)}</div><div class="ar">${esc(s.artist||'')}</div></div>${n>=0?`<span class="pkn" title="Σειρά προσθήκης">${n+1}</span>`:''}<span class="keyb ${s.key?'':'none'}">${esc(s.key||'—')}</span></label>`}).join(''):`<div class="muted" style="padding:12px 4px">${Store.songs.size?'Τίποτα για αυτή την αναζήτηση.':'Η βιβλιοθήκη είναι άδεια.'}</div>`;
+    $('#pkCount').textContent=order.length?`+${order.length} νέα, με τη σειρά που τα πατάς`:sel.size+' στη λίστα';
   };
-  openModal(`${dhead('Τραγούδια στη συλλογή')}
-    <div class="dbody" style="gap:8px"><div class="search">${ic('search')}<input id="pkQ" type="search" placeholder="Αναζήτηση" autofocus aria-label="Αναζήτηση"></div><div id="pkList"></div></div>
+  openModal(`${dhead('Πρόσθεσε τραγούδια')}
+    <div class="dbody" style="gap:8px">
+      ${secs.length?`<label class="pksec">Μπαίνουν στο πακέτο <select id="pkSec"><option value="">Στο τέλος της λίστας</option>${secs.map(x=>`<option value="${x.i}">${esc(secShort(x))}</option>`).join('')}</select></label>`:''}
+      <div class="search">${ic('search')}<input id="pkQ" type="search" placeholder="Αναζήτηση" autofocus aria-label="Αναζήτηση"></div><div id="pkList"></div></div>
     <div class="dfoot"><span class="left muted" id="pkCount" style="align-self:center;font-size:13.5px"></span><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="pkSave">Αποθήκευση</button></div>`,m=>{
       const onIn=e=>{if(e.target.id==='pkQ'){q=e.target.value;draw()}};
-      const onCh=e=>{const cb=e.target.closest('input[data-sid]');if(!cb) return;cb.checked?sel.add(cb.dataset.sid):sel.delete(cb.dataset.sid);$('#pkCount').textContent=sel.size+' επιλεγμένα'};
+      const onCh=e=>{const cb=e.target.closest('input[data-sid]');if(!cb) return;const id=cb.dataset.sid;
+        if(cb.checked){sel.add(id);if(!had.has(id)&&!order.includes(id))order.push(id)}else{sel.delete(id);const k=order.indexOf(id);if(k>=0)order.splice(k,1)}
+        draw()};
       m.addEventListener('input',onIn);m.addEventListener('change',onCh);
-      pickModal.save=async()=>{const c=clone(Store.cols.get(colId));const keep=itemsOf(c).filter(x=>x.sec!=null||sel.has(x.s));const add=[...sel].filter(id=>!keep.some(x=>x.s===id)).sort((a,b)=>collator.compare(Store.songs.get(a).title,Store.songs.get(b).title));c.items=keep.concat(add.map(s=>({i:uid(),s})));closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Η συλλογή ενημερώθηκε')};
+      pickModal.save=async()=>{const c=clone(Store.cols.get(colId));const keep=itemsOf(c).filter(x=>x.sec!=null||sel.has(x.s));
+        c.items=insertInSection(keep,order.filter(id=>!keep.some(x=>x.s===id)).map(s=>({i:uid(),s})),($('#pkSec')||{}).value||'');
+        closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast(order.length?`Προστέθηκαν ${order.length}`:'Η λίστα ενημερώθηκε')};
       setTimeout(draw,0);
       return ()=>{m.removeEventListener('input',onIn);m.removeEventListener('change',onCh)};
     });
@@ -1842,7 +1936,7 @@ function enterPerf(){
 }
 function exitPerf(){
   const wasCue=S.cueMode;
-  S.perf=false;S.cueMode=false;S.fromCue=null;if(wasCue&&document.body.dataset.size!=='l')setPane('list');document.body.classList.remove('perf','uihidden');
+  S.perf=false;S.cueMode=false;S.fromCue=null;S.returnTo=null;if(wasCue&&document.body.dataset.size!=='l')setPane('list');document.body.classList.remove('perf','uihidden');
   try{wakeLock&&wakeLock.release&&wakeLock.release()}catch(e){}wakeLock=null;try{nsVideo&&nsVideo.pause()}catch(e){}
   try{document.fullscreenElement&&document.exitFullscreen().catch(()=>{})}catch(e){}
   applyTheme();renderDetail(true);
@@ -1868,12 +1962,13 @@ const A={
     if(S.ctx&&S.ctx.colId===c.id){const e=ctxEntry();S.ctx.list=S.ctx.list.filter(x=>x.it!==el.dataset.item);S.ctx.pos=Math.max(0,S.ctx.list.indexOf(e))}
     Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Αφαιρέθηκε από τη λίστα')},
   addsec(){const c=colOf(S.sec);if(c)secModal(c.id,null)},
+  secHere(el){secModal(el.dataset.col,null,{before:el.dataset.item})},
   editsec(el){const c=colOf(S.sec);if(c)secModal(c.id,el.dataset.item)},
   async saveSec(el){
     const name=$('#sName').value.trim();if(!name){$('#sName').focus();return}
     const sub=$('#sSub').value.trim();const c=clone(Store.cols.get(el.dataset.col));const items=itemsOf(c);
     let it=el.dataset.item&&items.find(x=>x.i===el.dataset.item);
-    if(!it){it={i:uid(),sec:name};items.push(it)}
+    if(!it){it={i:uid(),sec:name};const b=el.dataset.before?items.findIndex(x=>x.i===el.dataset.before):-1;if(b>=0)items.splice(b,0,it);else items.push(it)}
     it.sec=name;if(sub)it.sub=sub;else delete it.sub;
     closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'))},
   delSec(el){const c=clone(Store.cols.get(el.dataset.col));c.items=itemsOf(c).filter(x=>x.i!==el.dataset.item);closeModal();Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Η ενότητα σβήστηκε · τα τραγούδια της έμειναν')},
@@ -1916,7 +2011,58 @@ const A={
   delsong(){const s=Store.songs.get(S.songId);if(!s)return;confirmDlg('Διαγραφή τραγουδιού;',`Το «${s.title}» θα σβηστεί από τη βιβλιοθήκη και από όλες τις συλλογές.`,'Διαγραφή',async()=>{const id=s.id;if(S.perf)exitPerf();S.songId=null;if(document.body.dataset.size!=='l')setPane('list');await Store.deleteSong(id).catch(()=>toast('Δεν σβήστηκε. Δοκίμασε ξανά.'));renderDetail(true);toast('Διαγράφηκε')})},
   async confirmOk(){const f=confirmFn;confirmFn=null;closeModal();if(f)await f()},
   closeModal(){closeModal()},
-  newcol(){colModal(null)},
+  newcol(){
+    const b=(act,icon,label,sub)=>`<button class="mitem" data-act="${act}">${ic(icon)}<span><b>${label}</b><small>${sub}</small></span></button>`;
+    openModal(`${dhead('Νέο')}<div class="dbody menulist">
+      ${b('newlist','listmusic','Λίστα','Πρόγραμμα, setlist ή ομάδα τραγουδιών')}
+      ${b('newfolder','folder','Φάκελος','Για να μαζέψεις λίστες, π.χ. ένα μαγαζί ή μια σεζόν')}
+    </div>`)},
+  newlist(){colModal(null)},
+  newfolder(){colModal(null,{folder:true})},
+  // a copy of a list, or of a whole folder with all its lists: packs, keys and notes come along
+  dupcol(el){const c=Store.cols.get(el.dataset.col||(colOf(S.sec)||{}).id);if(!c)return;const f=isFolder(c);
+    openModal(`${dhead(f?'Αντίγραφο φακέλου':'Αντίγραφο λίστας')}<div class="dbody">
+      <div class="field"><label for="dupName">Όνομα</label><input id="dupName" value="${esc(c.name+' (αντίγραφο)')}" autofocus autocomplete="off"></div>
+      ${f?`<div class="hint">Αντιγράφονται και οι ${childrenOf(c.id).length} λίστες του, με τα πακέτα, τους τόνους και τις σημειώσεις.</div>`:'<div class="hint">Με τα πακέτα, τους τόνους και τις σημειώσεις. Τα τραγούδια δεν διπλασιάζονται στη βιβλιοθήκη.</div>'}
+    </div><div class="dfoot"><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="dupGo" data-col="${c.id}">Δημιουργία</button></div>`,
+    m=>{const h=e=>{if(e.key==='Enter'&&e.target.id==='dupName'){e.preventDefault();m.querySelector('[data-act=dupGo]').click()}};m.addEventListener('keydown',h);return()=>m.removeEventListener('keydown',h)})},
+  async dupGo(el){
+    const name=$('#dupName').value.trim();if(!name){$('#dupName').focus();return}
+    const copy=(c,parent,nm)=>{const n=clone(c);n.id=uid();n.name=nm||c.name;n.parent=parent;n.createdAt=now();n.items=itemsOf(n).map(x=>Object.assign({},x,{i:uid()}));Store.saveCol(n);
+      for(const k of childrenOf(c.id)) copy(k,n.id);return n};
+    const src=Store.cols.get(el.dataset.col);closeModal();
+    const n=copy(src,src.parent||null,name);S.sec='col:'+n.id;renderAll();if(document.body.dataset.size==='s')setPane('list');toast('Έτοιμο το αντίγραφο')},
+  foldermenu(el){const c=Store.cols.get(el.dataset.col);if(!c)return;
+    const b=(act,icon,label,sub)=>`<button class="mitem" data-act="${act}" data-col="${c.id}" data-parent="${c.id}">${ic(icon)}<span><b>${label}</b>${sub?`<small>${sub}</small>`:''}</span></button>`;
+    openModal(`${dhead(esc(c.name))}<div class="dbody menulist">
+      ${b('newsubcol','plus','Νέα λίστα εδώ','')}
+      ${b('dupcol','paste','Αντίγραφο φακέλου','Με όλες τις λίστες του, π.χ. για τη νέα σεζόν')}
+      ${b('editcol','settings','Ρυθμίσεις φακέλου','Όνομα, σημειώσεις, θέση')}
+    </div>`)},
+  // «παίξε εκείνο»: search the whole library from the stage, play it, then «Πίσω» to the same spot in the list
+  stagesearch(){
+    openModal(`${dhead('Αναζήτηση')}<div class="dbody" style="gap:8px">
+      <div class="search">${ic('search')}<input id="ssQ" type="search" placeholder="Τίτλος, καλλιτέχνης ή στίχος" autocomplete="off" enterkeyhint="search" autofocus aria-label="Αναζήτηση σε όλα τα τραγούδια"></div>
+      <div id="ssList" class="sslist"><div class="muted" style="padding:10px 4px">Γράψε μερικά γράμματα από τον τίτλο.</div></div></div>`,m=>{
+      const draw=()=>{const q=$('#ssQ').value;const r=searchSongs(q,40);
+        $('#ssList').innerHTML=!q.trim()?'<div class="muted" style="padding:10px 4px">Γράψε μερικά γράμματα από τον τίτλο.</div>':r.length?r.map(s=>`<div class="row" data-act="stagepick" data-id="${s.id}" role="button" tabindex="0"><div class="main"><div class="tt">${esc(s.title)}</div><div class="ar">${esc(s.artist||'')}</div></div><span class="keyb ${s.key?'':'none'}">${esc(s.key||'—')}</span></div>`).join(''):'<div class="muted" style="padding:10px 4px">Δεν βρέθηκε.</div>'};
+      const h=e=>{if(e.target.id==='ssQ')draw()};m.addEventListener('input',h);
+      const k=e=>{if(e.key==='Enter'&&e.target.id==='ssQ'){const f=m.querySelector('[data-act=stagepick]');if(f){e.preventDefault();f.click()}}};m.addEventListener('keydown',k);
+      return()=>{m.removeEventListener('input',h);m.removeEventListener('keydown',k)}})},
+  stagepick(el){
+    closeModal();
+    if(!S.returnTo&&S.ctx) S.returnTo={ctx:clone(S.ctx),cueMode:S.cueMode,fromCue:S.fromCue};
+    S.fromCue=null;
+    openSong(el.dataset.id,[{s:el.dataset.id,it:null}],null,0);
+    if(!S.perf)enterPerf();else renderPbar();
+  },
+  stageback(){
+    const r=S.returnTo;S.returnTo=null;if(!r||!r.ctx){renderPbar();return}
+    S.ctx=r.ctx;S.fromCue=r.fromCue||null;
+    if(r.cueMode){S.cueMode=true;S.songId=null;document.body.classList.remove('uihidden');renderCueSheet()}
+    else openSong(S.ctx.list[S.ctx.pos].s,null,null,S.ctx.pos);
+    renderRows();
+  },
   songmenu(){const s=Store.songs.get(S.songId);if(!s)return;
     const b=(act,icon,label,sub,cls='')=>`<button class="mitem ${cls}" data-act="${act}">${ic(icon)}<span><b>${label}</b>${sub?`<small>${sub}</small>`:''}</span></button>`;
     const inCols=[...Store.cols.values()].filter(c=>hasSong(c,s.id)).length;
@@ -1932,6 +2078,7 @@ const A={
       ${b('pickcol','plus','Πρόσθεσε τραγούδια','Από τη βιβλιοθήκη')}
       ${c.ordered?b('addsec','section','Νέα ενότητα / πακέτο','π.χ. «Ρούμπες · 2ο πακέτο»'):''}
       ${c.ordered&&itemsOf(c).length>1?b('reorder','grip','Αλλαγή σειράς','Σύρε τραγούδια και ενότητες'):''}
+      ${b('dupcol','paste','Αντίγραφο λίστας','Νέα λίστα με τα ίδια τραγούδια, πακέτα και τόνους')}
       ${b('editcol','settings','Ρυθμίσεις λίστας','Όνομα, σειρά, εμφάνιση, σημειώσεις, φάκελος')}
       ${b('exportcol','download','Εξαγωγή σε κείμενο','')}
     </div>`)},
@@ -1949,7 +2096,7 @@ const A={
     const id=el.dataset.id;const was=id?Store.cols.get(id):null;
     const oEl=document.querySelector('input[name=cOrd]:checked'),mEl=document.querySelector('input[name=cMode]:checked'); // a folder has neither
     const ordered=oEl?oEl.value==='1':!!(was&&was.ordered);const mode=mEl?mEl.value:(was&&was.mode)||'full';const pe=$('#cParent');const parent=pe&&pe.value?pe.value:null;
-    const c=id?clone(Store.cols.get(id)):{id:uid(),items:[],createdAt:now()};
+    const c=id?clone(Store.cols.get(id)):Object.assign({id:uid(),items:[],createdAt:now()},el.dataset.folder?{folder:true}:{});
     const notes=($('#cNotes')||{value:''}).value.trim();
     Object.assign(c,{name,ordered,mode,parent,notes});
     if(!id&&el.dataset.add) c.items=[{i:uid(),s:el.dataset.add}];
@@ -2059,7 +2206,7 @@ document.addEventListener('paste',editorPaste);
 document.addEventListener('keydown',e=>{
   const t=e.target;const typing=t.matches&&t.matches('input,textarea,select');
   if(t.id==='edNewGenre'&&e.key==='Enter'){e.preventDefault();const v=t.value.trim();if(v){addGenre(v);t.value='';const wrap=$('#edGenres');const b=document.createElement('button');b.type='button';b.className='tog on';b.dataset.act='tgGenre';b.dataset.g=v;b.textContent=v;wrap.insertBefore(b,t)}return}
-  if(e.key==='Escape'){if(!$('#modal').hidden){closeModal();return}if(S.perf&&S.fromCue&&!S.cueMode){A.cueback();return}if(S.perf){exitPerf();return}if(S.edit){cancelEditor(false);return}}
+  if(e.key==='Escape'){if(!$('#modal').hidden){closeModal();return}if(S.perf&&S.returnTo){A.stageback();return}if(S.perf&&S.fromCue&&!S.cueMode){A.cueback();return}if(S.perf){exitPerf();return}if(S.edit){cancelEditor(false);return}}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&S.edit){e.preventDefault();saveEditor();return}
   if(typing||!$('#modal').hidden) return;
   if(e.key==='/'){const q=$('#q');if(q&&q.offsetParent){e.preventDefault();q.focus()}return}
@@ -2068,11 +2215,14 @@ document.addEventListener('keydown',e=>{
   if(t.classList&&t.classList.contains('row')&&e.key==='Enter'){t.click();return}
   if(S.cueMode){if(e.key==='Enter'){e.preventDefault();A.cueopen();return}if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();cueMove(1)}else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();cueMove(-1)}return}
   if(!S.songId||S.edit) return;
+  // page turner / pedal: down pages through the song and, at its end, goes on to the next one; up does the reverse
   const d=$('#detail');
+  const down=e.key==='PageDown'||e.key==='ArrowDown'||(e.key===' '&&S.perf);
+  const up=e.key==='PageUp'||e.key==='ArrowUp';
   if(e.key==='ArrowRight'){e.preventDefault();go(1)}
   else if(e.key==='ArrowLeft'){e.preventDefault();go(-1)}
-  else if(e.key==='PageDown'||(e.key===' '&&S.perf)){e.preventDefault();d.scrollBy({top:d.clientHeight*.8,behavior:'smooth'})}
-  else if(e.key==='PageUp'){e.preventDefault();d.scrollBy({top:-d.clientHeight*.8,behavior:'smooth'})}
+  else if(down){e.preventDefault();if(d.scrollTop+d.clientHeight>=d.scrollHeight-4){if(ctxStep(1)>=0)go(1)}else d.scrollTop+=Math.round(d.clientHeight*.8)}
+  else if(up){e.preventDefault();if(d.scrollTop<=4){if(ctxStep(-1)>=0){go(-1)}}else d.scrollTop-=Math.round(d.clientHeight*.8)}
 });
 // file restore
 $('#fileIn').addEventListener('change',async e=>{
@@ -2142,7 +2292,12 @@ Store.onChange=what=>{
 layout();applyTheme();
 if(window.innerWidth<760) document.body.dataset.pane='list';
 renderAll();
-Store.init().then(()=>{renderAll();if(Store.mode==='setup')ghModal()});
+Store.init().then(()=>{
+  const perf=Store.mode==='github'&&restoreState();
+  renderAll();
+  if(perf) enterPerf(); // back on stage where it was (fullscreen may need a tap, the rest is there)
+  if(Store.mode==='setup')ghModal();
+});
 // offline start: sw.js keeps a copy of the app (not of the songs: those stay with Store)
 if('serviceWorker' in navigator&&window.isSecureContext&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(e=>console.warn('sw',e)));
