@@ -158,8 +158,6 @@ body.perf #detail{display:block!important}
 .dtop .back{display:none;margin-left:-8px}
 body[data-size=m] .dtop .back,body[data-size=s] .dtop .back{display:inline-grid}
 .dtitle{flex:1 1 240px;min-width:0}
-.dtitle .cr{color:var(--faint);font-size:13px;margin-top:2px}
-body.perf .dtitle .cr{display:none}
 .dtitle h1{margin:2px 0 2px;font-size:28px;line-height:1.18;letter-spacing:-.02em;overflow-wrap:anywhere;text-wrap:balance}
 .dtitle .ar{color:var(--muted);font-size:16px}
 .dacts{display:flex;gap:2px;flex-wrap:wrap;justify-content:flex-end}
@@ -591,9 +589,8 @@ function extractMeta(text){
   for(let i=0;i<first;i++){
     const l=raw[i].trim(); if(!l) continue;
     let m;
-    // kithara: «Μουσική/Στίχοι: Α/Β» goes to credits, the performer stays in artist
-    if((m=l.match(/^((?:μουσικ[ηή]\s*(?:\/|και|&)?\s*στ[ιί]χοι|μουσικ[ηή]|στ[ιί]χοι|σ[υύ]νθεση|στιχουργ[οό]ς|συνθ[εέ]της))\s*[:：-]\s*(.+)$/i))){
-      const part=m[1].replace(/\s+/g,'')+': '+m[2].trim();meta.credits=meta.credits?meta.credits+' · '+part:part;continue}
+    // kithara: «Μουσική/Στίχοι: Α/Β» is not kept, so it never ends up in the lyrics; the performer stays in artist
+    if(/^(?:μουσικ[ηή]\s*(?:\/|και|&)?\s*στ[ιί]χοι|μουσικ[ηή]|στ[ιί]χοι|σ[υύ]νθεση|στιχουργ[οό]ς|συνθ[εέ]της)\s*[:：-]\s*.+$/i.test(l)) continue;
     if((m=l.match(/^(?:ερμηνε[ιί]α|ερμηνευτ[ηή]ς|καλλιτ[εέ]χνης|artist|by)\s*[:：-]\s*(.+)$/i))){ if(!meta.artist) meta.artist=m[1].trim(); continue }
     if((m=l.match(/^(?:τ[οό]νος|key)\s*[:：-]\s*([A-H][#b]?m?)/i))){meta.key=m[1].replace(/^H/,'B');continue}
     // kithara: «▼ G μινόρε (*)» / «D ματζόρε»
@@ -779,9 +776,10 @@ const Store={
   /* ---------- github ---------- */
   async _ghInit(){
     this.mode='github';this.status='cache';
+    this.gh={head:null,shas:{},etag:null,committing:false,timer:0}; // ready before anything is awaited: a save may come in meanwhile
     await Local.open(GH.cfg.owner+'/'+GH.cfg.repo);
     const L=await Local.load();
-    this.gh={head:L.head,shas:L.shas,etag:null,committing:false,timer:0};
+    this.gh.head=L.head;this.gh.shas=L.shas;
     this.songs=new Map();this.cols=new Map();
     for(const [p,obj] of L.items){const m=p.match(FILE_RE);if(m)(m[1]==='songs'?this.songs:this.cols).set(m[2],obj)}
     if(!L.items.length)this.status='loading';
@@ -941,7 +939,7 @@ const Store={
 /* =====================================================================
    APP STATE
    ===================================================================== */
-const prefs=Object.assign({theme:'auto',fs:22,speed:4,perfDark:true},lsGet('msb-prefs',{}));
+const prefs=Object.assign({theme:'auto',fs:22,perfDark:true},lsGet('msb-prefs',{}));
 const savePrefs=()=>lsSet('msb-prefs',prefs);
 const S={
   sec:'all',          // 'all' | 'fav' | 'recent' | 'col:<id>'
@@ -950,7 +948,6 @@ const S={
   tr:{},              // per-song transposition (session)
   edit:null,          // editor draft
   perf:false,cueIdx:{},cueMode:false,
-  scrolling:false,
 };
 
 /* =====================================================================
@@ -978,7 +975,7 @@ const idxCache=new Map();
 function searchKey(s){
   const k=s.updatedAt+'|'+s.id;const c=idxCache.get(s.id);
   if(c&&c.k===k) return c.v;
-  const v=norm([s.title,s.artist,(s.tags||[]).join(' '),(s.genres||[]).join(' ')].join(' '));
+  const v=norm([s.title,s.artist,(s.genres||[]).join(' ')].join(' '));
   const ly=norm(songLyrics(s));
   const o={meta:v,ly};idxCache.set(s.id,{k,v:o});return o;
 }
@@ -1222,13 +1219,12 @@ function renderDetail(force=false){
   if(s.rhythm) chips.push(`<span class="chip">Ρυθμός <b>${esc(s.rhythm)}</b></span>`);
   if(s.timeSig) chips.push(`<span class="chip">Μέτρο <b>${esc(s.timeSig)}</b></span>`);
   (s.genres||[]).forEach(g=>chips.push(`<span class="chip">${esc(g)}</span>`));
-  (s.tags||[]).forEach(g=>chips.push(`<span class="chip">#${esc(g)}</span>`));
   const hasC=songHasChords(s);
   d.innerHTML=`<div class="dwrap">
     ${cx&&cx.col?`<div class="ctxbar">${ic(cx.col.ordered?'listmusic':'folder','sm')}<span>${esc(cx.col.name)}</span><span class="pos">· ${cx.i+1} από ${cx.n}</span>${it?`<button class="btn sm ghost" data-act="itemmenu" data-item="${it.i}" data-col="${cx.col.id}">${ic('pencil','sm')}Τόνος/σημείωση λίστας</button>`:''}</div>`:''}
     <div class="dtop">
       <button class="ibtn back" data-act="back" aria-label="Πίσω">${ic('left')}</button>
-      <div class="dtitle"><h1>${esc(s.title||'Χωρίς τίτλο')}</h1>${s.artist?`<div class="ar">${esc(s.artist)}</div>`:''}${s.credits?`<div class="cr">${esc(s.credits)}</div>`:''}</div>
+      <div class="dtitle"><h1>${esc(s.title||'Χωρίς τίτλο')}</h1>${s.artist?`<div class="ar">${esc(s.artist)}</div>`:''}</div>
       <div class="dacts">
         <button class="ibtn fav ${s.fav?'on':''}" data-act="fav" title="${s.fav?'Αφαίρεση από αγαπημένα':'Αγαπημένο'}" aria-pressed="${!!s.fav}" aria-label="Αγαπημένο">${ic('star')}</button>
         <button class="ibtn" data-act="edit" title="Επεξεργασία" aria-label="Επεξεργασία">${ic('pencil')}</button>
@@ -1244,7 +1240,6 @@ function renderDetail(force=false){
     <div class="tools">
       ${hasC?`<div class="tgroup"><span class="lab">Τόνος</span><button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus','sm')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus','sm')}</button>${n!==defShift(s)?`<button class="ibtn" data-act="tr0" title="${it&&it.key?'Πίσω στον τόνο της λίστας':'Επαναφορά τόνου'}" aria-label="Επαναφορά τόνου">${ic('undo','sm')}</button>`:''}</div>`:''}
       <div class="tgroup"><span class="lab">Γράμματα</span><button class="ibtn" data-act="fs" data-d="-2" aria-label="Μικρότερα γράμματα">${ic('minus','sm')}</button><span class="val">${prefs.fs}</span><button class="ibtn" data-act="fs" data-d="2" aria-label="Μεγαλύτερα γράμματα">${ic('plus','sm')}</button></div>
-      <div class="tgroup"><span class="lab">Κύλιση</span><button class="ibtn ${S.scrolling?'on':''}" data-act="scroll" aria-label="${S.scrolling?'Παύση κύλισης':'Αυτόματη κύλιση'}">${ic(S.scrolling?'pause':'play','sm')}</button><button class="ibtn" data-act="speed" data-d="-1" aria-label="Πιο αργά">${ic('minus','sm')}</button><span class="val">${prefs.speed}</span><button class="ibtn" data-act="speed" data-d="1" aria-label="Πιο γρήγορα">${ic('plus','sm')}</button></div>
       <span class="tspacer"></span>
       ${hasC&&n!==defShift(s)?`<button class="btn sm" data-act="keeptr" title="${it?'Αυτή η λίστα θα ανοίγει το τραγούδι σε αυτόν τον τόνο':'Γράφει τα ακόρντα στον νέο τόνο'}">${it?'Κράτα τον τόνο στη λίστα':'Κράτα αυτόν τον τόνο'}</button>`:''}
       <button class="btn sm primary" data-act="perf">${ic('max','sm')}Παίξιμο</button>
@@ -1279,7 +1274,6 @@ function renderPbar(){
       ${S.fromCue?`<button class="pbtn" data-act="cueback">${ic('listmusic')}<span>Λίστα</span></button>`:''}
       ${songHasChords(s)?grp('Τόνος',`<button class="ibtn" data-act="tr" data-d="-1" aria-label="Μισό τόνο κάτω">${ic('minus')}</button><span class="val k">${esc(s.key?trKey(s.key,n,flat):(n>0?'+'+n:n))}</span><button class="ibtn" data-act="tr" data-d="1" aria-label="Μισό τόνο πάνω">${ic('plus')}</button>`):''}
       ${hasLines?fsGrp:''}
-      ${hasLines?grp('Κύλιση',`<button class="ibtn ${S.scrolling?'on':''}" data-act="scroll" aria-label="Αυτόματη κύλιση">${ic(S.scrolling?'pause':'scroll')}</button><button class="ibtn" data-act="speed" data-d="-1" aria-label="Πιο αργά">${ic('minus')}</button><span class="val">${prefs.speed}</span><button class="ibtn" data-act="speed" data-d="1" aria-label="Πιο γρήγορα">${ic('plus')}</button>`):''}
       ${exitBtn}
     </div>
     ${nav('next','next','Επόμ.',cx&&cx.next)}`;
@@ -1316,8 +1310,7 @@ function renderAll(){renderSide();renderList(true);renderDetail(true);renderTabb
    EDITOR
    ===================================================================== */
 function openEditor(song,preset){
-  stopScroll();
-  const s=song?clone(song):{id:null,title:(preset&&preset.title)||'',artist:'',credits:'',key:'',genres:[],tags:[],rhythm:'',timeSig:'',capo:'',notes:'',lines:[]};
+  const s=song?clone(song):{id:null,title:(preset&&preset.title)||'',artist:'',key:'',genres:[],rhythm:'',timeSig:'',capo:'',notes:'',lines:[]};
   S.edit={id:s.id,orig:song?clone(song):null,draft:s,text:linesToText(s.lines),dirty:false,showPrev:false,touchedKey:!!s.key};
   if(document.body.dataset.size!=='l') setPane('detail');
   document.body.classList.add('editing');
@@ -1333,14 +1326,12 @@ function renderEditor(){
     <div class="fgrid">
       <div class="field span3"><label for="edTitle">Τίτλος</label><input id="edTitle" data-k="title" value="${esc(s.title)}" placeholder="π.χ. Φραγκοσυριανή" autocomplete="off"></div>
       <div class="field span3"><label for="edArtist">Καλλιτέχνης</label><input id="edArtist" data-k="artist" value="${esc(s.artist)}" list="dlArtists" autocomplete="off"><datalist id="dlArtists">${distinct('artist').map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
-      <div class="field span6"><label for="edCredits">Δημιουργοί</label><input id="edCredits" data-k="credits" value="${esc(s.credits)}" placeholder="π.χ. Μουσική: … · Στίχοι: …" autocomplete="off"></div>
       <div class="field span1"><label for="edKey">Τόνος</label><select id="edKey" data-k="key"><option value="">—</option>${ALLKEYS.map(k=>`<option ${s.key===k?'selected':''}>${k}</option>`).join('')}</select></div>
       <div class="field span1"><label for="edCapo">Κάπο</label><input id="edCapo" data-k="capo" value="${esc(s.capo)}" inputmode="numeric" placeholder="—"></div>
       <div class="field span2"><label for="edRhythm">Ρυθμός</label><input id="edRhythm" data-k="rhythm" value="${esc(s.rhythm)}" list="dlRhythm" placeholder="π.χ. Χασάπικο"><datalist id="dlRhythm">${['Ζεϊμπέκικο','Χασάπικο','Χασαποσέρβικο','Τσιφτετέλι','Καλαματιανό','Συρτό','Μπάλος','Καρσιλαμάς','Βαλς','Ταγκό','Ballad','Rock'].concat(distinct('rhythm')).filter((v,i,a)=>a.indexOf(v)===i).map(r=>`<option value="${esc(r)}">`).join('')}</datalist></div>
       <div class="field span2"><label for="edTime">Μέτρο</label><input id="edTime" data-k="timeSig" value="${esc(s.timeSig)}" placeholder="π.χ. 9/8" list="dlTime"><datalist id="dlTime">${['2/4','3/4','4/4','5/8','6/8','7/8','9/8','12/8'].map(r=>`<option value="${r}">`).join('')}</datalist></div>
       <div class="field span6"><label>Είδος</label><div class="chips" id="edGenres">${genres.map(g=>`<button type="button" class="tog ${(s.genres||[]).includes(g)?'on':''}" data-act="tgGenre" data-g="${esc(g)}" aria-pressed="${(s.genres||[]).includes(g)}">${esc(g)}</button>`).join('')}<input class="addg" id="edNewGenre" placeholder="+ Άλλο είδος" aria-label="Νέο είδος"></div></div>
-      <div class="field span3"><label for="edTags">Ετικέτες</label><input id="edTags" data-k="tags" value="${esc((s.tags||[]).join(', '))}" placeholder="π.χ. γλέντι, αργό, γάμος"></div>
-      <div class="field span3"><label for="edNotes">Σημειώσεις</label><input id="edNotes" data-k="notes" value="${esc(s.notes)}" placeholder="π.χ. αργά στην αρχή, κάπο στο 2"></div>
+      <div class="field span6"><label for="edNotes">Σημειώσεις</label><input id="edNotes" data-k="notes" value="${esc(s.notes)}" placeholder="π.χ. αργά στην αρχή, κάπο στο 2"></div>
     </div>
     <div class="edtabs"><div class="seg"><button class="${E.showPrev?'':'on'}" data-act="edtab" data-p="0">Κείμενο</button><button class="${E.showPrev?'on':''}" data-act="edtab" data-p="1">Προεπισκόπηση</button></div></div>
     <div class="edbody ${E.showPrev?'showprev':''}">
@@ -1387,8 +1378,7 @@ function editorInput(e){
   if(t.id==='edBody'){E.text=t.value;E.dirty=true;clearTimeout(prevT);prevT=setTimeout(updatePreview,140);return}
   const k=t.dataset.k;if(!k) return;
   E.dirty=true;
-  if(k==='tags') E.draft.tags=t.value.split(/[,;]/).map(x=>x.trim().replace(/^#/,'')).filter(Boolean);
-  else if(k==='key'){E.draft.key=t.value;E.touchedKey=true}
+  if(k==='key'){E.draft.key=t.value;E.touchedKey=true}
   else E.draft[k]=t.value;
 }
 function editorPaste(e){
@@ -1400,7 +1390,6 @@ function editorPaste(e){
       const {meta,body}=extractMeta(E.text);const filled=[];
       if(meta.title&&!E.draft.title){E.draft.title=meta.title;$('#edTitle').value=meta.title;filled.push('τίτλο')}
       if(meta.artist&&!E.draft.artist){E.draft.artist=meta.artist;$('#edArtist').value=meta.artist;filled.push('καλλιτέχνη')}
-      if(meta.credits&&!E.draft.credits){E.draft.credits=meta.credits;$('#edCredits').value=meta.credits;filled.push('δημιουργούς')}
       if(meta.key&&!E.draft.key&&ALLKEYS.includes(meta.key)){E.draft.key=meta.key;E.touchedKey=true;$('#edKey').value=meta.key;filled.push('τόνο')}
       if(meta.rhythm&&!E.draft.rhythm){E.draft.rhythm=meta.rhythm;$('#edRhythm').value=meta.rhythm;filled.push('ρυθμό')}
       if(meta.capo&&!E.draft.capo){E.draft.capo=meta.capo;$('#edCapo').value=meta.capo;filled.push('κάπο')}
@@ -1417,7 +1406,8 @@ async function saveEditor(){
   const title=(E.draft.title||'').trim();
   if(!title){err.textContent='Γράψε τίτλο για να αποθηκευτεί.';$('#edTitle').focus();return}
   const r=parseText(E.text);
-  const s=Object.assign({},E.draft,{title,artist:(E.draft.artist||'').trim(),credits:(E.draft.credits||'').trim(),lines:r.lines});
+  const s=Object.assign({},E.draft,{title,artist:(E.draft.artist||'').trim(),lines:r.lines});
+  delete s.tags;delete s.credits; // fields that no longer exist: dropped from a song when it is saved
   if(!s.key&&!E.touchedKey){s.key=guessKey(r.lines)}
   const sel=$('#edKey');if(sel) s.key=sel.value||s.key;
   const isNew=!E.id;
@@ -1548,7 +1538,7 @@ async function versionsModal(songId){
   }catch(e){const el=$('#vList');if(el)el.innerHTML='<div class="muted">Δεν φόρτωσε το ιστορικό. Δοκίμασε ξανά.</div>'}
 }
 function songAsText(s){
-  const head=[s.title,s.artist&&('Καλλιτέχνης: '+s.artist),...(s.credits?s.credits.split(' · '):[]),s.key&&('Τόνος: '+s.key),s.capo&&('Κάπο: '+s.capo),s.rhythm&&('Ρυθμός: '+s.rhythm)].filter(Boolean).join('\n');
+  const head=[s.title,s.artist&&('Καλλιτέχνης: '+s.artist),s.key&&('Τόνος: '+s.key),s.capo&&('Κάπο: '+s.capo),s.rhythm&&('Ρυθμός: '+s.rhythm)].filter(Boolean).join('\n');
   return head+'\n\n'+(s.notes?'# '+s.notes+'\n\n':'')+linesToText(s.lines)+'\n';
 }
 function songAsChordPro(s){
@@ -1649,7 +1639,7 @@ function lsPlan(d){
         const key=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||'';
         const ly=lyrics[lsLyrKey(part[0].title)];
         const lines=ly?parseText(String(ly)).lines:[];if(lines.length)withLyrics++;
-        song={id:uid(),title:part[0].title,artist,credits:'',key:ALLKEYS.includes(key)?key:'',genres:[],tags:['live setlist'],rhythm:'',timeSig:'',capo:'',notes:'',lines,fav:false,createdAt:now(),updatedAt:now()};
+        song={id:uid(),title:part[0].title,artist,key:ALLKEYS.includes(key)?key:'',genres:[],rhythm:'',timeSig:'',capo:'',notes:'',lines,fav:false,createdAt:now(),updatedAt:now()};
         newSongs.push(song);
       }
       part.forEach(o=>o.song=song);
@@ -1706,7 +1696,6 @@ function lsModal(plan){
    ===================================================================== */
 // list: [{s:songId,it:itemId|null}] to open within (or omit to stay in the current list); pos: position in it
 function openSong(id,list,colId,pos){
-  stopScroll();
   if(S.edit){S.edit=null}
   S.cueMode=false;
   S.songId=id;
@@ -1726,24 +1715,6 @@ function go(delta){
   if(!ctxInfo()) return;
   const p=ctxStep(delta>0?1:-1);if(p<0) return;
   openSong(S.ctx.list[p].s,null,null,p);
-}
-// ---- autoscroll ----
-let rafId=0,lastTs=0,acc=0;
-function startScroll(){
-  S.scrolling=true;lastTs=0;acc=0;
-  const d=$('#detail');
-  const step=ts=>{
-    if(!S.scrolling) return;
-    if(lastTs){const dt=Math.min(64,ts-lastTs);acc+=dt/1000*(prefs.speed*7)*(prefs.fs/20);const px=Math.floor(acc);if(px){d.scrollTop+=px;acc-=px}}
-    lastTs=ts;
-    if(d.scrollTop+d.clientHeight>=d.scrollHeight-2){stopScroll();refreshScrollBtns();return}
-    rafId=requestAnimationFrame(step);
-  };
-  rafId=requestAnimationFrame(step);refreshScrollBtns();
-}
-function stopScroll(){S.scrolling=false;cancelAnimationFrame(rafId)}
-function refreshScrollBtns(){
-  document.querySelectorAll('[data-act=scroll]').forEach(b=>{b.classList.toggle('on',S.scrolling);b.innerHTML=ic(S.scrolling?'pause':(b.closest('.pbar')?'scroll':'play'),b.closest('.pbar')?'':'sm')});
 }
 // ---- perf ----
 let wakeLock=null,wakeWarned=false;
@@ -1767,7 +1738,7 @@ function enterPerf(){
 }
 function exitPerf(){
   const wasCue=S.cueMode;
-  S.perf=false;S.cueMode=false;S.fromCue=null;if(wasCue&&document.body.dataset.size!=='l')setPane('list');stopScroll();document.body.classList.remove('perf','uihidden');
+  S.perf=false;S.cueMode=false;S.fromCue=null;if(wasCue&&document.body.dataset.size!=='l')setPane('list');document.body.classList.remove('perf','uihidden');
   try{wakeLock&&wakeLock.release&&wakeLock.release()}catch(e){}wakeLock=null;try{nsVideo&&nsVideo.pause()}catch(e){}
   try{document.fullscreenElement&&document.exitFullscreen().catch(()=>{})}catch(e){}
   applyTheme();renderDetail(true);
@@ -1827,8 +1798,6 @@ const A={
       await Store.addVersion(prev).catch(()=>{});await Store.saveSong(ns);toast('Ο νέος τόνος αποθηκεύτηκε')};
     openModal(`${dhead('Αλλαγή τόνου μόνιμα;')}<div class="dbody"><p style="margin:0">Τα ακόρντα θα γραφτούν στον νέο τόνο${s.key?` (${esc(s.key)} → ${esc(trKey(s.key,n,flat))})`:''}. Η τωρινή μορφή μένει στο ιστορικό εκδόσεων.</p></div><div class="dfoot"><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="confirmOk">Αποθήκευση τόνου</button></div>`)},
   fs(el){prefs.fs=Math.max(14,Math.min(48,prefs.fs+(+el.dataset.d)));savePrefs();document.querySelectorAll('.sheet,.cuesheet').forEach(x=>x.style.setProperty('--fs',prefs.fs+'px'));S.cueMode?renderCueSheet():renderDetail(true)},
-  scroll(){S.scrolling?stopScroll():startScroll();refreshScrollBtns();if(S.scrolling&&S.perf)setTimeout(()=>{if(S.scrolling)document.body.classList.add('uihidden')},1800)},
-  speed(el){prefs.speed=Math.max(1,Math.min(15,prefs.speed+(+el.dataset.d)));savePrefs();renderDetail(true)},
   perf(){enterPerf()},
   perfx(){exitPerf()},
   prev(){go(-1)},next(){go(1)},
@@ -1878,7 +1847,7 @@ const A={
     if(s&&(s.lines||[]).length){A.cueopen();return}renderCueSheet()},
   cueopen(){const c=Store.cols.get(S.ctx&&S.ctx.colId);if(!c)return;const list=songItems(c).map(x=>({s:x.s,it:x.i}));const i=S.cueIdx[c.id]||0;if(!list[i])return;
     S.fromCue=c.id;openSong(list[i].s,list,c.id,i);document.body.classList.remove('uihidden')},
-  cueback(){const c=Store.cols.get(S.fromCue);if(!c){S.fromCue=null;renderPbar();return}stopScroll();
+  cueback(){const c=Store.cols.get(S.fromCue);if(!c){S.fromCue=null;renderPbar();return}
     S.cueIdx[c.id]=S.ctx&&S.ctx.colId===c.id?S.ctx.pos:(S.cueIdx[c.id]||0);S.cueMode=true;S.songId=null;S.fromCue=null;document.body.classList.remove('uihidden');renderCueSheet();renderRows()},
   cue(el){cueMove(+el.dataset.d)},
   theme(){prefs.theme={auto:'light',light:'dark',dark:'auto'}[prefs.theme];savePrefs();applyTheme();renderSide()},
@@ -1925,8 +1894,8 @@ const A={
 E                              Am
 γιατί με μάρανες τον πικραμένο   | 2x`;
     const r=parseText(text);
-    const s={id:uid(),title:'Μήλο μου κόκκινο',artist:'Παραδοσιακό',key:'Am',genres:['Παραδοσιακό'],tags:['δείγμα'],rhythm:'Συρτό',timeSig:'',capo:'',notes:'Δείγμα: σβήσ’ το όποτε θες.',lines:r.lines,fav:false,createdAt:now()};
-    const t={id:uid(),title:'Τραγούδι μόνο με τίτλο',artist:'',key:'',genres:[],tags:['δείγμα'],rhythm:'',timeSig:'',capo:'',notes:'',lines:[],fav:false,createdAt:now()};
+    const s={id:uid(),title:'Μήλο μου κόκκινο',artist:'Παραδοσιακό',key:'Am',genres:['Παραδοσιακό'],rhythm:'Συρτό',timeSig:'',capo:'',notes:'Δείγμα: σβήσ’ το όποτε θες.',lines:r.lines,fav:false,createdAt:now()};
+    const t={id:uid(),title:'Τραγούδι μόνο με τίτλο',artist:'',key:'',genres:[],rhythm:'',timeSig:'',capo:'',notes:'',lines:[],fav:false,createdAt:now()};
     await Store.saveSong(s);await Store.saveSong(t);openSong(s.id,playList(),(colOf(S.sec)||{}).id);toast('Προστέθηκαν δύο δείγματα');
   }
 };
@@ -1991,7 +1960,6 @@ $('#lsIn').addEventListener('change',async e=>{
 let tx=0,ty=0,tt=0;
 $('#detail').addEventListener('touchstart',e=>{if(!S.perf)return;const p=e.changedTouches[0];tx=p.clientX;ty=p.clientY;tt=Date.now()},{passive:true});
 $('#detail').addEventListener('touchend',e=>{if(!S.perf)return;const p=e.changedTouches[0];const dx=p.clientX-tx,dy=p.clientY-ty;if(Date.now()-tt<600&&Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*1.6){S.cueMode?cueMove(dx<0?1:-1):go(dx<0?1:-1)}},{passive:true});
-// manual scroll pauses nothing; wheel during autoscroll just adds
 // ---- drag to reorder ----
 function moveItem(id,delta){
   const c=colOf(S.sec);if(!c) return;const n=clone(c);const items=itemsOf(n);const i=items.findIndex(x=>x.i===id);const j=i+delta;if(i<0||j<0||j>=items.length) return;
