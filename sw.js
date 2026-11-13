@@ -4,7 +4,7 @@
    - Icons and manifest: saved copy first.
    - Everything else (the GitHub API) is never touched here:
      the app keeps its own copy of the songs and queues changes until it is back online. */
-const CACHE = 'msb-shell-v1';
+const CACHE = 'msb-shell-v2'; // v2: new icons
 const SHELL = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon.png'];
 
 self.addEventListener('install', e => {

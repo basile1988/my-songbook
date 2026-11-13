@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#121212">
 <title>My Songbook</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon.png">
@@ -414,6 +414,139 @@ body[data-size=s]:not([data-pane=detail]) #toast,body.perf #toast,body.editing #
   .ctxedit{padding:0 8px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* =====================================================================
+   LOOK: dark, content-first music app (inspired by Spotify's design language)
+   Near-black surfaces, one green for actions and "now playing", pills and circles,
+   uppercase spaced labels on primary buttons, heavy shadows for anything floating.
+   The light theme keeps the same shapes with a darker green that reads on white.
+   ===================================================================== */
+:root{
+  --bg:#ffffff;--side:#f2f2f2;--surface:#f6f6f6;--raise:#ececec;--line:#dedede;--line2:#c4c4c4;
+  --text:#121212;--muted:#5e5e5e;--faint:#7a7a7a;--accent:#117a3e;--accent-ink:#ffffff;--accent-weak:#e2f5e9;
+  --chord:#1f5fbf;--danger:#c0303f;--danger-weak:#fdecee;--ok:#117a3e;--note:#9a5a00;
+  --shadow:0 8px 8px rgba(0,0,0,.08);--shadow-hi:0 8px 24px rgba(0,0,0,.18);
+}
+html[data-eff=dark],body.perf #detail,body.perf .pbar,body.perf .pnext,.darkvars{
+  --bg:#121212;--side:#000000;--surface:#181818;--raise:#1f1f1f;--line:#282828;--line2:#4d4d4d;
+  --text:#ffffff;--muted:#b3b3b3;--faint:#8a8a8a;--accent:#1ed760;--accent-ink:#000000;--accent-weak:#1c3a27;
+  --chord:#6fb1ff;--danger:#f3727f;--danger-weak:#3a1d21;--ok:#1ed760;--note:#ffa42b;
+  --shadow:0 8px 8px rgba(0,0,0,.3);--shadow-hi:0 8px 24px rgba(0,0,0,.5);
+}
+body{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;line-height:1.4}
+html[data-eff=dark] #side{border-right:0}
+html[data-eff=dark] #listPane{border-right:1px solid var(--line)}
+
+/* brand */
+.brand .logo{border-radius:50%;background:var(--accent);color:var(--accent-ink)}
+.brand{letter-spacing:-.02em;font-size:18px}
+
+/* navigation: muted until active, active is bold white */
+.navitem{color:var(--muted);border-radius:6px;font-weight:600}
+.navitem:hover{color:var(--text);background:var(--raise)}
+.navitem.on{background:var(--raise);color:var(--text);font-weight:700}
+.navitem.on svg.i{color:var(--accent)}
+.navitem.on .cnt{color:var(--muted)}
+.sidehead{text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:700}
+
+/* buttons: pills; primary = green with black, uppercase, spaced */
+.btn{border-radius:9999px;font-weight:700;border-color:var(--line2);background:transparent;padding:0 16px}
+.btn:hover{background:var(--raise);border-color:var(--text)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);text-transform:uppercase;letter-spacing:.1em;font-size:13px}
+.btn.primary:hover{background:var(--accent);filter:brightness(1.08);transform:scale(1.03)}
+.btn.primary:active{transform:scale(.97)}
+.btn.sm{min-height:32px;padding:0 12px;font-size:12.5px}
+.btn.ghost{border-color:transparent}
+.btn.ghost:hover{border-color:transparent}
+.btn.danger.solid{border-radius:9999px}
+.ibtn{border-radius:50%}
+.ibtn:hover{background:var(--raise)}
+.ibtn.fav.on{color:var(--accent)}
+
+/* search & filters: pills, recessed */
+.search input{border-radius:9999px;border:0;background:var(--raise);box-shadow:inset 0 0 0 1px var(--line2);padding:0 40px 0 42px;height:44px}
+.search input:hover{box-shadow:inset 0 0 0 1px var(--muted)}
+.search input:focus{box-shadow:inset 0 0 0 2px var(--text)}
+.search svg{left:14px}
+.sel{border:0;background-color:var(--raise);box-shadow:inset 0 0 0 1px var(--line2);font-weight:600;height:34px}
+.sel.on{background-color:var(--text);color:var(--bg);box-shadow:none}
+.seg{border:0;border-radius:9999px;background:var(--raise);padding:3px}
+.seg button{border-radius:9999px;font-weight:600}
+.seg button.on{background:var(--text);color:var(--bg);box-shadow:none}
+.secjump button{border:0;background:var(--raise);border-radius:9999px;font-weight:700}
+.secjump button:hover{background:var(--line);color:var(--text)}
+.secjump button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* lists: tight rows; the current song is green, like "now playing" */
+.lhead{border-bottom:0}
+.ltitle h2{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.row{border-radius:6px}
+.row:hover{background:var(--raise)}
+.row.on{background:var(--raise)}
+.row.on .tt{color:var(--accent)}
+.row .tt{font-weight:600}
+.keyb{border:0;border-radius:4px;background:var(--raise);color:var(--chord)}
+.row:hover .keyb,.row.on .keyb{background:var(--line)}
+.keyb.own{box-shadow:inset 0 0 0 1px var(--chord);border:0}
+.secrow:not(:first-child){border-top:0}
+.sechead .sn{color:var(--text);font-weight:800;letter-spacing:.08em}
+.colnotes{background:var(--surface);border-radius:8px}
+
+/* folder cards */
+.frow{border:0;background:var(--surface);border-radius:8px}
+.frow:hover{background:var(--raise);box-shadow:var(--shadow)}
+.frow .ficon{border-radius:6px;background:var(--raise);color:var(--accent)}
+.fplay{width:44px;height:44px;padding:0;border-radius:50%;background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.fplay span{display:none}
+.fplay svg.i{fill:currentColor}
+.fplay:hover{background:var(--accent);transform:scale(1.06)}
+.addsub{border-radius:9999px}
+
+/* song page */
+.dtitle h1{font-weight:800;letter-spacing:-.025em}
+.chip{border:0;background:var(--raise);font-weight:600}
+.note{border-radius:8px;background:var(--surface)}
+.tools{border-bottom:0}
+.tgroup{border:0;border-radius:9999px;background:var(--raise)}
+.nextup{border:0;background:var(--surface);border-radius:8px}
+.nextup:hover{background:var(--raise)}
+.nolyr{border:0;background:var(--surface);border-radius:8px}
+.sheet .sec{color:var(--text);border-left-color:var(--accent);text-transform:uppercase;letter-spacing:.08em;font-size:.72em}
+.cuesec{color:var(--text);border-left-color:var(--accent)}
+.cuesheet .row.cur{background:var(--raise);outline:0;box-shadow:inset 4px 0 0 var(--accent)}
+.cuesheet .row.cur .tt{color:var(--accent)}
+
+/* stage bar: floating, heavy shadow; next is the green pill */
+.pbar{border:0;border-radius:22px;background:color-mix(in srgb,var(--surface) 96%,transparent);box-shadow:var(--shadow-hi)}
+.pnav{border:0;border-radius:9999px;background:var(--raise);text-transform:uppercase;letter-spacing:.08em;font-size:14px}
+.pnl small{text-transform:none;letter-spacing:0;max-width:100%}
+.pnav{min-width:0;overflow:hidden}
+.pnl{flex:1 1 auto;min-width:0}
+.pnav.fwd{background:var(--accent);color:var(--accent-ink)}
+.pnav.ret{background:var(--note);color:#000}
+.pbtn{border-radius:14px}
+.pexit{background:var(--raise)}
+
+/* dialogs and menus float high */
+.dlg{background:#ffffff;border-radius:12px;box-shadow:var(--shadow-hi)}
+html[data-eff=dark] .dlg{background:#242424}
+.dfoot{border-top:0}
+.mitem{border-radius:6px}
+.mitem:hover{background:var(--line)}
+.radio{border-radius:8px}
+.field input,.field select,.field textarea{border:0;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line2);border-radius:6px}
+html[data-eff=dark] .field input,html[data-eff=dark] .field select,html[data-eff=dark] .field textarea{background:#181818}
+.field input:focus,.field select:focus,.field textarea:focus{box-shadow:inset 0 0 0 2px var(--text)}
+.tog{border:0;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line2);font-weight:600}
+.tog.on{background:var(--text);color:var(--bg);box-shadow:none}
+#toast{border-radius:9999px;background:#ffffff;color:#000;font-weight:600;box-shadow:var(--shadow-hi)}
+#tabbar{background:var(--side);border-top:0}
+#tabbar button{font-weight:600}
+#tabbar button.on{color:var(--text)}
+#tabbar button.on svg.i{color:var(--accent)}
+.reorderbar{border-radius:9999px}
+.pkn{background:var(--accent);color:var(--accent-ink)}
+.dot.live{background:var(--accent)}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -1009,7 +1142,9 @@ const Store={
 /* =====================================================================
    APP STATE
    ===================================================================== */
-const prefs=Object.assign({theme:'auto',fs:22,perfDark:true},lsGet('msb-prefs',{}));
+const prefs=Object.assign({theme:'dark',fs:22,perfDark:true},lsGet('msb-prefs',{}));
+// the dark look is the default: devices still on «Αυτόματο» move to «Σκούρο» once (they can switch back)
+if(!prefs.look2){prefs.look2=1;if(prefs.theme==='auto')prefs.theme='dark';lsSet('msb-prefs',prefs)}
 const savePrefs=()=>lsSet('msb-prefs',prefs);
 const S={
   sec:'all',          // 'all' | 'fav' | 'recent' | 'col:<id>'
@@ -1046,7 +1181,7 @@ const mq=window.matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){
   const eff=prefs.theme==='auto'?(mq.matches?'dark':'light'):prefs.theme;
   document.documentElement.dataset.eff=eff;
-  document.querySelector('meta[name=theme-color]').content=(S.perf&&prefs.perfDark)||eff==='dark'?'#111215':'#ffffff';
+  document.querySelector('meta[name=theme-color]').content=(S.perf&&prefs.perfDark)||eff==='dark'?'#121212':'#ffffff';
 }
 mq.addEventListener&&mq.addEventListener('change',applyTheme);
 function layout(){
