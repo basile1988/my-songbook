@@ -15,19 +15,8 @@
 <meta name="apple-mobile-web-app-title" content="Songbook">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
-:root{
-  --bg:#ffffff;--side:#f4f5f7;--surface:#f6f7f9;--raise:#ffffff;--line:#e3e6eb;--line2:#cfd4dc;
-  --text:#16181d;--muted:#596170;--faint:#7d8594;--accent:#1d5bd6;--accent-ink:#ffffff;--accent-weak:#e8effd;
-  --chord:#1a56cc;--danger:#c3352e;--danger-weak:#fbeceb;--ok:#1f7a4d;--note:#a15c00;
-  --shadow:0 1px 2px rgba(16,24,40,.06),0 6px 18px rgba(16,24,40,.08);
-  --r:10px;--fs:20px;color-scheme:light;
-}
-html[data-eff=dark],body.perf #detail,body.perf .pbar,body.perf .pnext,body.perf .pop,.darkvars{
-  --bg:#111215;--side:#16171b;--surface:#1b1d22;--raise:#22252a;--line:#2c2f36;--line2:#3b3f48;
-  --text:#eceef2;--muted:#a6adb8;--faint:#858c98;--accent:#7ea9ff;--accent-ink:#0b1426;--accent-weak:#1c2944;
-  --chord:#8fb7ff;--danger:#ff7d73;--danger-weak:#3a1f1d;--ok:#5fd39a;--note:#ffc76b;
-  --shadow:0 1px 2px rgba(0,0,0,.45),0 8px 22px rgba(0,0,0,.4);color-scheme:dark;
-}
+:root{--r:10px;--fs:20px;color-scheme:light}
+html[data-eff=dark],body.perf #detail,body.perf .pbar,body.perf .pnext,body.perf .pop,.darkvars{color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;overflow:hidden}
@@ -497,7 +486,8 @@ body[data-size=s]:not([data-pane=detail]) #toast,body.perf #toast,body.editing #
 /* the end of a song is never under the stage bar */
 body.perf .dwrap{padding-bottom:calc(var(--pbarh,72px) + 14px + env(safe-area-inset-bottom) + 24px)}
 body.perf .splitL,body.perf .splitR{padding-bottom:calc(var(--pbarh,72px) + 14px + env(safe-area-inset-bottom) + 24px)}
-body.perf .nextup{display:none}@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.modalghost{display:none}}
+body.perf .nextup{display:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.modalghost{display:none}}
 
 /* =====================================================================
    LOOK: dark, content-first music app (inspired by Spotify's design language)
@@ -536,7 +526,7 @@ html[data-eff=dark] #listPane{border-right:1px solid var(--line)}
 /* buttons: pills; primary = green with black, uppercase, spaced */
 .btn{border-radius:9999px;font-weight:700;border-color:var(--line2);background:transparent;padding:0 16px}
 @media (hover:hover) and (pointer:fine){.btn:hover{background:var(--raise);border-color:var(--text)}}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);text-transform:uppercase;letter-spacing:.1em;font-size:13px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
 @media (hover:hover) and (pointer:fine){.btn.primary:hover{background:var(--accent);filter:brightness(1.08);transform:scale(1.03)}}
 .btn.primary:active{transform:scale(.97)}
 .btn.sm{min-height:32px;padding:0 12px;font-size:12.5px}
@@ -603,7 +593,7 @@ html[data-eff=dark] #listPane{border-right:1px solid var(--line)}
 
 /* stage bar: floating, heavy shadow; next is the green pill */
 .pbar{border:0;border-radius:22px;background:color-mix(in srgb,var(--surface) 96%,transparent);box-shadow:var(--shadow-hi)}
-.pnav{border:0;border-radius:9999px;background:var(--raise);text-transform:uppercase;letter-spacing:.08em;font-size:14px}
+.pnav{border:0;border-radius:9999px;background:var(--raise);font-size:14px}
 .pnl small{text-transform:none;letter-spacing:0;max-width:100%}
 .pnav{min-width:0;overflow:hidden}
 .pnl{flex:1 1 auto;min-width:0}
@@ -719,7 +709,6 @@ body.perf.swipeon #detail{touch-action:pan-y}
 .lcard .main{flex:1;min-width:0}
 .lcard .tt{font-size:16px;font-weight:700}
 .lcard .ar{font-size:13px;color:var(--muted)}
-.lcard .playc{width:42px;height:42px}
 .slab{font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:10px 10px 4px}
 .setbtn{align-self:flex-start;color:var(--muted)}
 .setbody{gap:4px}
@@ -737,6 +726,49 @@ body.perf.swipeon #detail{touch-action:pan-y}
 .fbadge{position:absolute;top:4px;right:4px;min-width:16px;height:16px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-size:10.5px;font-weight:800;display:grid;place-items:center;padding:0 4px}
 .pkn{background:var(--accent);color:var(--accent-ink)}
 .dot.live{background:var(--accent)}
+/* ---- lists home: cards in a grid, empty lists faint, play buttons quiet except «Συνέχεια» ---- */
+.cardgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+.cardgrid .lcard{margin-bottom:0}
+.cardgrid>.hfold{grid-column:1/-1}
+.lcard.isempty{background:transparent;border:1px dashed var(--line2);min-height:56px}
+.lcard.isempty .tt{color:var(--muted)}
+.lcard.isempty .ar{color:var(--faint)}
+.lcard .playc{width:36px;height:36px;background:transparent;border:1.5px solid var(--line2);color:var(--text)}
+.lcard .playc svg.i{width:16px;height:16px}
+.lcard .playc:active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+@media (hover:hover) and (pointer:fine){.lcard .playc:hover{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}}
+.archhead{margin-top:18px;opacity:.8}
+.hfold.arch .hftog{color:var(--faint)}
+/* first load on a new device: grey placeholders instead of «make your first list» */
+.skel{display:flex;flex-direction:column;gap:8px;padding:4px 0}
+.skl{font-size:13.5px;color:var(--muted);padding:2px 2px 6px}
+.skc{height:64px;border-radius:12px;background:var(--surface);animation:skp 1.4s ease-in-out infinite}
+@keyframes skp{50%{opacity:.5}}
+/* program notes: one line, «περισσότερα» opens them */
+.colnotes{display:flex;align-items:flex-start;gap:8px;max-height:none;overflow:visible}
+.colnotes .cn{flex:1;min-width:0;white-space:pre-wrap}
+.colnotes.clamped .cn{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}
+.cnmore{flex:none;border:0;background:none;color:var(--text);font:inherit;font-size:12.5px;font-weight:700;padding:0 2px;min-height:24px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+/* the list summary in the right pane (wide screens) */
+.colsum{max-width:520px;margin:0 auto;padding:48px 24px;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.colsum h2{margin:0;font-size:28px;letter-spacing:-.01em}
+.colsum .packs{display:flex;flex-wrap:wrap;gap:6px}
+.colsum .pk{border-radius:999px;background:var(--surface);padding:4px 12px;font-size:13.5px}
+.colsum .pk b{color:var(--muted);font-weight:700;margin-left:4px}
+.colsum .note{align-self:stretch}
+.btn.big{min-height:52px;padding:0 24px;font-size:16px;margin-top:8px}
+/* «Τόνος & σημείωση σε αυτή τη λίστα»: short label on phones */
+.ctxedit .sm{display:none}
+@media (max-width:640px){.ctxedit .lg{display:none}.ctxedit .sm{display:inline}}
+/* settings */
+.ghcard{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--surface)}
+.ghcard .dot{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.ghcard .tt{font-weight:700}
+.ghcard .ar{font-size:13px;color:var(--muted)}
+.setacts{display:flex;gap:8px}
+.setrow{padding:10px 0}
+.setbody .menulist{display:flex;flex-direction:column;gap:2px}
+.mitem.danger b{color:var(--danger)}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -1519,6 +1551,8 @@ function distinct(field){const s=new Set();for(const x of Store.songs.values()) 
 function colTree(opts={}){
   const cols=[...Store.cols.values()].sort((a,b)=>collator.compare(a.name,b.name));
   const by=new Map();cols.forEach(c=>{const p=c.parent&&Store.cols.has(c.parent)?c.parent:'';if(!by.has(p))by.set(p,[]);by.get(p).push(c)});
+  // top level: newest season first, archived ones last (same order as the Lists screen)
+  if(by.has(''))by.get('').sort((a,b)=>(isArchived(a)-isArchived(b))||(seasonYear(b)-seasonYear(a))||(lastTouch(b)-lastTouch(a))||collator.compare(a.name,b.name));
   const closed=new Set(opts.collapsed?prefs.closed||[]:[]);
   const out=[];const walk=(p,d,seen)=>{(by.get(p)||[]).forEach(c=>{if(seen.has(c.id))return;seen.add(c.id);const kids=(by.get(c.id)||[]).length;out.push({c,d,kids});if(!closed.has(c.id))walk(c.id,d+1,seen)})};
   walk('',0,new Set());return out;
@@ -1556,10 +1590,9 @@ function renderSide(){
   $('#side').innerHTML=`
     <div class="brand"><span class="logo">${ic('music')}</span>My Songbook</div>
     <div class="sidescroll">
-      ${nav('home','listmusic','Αρχική')}
-      ${nav('search','search','Αναζήτηση')}
-      ${nav('all','library','Όλα τα τραγούδια',n)}
-      <div class="sidehead"><span>Λίστες</span><button class="ibtn sm" data-act="newcol" title="Νέα λίστα ή φάκελος" aria-label="Νέα λίστα ή φάκελος">${ic('plus')}</button></div>
+      ${nav('home','listmusic','Λίστες')}
+      ${nav('all','library','Τραγούδια',n)}
+      <div class="sidehead"><span>Οι λίστες σου</span><button class="ibtn sm" data-act="newcol" title="Νέα λίστα ή φάκελος" aria-label="Νέα λίστα ή φάκελος">${ic('plus')}</button></div>
       ${tree.length?tree.map(colRow).join(''):`<div class="muted" style="font-size:13px;padding:6px 10px 0">Φτιάξε λίστες για προγράμματα και setlist, και φακέλους για μαγαζιά ή σεζόν.</div>`}
     </div>
     <div class="sidefoot">
@@ -1584,8 +1617,9 @@ function renderList(full=true){
   const col=colOf(S.sec);
   if(S.sec.startsWith('col:')&&!col&&Store.loaded.cols){S.sec='home'}
   const pane=$('#listPane');
+  // «Αναζήτηση» and «Όλα τα τραγούδια» are one screen now: «Τραγούδια» (search on top, recent, then all)
+  if(S.sec==='search'||S.sec==='recent')S.sec='all';
   if(S.sec==='home'){renderHome(pane);return}
-  if(S.sec==='search'){renderSearch(pane,full);return}
   if(isFolder(col)){renderFolder(col,pane);return}
   if(full||!pane.querySelector('.list')||pane.querySelector('.folderlist')){
     const genres=allGenres(),artists=distinct('artist'),keys=ALLKEYS.filter(k=>[...Store.songs.values()].some(s=>s.key===k));
@@ -1599,14 +1633,14 @@ function renderList(full=true){
           <h2>${esc(sectionTitle())}</h2>
           ${col?`<button class="ibtn" data-act="colmenu" title="Επιλογές λίστας" aria-label="Επιλογές λίστας">${ic('more')}</button>
                  <button class="btn primary sm" data-act="playcol" ${songItems(col).length?'':'disabled'}>${ic('play','sm')}Παίξιμο</button>`
-              :`<button class="btn primary sm" data-act="newsong">${ic('plus','sm')}Νέο</button>`}
+              :`<button class="btn primary sm" data-act="newsong">${ic('plus','sm')}Νέο τραγούδι</button>`}
         </div>
-        ${col&&col.notes?`<div class="colnotes">${esc(col.notes)}</div>`:''}
+        ${col&&col.notes?notesBox(col):''}
         ${S.reorder?`<div class="reorderbar">${ic('pencil','sm')}<span>Επεξεργασία: «+» για προσθήκη, ▲▼ ή σύρσιμο για σειρά</span><button class="btn sm primary" data-act="reorderdone">Τέλος</button></div>
         ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}</div>`:''}`:`
         ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}</div>`:''}
         <div class="searchrow">
-          <div class="search">${ic('search')}<input id="q" type="search" placeholder="Τίτλος, καλλιτέχνης ή στίχος" value="${esc(S.q)}" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση"><button class="ibtn clr" data-act="clearq" aria-label="Καθαρισμός" ${S.q?'':'hidden'}>${ic('x','sm')}</button></div>
+          <div class="search">${ic('search')}<input id="q" type="search" placeholder="${col?'Αναζήτηση στη λίστα':'Τίτλος, καλλιτέχνης ή στίχος'}" value="${esc(S.q)}" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση"><button class="ibtn clr" data-act="clearq" aria-label="Καθαρισμός" ${S.q?'':'hidden'}>${ic('x','sm')}</button></div>
           ${col?'':(()=>{const nf=['rhythm','genre','key','artist'].filter(k=>S.f[k]).length;return `<button class="ibtn ftoggle ${S.showF||nf?'on':''}" data-act="togglef" aria-expanded="${!!(S.showF||nf)}" aria-label="Φίλτρα" title="Φίλτρα">${ic('settings')}${nf?`<span class="fbadge">${nf}</span>`:''}</button>`})()}
         </div>
         ${col?'':`<div class="filters" ${S.showF||S.f.genre||S.f.rhythm||S.f.key||S.f.artist?'':'hidden'}>
@@ -1637,32 +1671,51 @@ function lastPlayed(){
 }
 const listCard=c=>{
   const n=songItems(c).length,secs=itemsOf(c).filter(x=>x.sec!=null).length;
+  // an empty list looks empty (faint), with the way to fill it
+  if(!n)return `<div class="lcard isempty" data-act="sec" data-sec="col:${c.id}" role="button" tabindex="0">
+    <div class="main"><div class="tt">${esc(c.name)}</div><div class="ar">Άδειο · Πρόσθεσε τραγούδια</div></div></div>`;
   return `<div class="lcard" data-act="sec" data-sec="col:${c.id}" role="button" tabindex="0">
     <div class="main"><div class="tt">${esc(c.name)}</div><div class="ar">${n} τραγούδι${n===1?'':'α'}${secs?` · ${secs} πακέτ${secs===1?'ο':'α'}`:''}</div></div>
-    ${n?`<button class="playc" data-act="playsub" data-col="${c.id}" aria-label="Παίξιμο: ${esc(c.name)}">${ic('play')}</button>`:''}
+    <button class="playc" data-act="playsub" data-col="${c.id}" aria-label="Παίξιμο: ${esc(c.name)}">${ic('play')}</button>
   </div>`;
 };
-// home: where a night starts. «Συνέχεια» on top, then every folder with its lists as cards
+// the program notes of a list: the first line, «περισσότερα» opens them all (remembered per list on this device)
+function notesBox(col){
+  const t=String(col.notes||'').trim();if(!t)return '';
+  const long=t.includes('\n')||t.length>70,open=(prefs.notesOpen||[]).includes(col.id);
+  return `<div class="colnotes ${long&&!open?'clamped':''}"><span class="cn">${esc(t)}</span>${long?`<button class="cnmore" data-act="notestoggle" data-id="${col.id}" aria-expanded="${open}">${open?'λιγότερα':'περισσότερα'}</button>`:''}</div>`;
+}
+// seasons: the newest first (by the latest year in the name: «Χειμώνας 2026–2027» before «Καλοκαίρι 2026»),
+// archived ones (on this device) at the end, folded
+const seasonYear=c=>Math.max(0,...(String(c.name).match(/\b(19|20)\d{2}\b/g)||[]).map(Number));
+const lastTouch=c=>Math.max(c.updatedAt||0,...childrenOf(c.id).map(k=>k.updatedAt||0));
+const isArchived=c=>(prefs.archived||[]).includes(c.id);
 function renderHome(pane){
   const r=lastPlayed();const closed=new Set(prefs.closed||[]);
-  const tops=[...Store.cols.values()].filter(c=>!c.parent||!Store.cols.has(c.parent)).sort((a,b)=>collator.compare(a.name,b.name));
-  const folders=tops.filter(isFolder),loose=tops.filter(c=>!isFolder(c));
-  const folderBlock=(f,d=0)=>{const kids=childrenOf(f.id),open=!closed.has(f.id);
-    return `<section class="hfold">
-      <div class="hfhead"><button class="hftog ${open?'open':''}" data-act="foldtoggle" data-id="${f.id}" aria-expanded="${open}">${ic('right','sm')}<span>${esc(f.name)}</span></button>
-        <button class="ibtn" data-act="foldermenu" data-col="${f.id}" aria-label="Επιλογές φακέλου">${ic('more','sm')}</button></div>
-      ${open?kids.map(k=>isFolder(k)?folderBlock(k,d+1):listCard(k)).join('')||`<div class="muted hfempty">Άδειος φάκελος.</div>`:''}
+  const tops=[...Store.cols.values()].filter(c=>!c.parent||!Store.cols.has(c.parent))
+    .sort((a,b)=>(seasonYear(b)-seasonYear(a))||(lastTouch(b)-lastTouch(a))||collator.compare(a.name,b.name));
+  const folders=tops.filter(c=>isFolder(c)&&!isArchived(c)),loose=tops.filter(c=>!isFolder(c)&&!isArchived(c)),arch=tops.filter(isArchived);
+  // archived folders start folded: for them the remembered token means «opened» instead of «closed»
+  const folderBlock=(f,d=0,forceClosed)=>{const kids=childrenOf(f.id),open=forceClosed?closed.has('o:'+f.id):!closed.has(f.id);
+    return `<section class="hfold ${isArchived(f)?'arch':''}">
+      <div class="hfhead"><button class="hftog ${open?'open':''}" data-act="foldtoggle" data-id="${forceClosed?'o:'+f.id:f.id}" data-inv="${forceClosed?1:''}" aria-expanded="${open}">${ic('right','sm')}<span>${esc(f.name)}</span></button>
+        <button class="ibtn" data-act="foldermenu" data-col="${f.id}" aria-label="Επιλογές φακέλου" title="Επιλογές φακέλου">${ic('more','sm')}</button></div>
+      ${open?(kids.length?`<div class="cardgrid">${kids.map(k=>isFolder(k)?folderBlock(k,d+1):listCard(k)).join('')}</div>`:`<div class="muted hfempty">Άδειος φάκελος.</div>`):''}
     </section>`};
+  // first load on a new device: GitHub hasn't answered yet, so show that (not «make your first list»)
+  const loading=!tops.length&&(Store.status==='loading'||!Store.loaded.cols);
   pane.innerHTML=`
-    <div class="lhead"><div class="ltitle">${SIDETOG}<h2>Λίστες</h2><button class="ibtn" data-act="newcol" aria-label="Νέα λίστα ή φάκελος" title="Νέα λίστα ή φάκελος">${ic('plus')}</button></div></div>
+    <div class="lhead"><div class="ltitle">${SIDETOG}<h2>Λίστες</h2><button class="btn primary sm" data-act="newlist">${ic('plus','sm')}Νέα λίστα</button></div></div>
     <div class="list homelist">
       ${r?`<div class="resume" data-act="resume" role="button" tabindex="0">
         <div class="main"><div class="rl">Συνέχεια από εκεί που ήσουν</div><div class="tt">${esc(r.col.name)}</div>
         <div class="ar">${r.i+1} / ${r.n}${r.sec?' · '+esc(secShort(r.sec)):''}${r.song?' · '+esc(r.song.title):''}</div></div>
         <span class="playc">${ic('play')}</span></div>`:''}
       ${folders.map(f=>folderBlock(f)).join('')}
-      ${loose.length?`<section class="hfold">${folders.length?`<div class="hfhead"><span class="hflab">Άλλες λίστες</span></div>`:''}${loose.map(listCard).join('')}</section>`:''}
-      ${!tops.length?`<div class="empty"><h3>Φτιάξε την πρώτη σου λίστα</h3><p>Ένα πρόγραμμα, ένα setlist ή μια βραδιά. Τα τραγούδια μπαίνουν από τη βιβλιοθήκη.</p><div class="acts"><button class="btn primary" data-act="newcol">${ic('plus','sm')}Νέα λίστα</button></div></div>`:''}
+      ${loose.length?`<section class="hfold">${folders.length?`<div class="hfhead"><span class="hflab">Άλλες λίστες</span></div>`:''}<div class="cardgrid">${loose.map(listCard).join('')}</div></section>`:''}
+      ${arch.length?`<div class="hfhead archhead"><span class="hflab">Αρχείο</span></div>${arch.map(f=>isFolder(f)?folderBlock(f,0,true):`<div class="cardgrid">${listCard(f)}</div>`).join('')}`:''}
+      ${loading?`<div class="skel" aria-live="polite"><div class="skl">Φόρτωση από GitHub…</div>${'<div class="skc"></div>'.repeat(5)}</div>`
+        :!tops.length?`<div class="empty"><h3>Φτιάξε την πρώτη σου λίστα</h3><p>Ένα πρόγραμμα, ένα setlist ή μια βραδιά. Πάτα «Νέα λίστα» πάνω δεξιά. Τα τραγούδια μπαίνουν από τη βιβλιοθήκη.</p></div>`:''}
     </div>`;
 }
 // search tab: the keyboard comes up ready; recent songs below
@@ -1704,7 +1757,7 @@ function renderFolder(col,pane){
       ${col.parent&&Store.cols.get(col.parent)?`<button class="crumb" data-act="sec" data-sec="col:${col.parent}">${ic('left','sm')}${esc(Store.cols.get(col.parent).name)}</button>`:''}
       <div class="ltitle">${SIDETOG}<h2>${esc(col.name)}</h2><button class="ibtn" data-act="foldermenu" data-col="${col.id}" title="Επιλογές φακέλου" aria-label="Επιλογές φακέλου">${ic('more')}</button></div>
       <div class="fsum">${ic('folder','sm')}${kids.length} λίστ${kids.length===1?'α':'ες'} · ${total} θέσεις</div>
-      ${col.notes?`<div class="colnotes">${esc(col.notes)}</div>`:''}
+      ${col.notes?notesBox(col):''}
     </div>
     <div class="list folderlist">
       ${kids.map(row).join('')}
@@ -1732,7 +1785,13 @@ function renderRows(){
   const gap=after=>canIns?`<div class="insgap" data-act="insat" data-after="${after}" role="button" tabindex="-1" aria-label="Πρόσθεσε εδώ"><span>${ic('plus','sm')}Πρόσθεσε εδώ</span></div>`:'';
   const ud=id=>S.reorder&&id?`<span class="mvbtns"><button class="ibtn" data-act="mvup" data-item="${id}" aria-label="Μία θέση πάνω">${ic('up','sm')}</button><button class="ibtn" data-act="mvdn" data-item="${id}" aria-label="Μία θέση κάτω">${ic('down','sm')}</button></span>`:'';
   el.classList.toggle('editing',!!S.reorder);
-  el.innerHTML=gap('')+arr.map(e=>{
+  // «Τραγούδια» with nothing typed: the recently opened first, then everything A–Ω
+  let top='';
+  if(!col&&S.sec==='all'&&!filtered&&S.sort==='title'){
+    const rec=[...Store.songs.values()].filter(s=>s.openedAt).sort((a,b)=>b.openedAt-a.openedAt).slice(0,8);
+    if(rec.length)top=`<div class="slab">Πρόσφατα</div>${rec.map(s=>`<div class="row" data-act="opensong" data-id="${s.id}" role="button" tabindex="0"><div class="main"><div class="tt">${esc(s.title||'Χωρίς τίτλο')}</div><div class="ar">${esc(s.artist||'')}</div></div><span class="keyb ${s.key?'':'none'}">${esc(s.key||'—')}</span></div>`).join('')}<div class="slab">Όλα · ${arr.length}</div>`;
+  }
+  el.innerHTML=top+gap('')+arr.map(e=>{
     if(e.sec){num=0;return `<div class="row secrow" data-item="${e.sec.i}">${handle(e.sec.i)}<button class="sechead" data-act="editsec" data-item="${e.sec.i}"><span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}</button>${ud(e.sec.i)}</div>${gap(e.sec.i)}`}
     const s=e.s,it=e.it,k=itemKey(it,s),p=pos++;num++;
     const on=it?curIt===it.i&&S.songId===s.id:S.songId===s.id;
@@ -1741,7 +1800,7 @@ function renderRows(){
       ${col&&col.ordered?`<span class="num">${num}</span>`:''}
       <div class="main"><div class="tt">${esc(s.title||'Χωρίς τίτλο')}</div>${it&&it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${esc([s.artist,!col&&inLists.get(s.id)?`σε ${inLists.get(s.id)} λίστ${inLists.get(s.id)===1?'α':'ες'}`:''].filter(Boolean).join(' · '))}${(s.lines||[]).length?`<span class="lymark">${ic('music','sm')}στίχοι</span>`:''}</div></div>
       <span class="keyb ${k?'':'none'} ${it&&it.key&&it.key!==s.key?'own':''}" title="${it&&it.key&&s.key&&it.key!==s.key?'Σε αυτή τη λίστα · το τραγούδι είναι σε '+esc(s.key):''}">${esc(k||'—')}</span>
-      ${S.reorder?ud(it&&it.i):it?`<button class="ibtn imenu" data-act="itemmenu" data-item="${it.i}" aria-label="Τόνος, σημείωση, μετακίνηση" title="Τόνος, σημείωση, μετακίνηση">${ic('more','sm')}</button>`:''}
+      ${S.reorder?ud(it&&it.i):it?`<button class="ibtn imenu" data-act="itemmenu" data-item="${it.i}" aria-label="Επιλογές τραγουδιού: ${esc(s.title||'')}" title="Επιλογές τραγουδιού">${ic('more','sm')}</button>`:''}
     </div>${it?gap(it.i):''}`}).join('');
 }
 function emptyList(col,filtered){
@@ -1801,7 +1860,27 @@ function renderDetail(force=false){
   const s=S.songId&&Store.songs.get(S.songId);
   if(!s){
     lastDetailKey='';
-    d.innerHTML=`<div class="dempty"><div class="empty"><h3>${Store.songs.size?'Διάλεξε τραγούδι':'Ξεκίνα τη βιβλιοθήκη σου'}</h3><p>${Store.songs.size?'Ή πρόσθεσε ένα καινούργιο με επικόλληση από το kithara.':'Επικόλλησε το πρώτο σου τραγούδι. Τίτλος, καλλιτέχνης και ακόρντα αναγνωρίζονται αυτόματα.'}</p><div class="acts"><button class="btn primary" data-act="newsong">${ic('plus','sm')}Νέο τραγούδι</button></div></div></div>`;
+    const col=colOf(S.sec),wide=document.body.dataset.size!=='s';
+    // «Τραγούδια» on a wide screen: show the most recent song (or the first one) instead of an empty half screen
+    if(wide&&S.sec==='all'&&!S.perf&&Store.songs.size){
+      const first=[...Store.songs.values()].filter(x=>x.openedAt).sort((a,b)=>b.openedAt-a.openedAt)[0]||(currentEntries().find(e=>e.s)||{}).s;
+      if(first){S.songId=first.id;S.ctx=null;renderDetail(true);renderRows();return}
+    }
+    if(!Store.songs.size&&(Store.status==='loading'||!Store.loaded.songs)){d.innerHTML=`<div class="dempty"><div class="skel"><div class="skl">Φόρτωση από GitHub…</div>${'<div class="skc"></div>'.repeat(4)}</div></div>`;renderPbar();return}
+    // a list on a wide screen: its summary and «Παίξιμο από την αρχή»
+    if(wide&&col&&!isFolder(col)){
+      const n=songItems(col).length;const packs=[];let cur=null;
+      for(const x of itemsOf(col)){if(x.sec!=null){cur={name:secShort(x),n:0};packs.push(cur)}else if(x.s&&Store.songs.has(x.s)&&cur)cur.n++}
+      d.innerHTML=`<div class="dempty"><div class="colsum">
+        <div class="slab" style="padding-left:0">Λίστα</div><h2>${esc(col.name)}</h2>
+        <div class="muted">${n} τραγούδι${n===1?'':'α'}${packs.length?` · ${packs.length} πακέτ${packs.length===1?'ο':'α'}`:''}</div>
+        ${packs.length?`<div class="packs">${packs.map(p=>`<span class="pk">${esc(p.name)} <b>${p.n}</b></span>`).join('')}</div>`:''}
+        ${col.notes?`<div class="note"><span class="nl">Σημειώσεις</span>${esc(col.notes)}</div>`:''}
+        ${n?`<button class="btn primary big" data-act="playstart">${ic('play','sm')}Παίξιμο από την αρχή</button>`:`<button class="btn primary big" data-act="pickcol">${ic('plus','sm')}Πρόσθεσε τραγούδια</button>`}
+      </div></div>`;
+      renderPbar();return;
+    }
+    d.innerHTML=`<div class="dempty"><div class="empty"><h3>${Store.songs.size?'Διάλεξε τραγούδι':'Ξεκίνα τη βιβλιοθήκη σου'}</h3><p>${Store.songs.size?'Από τα αριστερά.':'Πάτα «Νέο τραγούδι» στα Τραγούδια και επικόλλησε. Τίτλος, καλλιτέχνης και ακόρντα αναγνωρίζονται αυτόματα.'}</p></div></div>`;
     renderPbar();return;
   }
   const n=curShift(s);
@@ -1813,8 +1892,10 @@ function renderDetail(force=false){
   const flat=preferFlat(s,n);
   const chips=[];
   const hasLines=(s.lines||[]).length>0; // without lyrics the key is shown big instead (.bigkey)
-  if(hasLines&&s.key) chips.push(`<span class="chip key">Τόνος <b>${esc(trKey(s.key,n,flat))}</b>${n?` <span>(το τραγούδι είναι σε ${esc(s.key)})</span>`:''}</span>`);
-  else if(hasLines&&it&&it.key) chips.push(`<span class="chip key">Τόνος <b>${esc(it.key)}</b></span>`);
+  // the key is shown once, by the − Gm + control; a chip only says where it started, when it was changed
+  const hasC0=songHasChords(s);
+  if(hasLines&&hasC0&&s.key&&n) chips.push(`<span class="chip key">Αρχικός <b>${esc(s.key)}</b></span>`);
+  else if(hasLines&&!hasC0&&itemKey(it,s)) chips.push(`<span class="chip key">Τόνος <b>${esc(itemKey(it,s))}</b></span>`);
   if(s.capo) chips.push(`<span class="chip">Κάπο <b>${esc(s.capo)}</b></span>`);
   if(s.rhythm) chips.push(`<span class="chip">Ρυθμός <b>${esc(s.rhythm)}</b></span>`);
   (s.genres||[]).forEach(g=>chips.push(`<span class="chip">${esc(g)}</span>`));
@@ -1825,13 +1906,13 @@ function renderDetail(force=false){
   const back=S.returnTo?`<button class="shback" data-act="stageback">${ic('left','sm')}Πίσω</button>`:S.fromCue?`<button class="shback" data-act="cueback">${ic('left','sm')}Λίστα</button>`:`<button class="shback" data-act="perfx" aria-label="Έξοδος από τη σκηνή">${ic('left','sm')}${cx&&cx.col?'Λίστα':'Πίσω'}</button>`;
   d.innerHTML=`<div class="dwrap">
     <div class="stagehead">${back}<div class="shtitle"><b>${esc(s.title||'Χωρίς τίτλο')}</b>${s.artist?`<span>${esc(s.artist)}</span>`:''}</div>${shownKey?`<button class="shkey" ${hasC?'data-act="stagepop" data-sheet="key"':''} aria-label="Τόνος ${esc(shownKey)}">${esc(shownKey)}</button>`:''}</div>
-    ${cx&&cx.col?`<div class="ctxbar"><button class="ctxname" data-act="sec" data-sec="col:${cx.col.id}" title="Πίσω στη λίστα">${ic(cx.col.ordered?'listmusic':'folder','sm')}<span>${esc(cx.col.name)}</span></button><span class="pos">${cx.i+1}/${cx.n}</span>${it?`<button class="btn sm ghost ctxedit" data-act="itemmenu" data-item="${it.i}" data-col="${cx.col.id}" title="Τόνος και σημείωση σε αυτή τη λίστα" aria-label="Τόνος και σημείωση σε αυτή τη λίστα">${ic('settings','sm')}<span>Τόνος/σημείωση</span></button>`:''}</div>`:''}
+    ${cx&&cx.col?`<div class="ctxbar"><button class="ctxname" data-act="sec" data-sec="col:${cx.col.id}" title="Πίσω στη λίστα">${ic(cx.col.ordered?'listmusic':'folder','sm')}<span>${esc(cx.col.name)}</span></button><span class="pos">${cx.i+1}/${cx.n}</span>${it?`<button class="btn sm ghost ctxedit" data-act="itemmenu" data-item="${it.i}" data-col="${cx.col.id}" title="Τόνος & σημείωση σε αυτή τη λίστα" aria-label="Τόνος & σημείωση σε αυτή τη λίστα">${ic('settings','sm')}<span class="lg">Τόνος & σημείωση σε αυτή τη λίστα</span><span class="sm">Ρύθμιση λίστας</span></button>`:''}</div>`:''}
     <div class="dtop">
       <button class="ibtn back" data-act="back" aria-label="Πίσω">${ic('left')}</button>
       <div class="dtitle"><h1>${esc(s.title||'Χωρίς τίτλο')}</h1>${s.artist?`<div class="ar">${esc(s.artist)}</div>`:''}</div>
       <div class="dacts">
         <button class="ibtn" data-act="edit" title="Επεξεργασία" aria-label="Επεξεργασία">${ic('pencil')}</button>
-        <button class="ibtn" data-act="songmenu" title="Περισσότερα" aria-label="Περισσότερα">${ic('more')}</button>
+        <button class="ibtn" data-act="songmenu" title="Επιλογές τραγουδιού" aria-label="Επιλογές τραγουδιού">${ic('more')}</button>
       </div>
     </div>
     ${chips.length?`<div class="meta">${chips.join('')}</div>`:''}
@@ -2025,12 +2106,11 @@ function renderCueSheet(){
 }
 function renderTabbar(){
   const p=document.body.dataset.pane;
-  // phone: the lists first (that is where a night starts), search for requests, the library, settings
-  const on=t=>t==='home'?(S.sec==='home'||S.sec.startsWith('col:')):t==='search'?S.sec==='search':(S.sec==='all'||S.sec==='recent');
+  // phone: the lists first (that is where a night starts), the songs (search + library), settings
+  const on=t=>t==='home'?(S.sec==='home'||S.sec.startsWith('col:')):(S.sec==='all'||S.sec==='recent'||S.sec==='search');
   $('#tabbar').innerHTML=`
-    <button class="${on('home')?'on':''}" data-act="tab" data-t="home">${ic('listmusic')}Λίστες</button>
-    <button class="${on('search')?'on':''}" data-act="tab" data-t="search">${ic('search')}Αναζήτηση</button>
-    <button class="${on('songs')?'on':''}" data-act="tab" data-t="songs">${ic('library')}Τραγούδια</button>
+    <button class="${on('home')?'on':''}" data-act="tab" data-t="home" ${on('home')?'aria-current="page"':''}>${ic('listmusic')}Λίστες</button>
+    <button class="${on('songs')?'on':''}" data-act="tab" data-t="songs" ${on('songs')?'aria-current="page"':''}>${ic('library')}Τραγούδια</button>
     <button data-act="settings">${ic('settings')}Ρυθμίσεις</button>`;
 }
 function renderAll(){renderSide();renderList(true);renderDetail(true);renderTabbar()}
@@ -2386,29 +2466,33 @@ function ghModal(){
 // one place for everything that is not about songs: look, GitHub, backup and import
 function backupModal(){
   const th=(t,label)=>`<button class="${prefs.theme===t?'on':''}" data-act="settheme" data-t="${t}">${label}</button>`;
+  const gh=Store.mode==='github'&&GH.cfg;
+  const tog=(pref,on,label,sub)=>`<label class="ck setrow"><input type="checkbox" data-pref="${pref}" ${on?'checked':''}><div class="main"><div class="tt">${label}</div>${sub?`<div class="ar">${sub}</div>`:''}</div></label>`;
+  const item=(act,icon,label,sub,cls='')=>`<button class="mitem ${cls}" data-act="${act}">${ic(icon)}<span><b>${label}</b>${sub?`<small>${sub}</small>`:''}</span></button>`;
   openModal(`${dhead('Ρυθμίσεις')}<div class="dbody setbody">
     <section><h4>Εμφάνιση</h4><div class="seg" role="group" aria-label="Θέμα">${th('dark','Σκούρο')}${th('light','Φωτεινό')}${th('auto','Όπως η συσκευή')}</div></section>
     <section><h4>Σκηνή</h4>
-      <label class="ck" style="padding-left:0"><input type="checkbox" data-pref="swipe" ${prefs.swipe?'checked':''}><div class="main"><div class="tt">Αλλαγή τραγουδιού με σύρσιμο</div><div class="ar">Σύρε αριστερά ή δεξιά για επόμενο ή προηγούμενο. Κλειστό, για να μην αλλάζει κατά λάθος στο αναλόγιο.</div></div></label>
+      ${tog('swipe',!!prefs.swipe,'Αλλαγή τραγουδιού με σύρσιμο','Αριστερά ή δεξιά για επόμενο ή προηγούμενο. Κλειστό, για να μην αλλάζει κατά λάθος στο αναλόγιο.')}
+      ${tog('keepAwake',prefs.keepAwake!==false,'Η οθόνη μένει ανοιχτή','Όσο είσαι στη σκηνή')}
+      ${tog('showChords',prefs.showChords!==false,'Ακόρντα στη σκηνή','Κλειστό: μόνο οι στίχοι')}
     </section>
-    <section><h4>Αποθήκευση</h4>
-      <p class="muted">${Store.songs.size} τραγούδια · ${Store.cols.size} λίστες. ${Store.mode==='github'?`Όλα είναι στο repo <b>${esc(GH.cfg.owner)}/${esc(GH.cfg.repo)}</b> στο GitHub, με κάθε παλιά μορφή στο ιστορικό του.`:`Δεν είσαι συνδεδεμένος με το GitHub σε αυτή τη συσκευή, οπότε τίποτα δεν αποθηκεύεται ακόμα.`}</p>
-      <button class="btn" data-act="ghsetup">${ic('cloud','sm')}${Store.mode==='github'?'Σύνδεση με GitHub':'Σύνδεση με GitHub…'}</button>
-      ${Store.mode==='github'?`<div class="devcopy" id="devCopy"><b>Αντίγραφο σε αυτή τη συσκευή</b><span>Έλεγχος…</span></div>`:''}
+    <section><h4>Σύνδεση</h4>
+      ${gh?`<div class="ghcard"><span class="dot live"></span><div class="main"><div class="tt">Συνδεδεμένο ως ${esc(GH.cfg.owner)}</div><div class="ar">${esc(GH.cfg.repo)} · ${Store.songs.size} τραγούδια · ${Store.cols.size} λίστες</div></div></div>
+        <div class="setacts"><button class="btn sm" data-act="ghsetup">Αλλαγή</button><button class="btn sm danger" data-act="ghOff">Αποσύνδεση</button></div>
+        <p class="muted small" id="devCopy">Όλα αποθηκευμένα και σε αυτή τη συσκευή.</p>`
+      :`<p class="muted">Δεν είσαι συνδεδεμένος με το GitHub σε αυτή τη συσκευή, οπότε τίποτα δεν αποθηκεύεται ακόμα.</p><button class="btn primary" data-act="ghsetup">${ic('cloud','sm')}Σύνδεση με GitHub</button>`}
     </section>
-    <section><h4>Αντίγραφα και εισαγωγή</h4>
-      <button class="btn" data-act="doBackup">${ic('download','sm')}Λήψη αντιγράφου (.json)</button>
-      <button class="btn" data-act="doLiveSetlist">${ic('listmusic','sm')}Εισαγωγή λιστών από Live Setlist (.html)</button>
-      <button class="btn danger" data-act="doRestore">${ic('upload','sm')}Επαναφορά από αντίγραφο…</button>
-      <p class="muted small">Η επαναφορά γράφει τα τραγούδια και τις λίστες του αρχείου <b>πάνω</b> σε όσα υπάρχουν με το ίδιο όνομα αρχείου, ακόμα κι αν είναι νεότερα. Ό,τι δεν υπάρχει στο αρχείο μένει.</p>
-    </section>
+    <section><h4>Αντίγραφα</h4><div class="menulist">
+      ${item('doBackup','download','Λήψη αντιγράφου','Όλα τα τραγούδια και οι λίστες σε ένα αρχείο .json')}
+      ${item('doLiveSetlist','listmusic','Εισαγωγή από Live Setlist','Λίστες από αρχείο .html')}
+      ${item('doRestore','upload','Επαναφορά από αντίγραφο…','Γράφει πάνω σε ό,τι έχει το ίδιο όνομα αρχείου, ακόμα κι αν είναι νεότερο','danger')}
+    </div></section>
   </div><div class="dfoot"><button class="btn" data-act="closeModal">Κλείσιμο</button></div>`);
-  if(Store.mode==='github') Local.usage().then(u=>{
-    const el=$('#devCopy span');if(!el) return;
-    const mb=b=>b>=1073741824?(b/1073741824).toFixed(1).replace('.',',')+' GB':b>=1048576?(b/1048576).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(b/1024))+' KB';
-    const where=Local.db?'βάση του browser':'μικρή μνήμη του browser (περιορισμένη)';
-    const keep=Local.persisted?'Μόνιμο: ο browser δεν θα το σβήσει μόνος του.':'Όχι μόνιμο: αν η συσκευή μείνει από χώρο, ο browser μπορεί να το σβήσει. Πρόσθεσε την εφαρμογή στην αρχική οθόνη. Στο GitHub δεν χάνεται τίποτα.';
-    el.innerHTML=`${Store.songs.size} τραγούδια στη ${esc(where)}${u&&u.usage!=null?` · πιάνει ${mb(u.usage)}${u.quota?` από ${mb(u.quota)} διαθέσιμα`:''}`:''}.<br>${esc(keep)}`;
+  // only when the copy on this device could be lost is there anything to say about it
+  if(gh) Local.usage().then(()=>{
+    const el=$('#devCopy');if(!el) return;
+    if(!Local.db) el.textContent='Αποθηκευμένα και σε αυτή τη συσκευή, σε περιορισμένη μνήμη.';
+    else if(!Local.persisted) el.textContent='Αποθηκευμένα και σε αυτή τη συσκευή. Πρόσθεσέ την στην αρχική οθόνη για να μη σβηστούν ποτέ από τον browser. Στο GitHub δεν χάνεται τίποτα.';
   });
 }
 
@@ -2582,10 +2666,12 @@ const A={
     else if(S.ctx&&S.ctx.colId&&S.sec!=='col:'+S.ctx.colId&&!S.perf){S.ctx=null;renderDetail(true)}
     S.f={genre:'',key:'',artist:''};S.q='';renderSide();renderList(true);if(document.body.dataset.size==='s')setPane('list');else if(document.body.dataset.size==='m'&&document.body.dataset.pane==='detail')setPane('list');renderTabbar()},
   // phone tabs: each one is a view of the list pane
-  tab(el){const t={home:'home',search:'search',songs:'all'}[el.dataset.t]||'home';
-    if(S.sec!==t||document.body.dataset.pane!=='list'){S.sec=t;S.q='';S.reorder=false;renderSide();renderList(true)}
+  // «Τραγούδια» tapped again while already there: straight to the search field (for «παίξε εκείνο»)
+  tab(el){const t={home:'home',search:'all',songs:'all'}[el.dataset.t]||'home';
+    const again=S.sec===t&&document.body.dataset.pane==='list';
+    if(!again){S.sec=t;S.q='';S.reorder=false;renderSide();renderList(true)}
     setPane('list');
-    if(t==='search')setTimeout(()=>{const q=$('#sq');if(q)q.focus()},60)},
+    if(again&&t==='all')setTimeout(()=>{const q=$('#q');if(q)q.focus()},60)},
   resume(){const r=lastPlayed();if(!r)return;S.sec='col:'+r.col.id;renderSide();renderList(true);A.playcol()},
   opensong(el){const id=el.dataset.id;guardEdit(()=>openSong(id,[{s:id,it:null}],null,0))},
   open(el){const col=colOf(S.sec),id=el.dataset.id,pos=+el.dataset.pos,list=playList();guardEdit(()=>openSong(id,list,col?col.id:null,pos))},
@@ -2705,7 +2791,12 @@ const A={
       ${b('newsubcol','plus','Νέα λίστα εδώ','')}
       ${b('dupcol','paste','Αντίγραφο φακέλου','Με όλες τις λίστες του, π.χ. για τη νέα σεζόν')}
       ${b('editcol','settings','Ρυθμίσεις φακέλου','Όνομα, σημειώσεις, θέση')}
+      ${b('archtoggle','folder',isArchived(c)?'Επαναφορά από το αρχείο':'Αρχειοθέτηση','Σεζόν που τελείωσε: πάει στο τέλος, μαζεμένη (μόνο σε αυτή τη συσκευή)')}
     </div>`)},
+  archtoggle(el){const id=el.dataset.col;const s=new Set(prefs.archived||[]);s.has(id)?s.delete(id):s.add(id);prefs.archived=[...s];savePrefs();closeModal();renderSide();if(S.sec==='home')renderList(true);toast(s.has(id)?'Στο αρχείο':'Επέστρεψε από το αρχείο')},
+  notestoggle(el){const id=el.dataset.id;const s=new Set(prefs.notesOpen||[]);s.has(id)?s.delete(id):s.add(id);prefs.notesOpen=[...s];savePrefs();renderList(true)},
+  // «Παίξιμο από την αρχή» (the list summary on wide screens)
+  playstart(){const c=colOf(S.sec);if(!c)return;const sl=songItems(c);if(!sl.length)return;S.songId=null;S.ctx=null;setCue(c.id,0);A.playcol()},
   // «παίξε εκείνο»: search the whole library from the stage, play it, then «Πίσω» to the same spot in the list
   stagesearch(){
     openModal(`${dhead('Αναζήτηση')}<div class="dbody" style="gap:8px">
