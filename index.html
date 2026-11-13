@@ -1395,7 +1395,9 @@ function currentEntries(){
     arr=songs.map(s=>({s,it:null}));
   }
   const q=norm(S.q.trim());
-  const filtered=q||S.f.genre||S.f.key||S.f.artist;
+  // filters belong to the library only; inside a list there is just the search
+  const f=col?{}:S.f;
+  const filtered=q||f.genre||f.rhythm||f.key||f.artist;
   if(filtered) arr=arr.filter(e=>e.s);
   if(q){
     const words=q.split(/\s+/);
@@ -1405,10 +1407,10 @@ function currentEntries(){
       else if(k.ly.includes(q)) scored.push([1,e]);}
     arr=scored.sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
   }
-  if(S.f.genre) arr=arr.filter(e=>(e.s.genres||[]).includes(S.f.genre));
-  if(S.f.rhythm) arr=arr.filter(e=>(e.s.rhythm||'')===S.f.rhythm);
-  if(S.f.key) arr=arr.filter(e=>itemKey(e.it,e.s)===S.f.key);
-  if(S.f.artist) arr=arr.filter(e=>(e.s.artist||'')===S.f.artist);
+  if(f.genre) arr=arr.filter(e=>(e.s.genres||[]).includes(f.genre));
+  if(f.rhythm) arr=arr.filter(e=>(e.s.rhythm||'')===f.rhythm);
+  if(f.key) arr=arr.filter(e=>itemKey(e.it,e.s)===f.key);
+  if(f.artist) arr=arr.filter(e=>(e.s.artist||'')===f.artist);
   if(!col&&S.sec!=='recent'&&!q){
     const cmp={title:(a,b)=>collator.compare(a.s.title||'',b.s.title||''),
       artist:(a,b)=>collator.compare(a.s.artist||'~',b.s.artist||'~')||collator.compare(a.s.title,b.s.title),
@@ -1529,9 +1531,9 @@ function renderList(full=true){
         ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}</div>`:''}
         <div class="searchrow">
           <div class="search">${ic('search')}<input id="q" type="search" placeholder="Τίτλος, καλλιτέχνης ή στίχος" value="${esc(S.q)}" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση"><button class="ibtn clr" data-act="clearq" aria-label="Καθαρισμός" ${S.q?'':'hidden'}>${ic('x','sm')}</button></div>
-          ${(()=>{const nf=['rhythm','genre','key','artist'].filter(k=>S.f[k]).length;return `<button class="ibtn ftoggle ${S.showF||nf?'on':''}" data-act="togglef" aria-expanded="${!!(S.showF||nf)}" aria-label="Φίλτρα" title="Φίλτρα">${ic('settings')}${nf?`<span class="fbadge">${nf}</span>`:''}</button>`})()}
+          ${col?'':(()=>{const nf=['rhythm','genre','key','artist'].filter(k=>S.f[k]).length;return `<button class="ibtn ftoggle ${S.showF||nf?'on':''}" data-act="togglef" aria-expanded="${!!(S.showF||nf)}" aria-label="Φίλτρα" title="Φίλτρα">${ic('settings')}${nf?`<span class="fbadge">${nf}</span>`:''}</button>`})()}
         </div>
-        <div class="filters" ${S.showF||S.f.genre||S.f.key||S.f.artist?'':'hidden'}>
+        ${col?'':`<div class="filters" ${S.showF||S.f.genre||S.f.rhythm||S.f.key||S.f.artist?'':'hidden'}>
           ${(()=>{const rh=distinct('rhythm');
             // the rhythm is the category the lists are built on (Ζεϊμπέκικο, Ρούμπα, Τσιφτετέλι…)
             return rh.length?`<select class="sel ${S.f.rhythm?'on':''}" data-f="rhythm" aria-label="Ρυθμός"><option value="">Ρυθμός</option>${rh.map(r=>`<option ${S.f.rhythm===r?'selected':''}>${esc(r)}</option>`).join('')}</select>`:''})()}
@@ -1540,7 +1542,7 @@ function renderList(full=true){
             return used.length?`<select class="sel ${S.f.genre?'on':''}" data-f="genre" aria-label="Είδος"><option value="">Είδος</option>${used.map(g=>`<option ${S.f.genre===g?'selected':''}>${esc(g)}</option>`).join('')}</select>`:''})()}
           <select class="sel ${S.f.key?'on':''}" data-f="key" aria-label="Τόνος"><option value="">Τόνος</option>${keys.map(k=>`<option ${S.f.key===k?'selected':''}>${k}</option>`).join('')}</select>
           ${!col&&S.sec!=='recent'?`<select class="sel" data-sort aria-label="Ταξινόμηση"><option value="title" ${S.sort==='title'?'selected':''}>Α–Ω τίτλος</option><option value="artist" ${S.sort==='artist'?'selected':''}>Καλλιτέχνης</option><option value="updated" ${S.sort==='updated'?'selected':''}>Τελευταίες αλλαγές</option></select>`:''}
-        </div>`}
+        </div>`}`}
       </div>
       <div class="list" id="list"></div>`;
   }
@@ -1641,7 +1643,7 @@ function renderRows(){
   const arr=currentEntries();
   // in the library each row says in how many lists the song is
   const inLists=new Map();if(!col)for(const c of Store.cols.values())for(const x of itemsOf(c))if(x.s)inLists.set(x.s,(inLists.get(x.s)||0)+1);
-  const filtered=S.q||S.f.genre||S.f.rhythm||S.f.key||S.f.artist;
+  const filtered=S.q||(!col&&(S.f.genre||S.f.rhythm||S.f.key||S.f.artist));
   const canDrag=col&&col.ordered&&!filtered&&S.reorder;
   const cue=false; // one kind of list: the stage always opens the title–key list
   el.classList.toggle('cue',!!cue);
