@@ -32,20 +32,20 @@ svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-widt
 [hidden]{display:none!important}
 
 /* ---------- layout ---------- */
-#app{display:grid;grid-template-columns:264px 360px minmax(0,1fr);height:100vh;height:100dvh}
+#app{display:grid;grid-template-columns:var(--sidew,264px) var(--listw,360px) minmax(0,1fr);height:100vh;height:100dvh}
 #side{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding-top:env(safe-area-inset-top)}
 #listPane{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--bg);padding-top:env(safe-area-inset-top)}
 #detail{min-width:0;min-height:0;overflow:auto;background:var(--bg);color:var(--text);position:relative;overscroll-behavior:contain;padding-top:env(safe-area-inset-top)}
 #tabbar{display:none}
 /* small laptop / tablet landscape: the list and the song side by side; the sidebar opens with ☰ */
-body[data-size=m] #app{grid-template-columns:minmax(300px,38%) minmax(0,1fr)}
+body[data-size=m] #app{grid-template-columns:var(--listwm,minmax(300px,38%)) minmax(0,1fr)}
 body[data-size=m] #side{display:none;position:fixed;left:0;top:0;bottom:0;width:272px;z-index:40;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 body[data-size=m].sideopen #side{display:flex}
 body[data-size=m].sideopen::after{content:"";position:fixed;inset:0;z-index:39;background:rgba(0,0,0,.45)}
 .ibtn.sidetog{display:none}
 body[data-size=m] .ibtn.sidetog{display:inline-grid}
 /* home on a laptop: the cards use all the width instead of half a screen saying «Διάλεξε τραγούδι» */
-body[data-size=l][data-home] #app{grid-template-columns:264px minmax(0,1fr)}
+body[data-size=l][data-home] #app{grid-template-columns:var(--sidew,264px) minmax(0,1fr)}
 body[data-size=m][data-home] #app{grid-template-columns:minmax(0,1fr)}
 body:not([data-size=s])[data-home] #detail{display:none}
 /* laptop: the list is right there beside the song, so the song page does not repeat it */
@@ -817,9 +817,18 @@ body[data-size=s] .mbrand{display:flex;align-items:center;gap:8px;font-weight:80
 .fsec span{text-transform:none;letter-spacing:0;font-weight:500;color:var(--faint)}
 .fsec.lst{color:var(--note);margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
 @media (max-width:759px){.fgrid .span2,.fgrid .span4{grid-column:span 2}}
+/* column dividers: a thin line that lights up under the mouse (like Spotify), drag to resize */
+.colsplit{position:fixed;top:0;bottom:0;width:8px;z-index:25;cursor:col-resize;touch-action:none}
+.colsplit::after{content:"";position:absolute;top:0;bottom:0;left:3px;width:2px;border-radius:2px;background:transparent;transition:background .12s ease}
+.colsplit:hover::after,.colsplit.on::after{background:var(--muted)}
+.colsplit.on::after{background:var(--text)}
+body.colresizing,body.colresizing *{cursor:col-resize!important;user-select:none!important}
+body.colresizing #app{pointer-events:none}
 </style>
 </head>
 <body data-size="l" data-pane="list">
+<div class="colsplit" data-split="side" role="separator" aria-orientation="vertical" aria-label="Πλάτος πλαϊνής στήλης" tabindex="-1" hidden></div>
+<div class="colsplit" data-split="list" role="separator" aria-orientation="vertical" aria-label="Πλάτος λίστας" tabindex="-1" hidden></div>
 <div id="app">
   <aside id="side" aria-label="Πλοήγηση"></aside>
   <section id="listPane" aria-label="Τραγούδια"></section>
@@ -3168,7 +3177,7 @@ Store.onChange=what=>{
   if(S.cueMode) renderCueSheet(); else renderDetail(false);
   renderTabbar();
 };
-layout();applyTheme();applyStagePrefs();
+layout();applyTheme();applyStagePrefs();applyColWidths();
 if(window.innerWidth<760) document.body.dataset.pane='list';
 renderAll();
 // as soon as the device copy is loaded (before talking to GitHub), go back to where this device was
@@ -3187,6 +3196,50 @@ Store.init().then(()=>{
 if('serviceWorker' in navigator&&window.isSecureContext&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(e=>console.warn('sw',e)));
 }
+
+/* ---- column dividers (laptop/tablet with a mouse): drag the line between two columns to resize them,
+   double-click to go back to the default width; widths are remembered on this device ---- */
+const COLW={side:[200,420,264],list:[280,720,360]};
+function applyColWidths(){
+  const r=document.documentElement.style;
+  prefs.sidew?r.setProperty('--sidew',prefs.sidew+'px'):r.removeProperty('--sidew');
+  prefs.listw?r.setProperty('--listw',prefs.listw+'px'):r.removeProperty('--listw');
+  prefs.listwm?r.setProperty('--listwm',prefs.listwm+'px'):r.removeProperty('--listwm');
+}
+function placeSplitters(){
+  const fine=matchMedia('(hover:hover) and (pointer:fine)').matches,size=document.body.dataset.size;
+  const on=fine&&!S.perf&&!document.body.classList.contains('editing')&&(size==='l'||size==='m');
+  for(const el of document.querySelectorAll('.colsplit')){
+    const which=el.dataset.split,pane=which==='side'?$('#side'):$('#listPane');
+    const vis=on&&pane&&pane.offsetParent!==null&&getComputedStyle(pane).position!=='fixed'&&(which==='side'||$('#detail').offsetParent!==null);
+    el.hidden=!vis;if(!vis)continue;
+    const r=pane.getBoundingClientRect();el.style.left=(r.right-4)+'px';
+  }
+}
+let colDrag=null;
+document.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.colsplit');if(!el)return;e.preventDefault();
+  const which=el.dataset.split,pane=which==='side'?$('#side'):$('#listPane');
+  colDrag={which,el,x0:e.clientX,w0:pane.getBoundingClientRect().width,m:document.body.dataset.size==='m'};
+  el.setPointerCapture(e.pointerId);document.body.classList.add('colresizing');el.classList.add('on');
+});
+document.addEventListener('pointermove',e=>{
+  if(!colDrag)return;const [mn,mx]=COLW[colDrag.which];
+  // the song column always keeps at least 420px
+  const others=colDrag.which==='side'?($('#listPane').offsetParent?$('#listPane').getBoundingClientRect().width:0):($('#side').offsetParent&&!colDrag.m?$('#side').getBoundingClientRect().width:0);
+  const room=innerWidth-others-(document.body.dataset.home&&colDrag.which==='side'?320:420);
+  const w=Math.round(Math.max(mn,Math.min(mx,room,colDrag.w0+e.clientX-colDrag.x0)));
+  if(colDrag.which==='side')prefs.sidew=w;else if(colDrag.m)prefs.listwm=w;else prefs.listw=w;
+  applyColWidths();placeSplitters();
+});
+const endColDrag=()=>{if(!colDrag)return;colDrag.el.classList.remove('on');colDrag=null;document.body.classList.remove('colresizing');savePrefs();if(S.perf)fitStage(document.querySelector('#detail .sheet'))};
+document.addEventListener('pointerup',endColDrag);document.addEventListener('pointercancel',endColDrag);
+document.addEventListener('dblclick',e=>{const el=e.target.closest('.colsplit');if(!el)return;
+  if(el.dataset.split==='side')delete prefs.sidew;else if(document.body.dataset.size==='m')delete prefs.listwm;else delete prefs.listw;
+  savePrefs();applyColWidths();placeSplitters()});
+new ResizeObserver(()=>placeSplitters()).observe(document.getElementById('app'));
+for(const id of ['side','listPane','detail'])new ResizeObserver(()=>placeSplitters()).observe(document.getElementById(id));
+window.addEventListener('resize',placeSplitters);
 </script>
 </body>
 </html>
