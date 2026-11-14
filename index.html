@@ -894,6 +894,7 @@ html:not([data-eff=dark]) .dlg,html:not([data-eff=dark]) .cmenu,html:not([data-e
 .cmenu .mitem:hover,.dlg .mitem:hover{background:color-mix(in srgb,var(--text) 9%,transparent)}
 /* where the browser can't blur, a solid background (still readable) */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.dlg,.cmenu,.pop{background:var(--raise)!important}}
+@media (hover:hover) and (pointer:fine){.list .row[data-item],.list .row[data-act=open]{cursor:default}body.dragging-rows .row{transition:none}}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -3267,18 +3268,27 @@ let drag=null;
    A list in the sidebar is a target from a list too: the dragged songs are added there (not moved). */
 function dropLine(){let l=document.getElementById('dropline');if(!l){l=document.createElement('div');l.id='dropline';document.body.appendChild(l)}return l}
 document.addEventListener('pointerdown',e=>{
-  const h=e.target.closest('.handle');if(!h||e.button>0) return;
-  e.preventDefault();const row=h.closest('.row');const list=$('#list');const col=colOf(S.sec);
+  if(e.button>0)return;
+  let h=e.target.closest('.handle'),soft=false;
+  // with a mouse the whole row is draggable (like Spotify); a click without moving still opens the song
+  if(!h&&e.pointerType==='mouse'&&fineMouse()){const r=e.target.closest('#list .row');
+    if(r&&!e.target.closest('button,a,input,select,textarea')){h=r.querySelector('.handle');soft=!!h}}
+  if(!h) return;
+  if(!soft)e.preventDefault();const row=h.closest('.row');const list=$('#list');const col=colOf(S.sec);
   let ids=[],songs=[];
   if(h.dataset.drag){ids=S.sel&&S.sel.has(h.dataset.drag)&&S.sel.size>1&&col?itemsOf(col).filter(x=>S.sel.has(x.i)).map(x=>x.i):[h.dataset.drag];
     songs=col?ids.map(i=>(itemById(col.id,i)||{}).s).filter(Boolean):[]}
   else if(h.dataset.dragSong){songs=[h.dataset.dragSong]}
-  drag={ids,songs,col:col&&col.id,row,list,pid:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false,before:undefined,side:null,onlySide:!h.dataset.drag};
-  h.setPointerCapture(e.pointerId);
+  drag={ids,songs,col:col&&col.id,row,list,pid:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false,before:undefined,side:null,onlySide:!h.dataset.drag,soft,cap:h};
+  if(!soft)h.setPointerCapture(e.pointerId);
 });
+// a row that was dragged must not also open when the mouse is let go
+let dragEndAt=0;
+document.addEventListener('click',e=>{if(Date.now()-dragEndAt<350&&e.target.closest('#list,#side')){e.stopPropagation();e.preventDefault()}},true);
 document.addEventListener('pointermove',e=>{
   if(!drag||e.pointerId!==drag.pid) return;
-  if(!drag.moved){if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<4)return;drag.moved=true;document.body.classList.add('dragging-rows');
+  if(!drag.moved){if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<(drag.soft?6:4))return;drag.moved=true;document.body.classList.add('dragging-rows');
+    if(drag.soft){try{drag.cap.setPointerCapture(drag.pid)}catch(_){}try{getSelection().removeAllRanges()}catch(_){}}
     const L=drag.list;drag.ids.forEach(i=>{const r=L.querySelector(`.row[data-item="${i}"]`);if(r)r.classList.add('dragging')});if(drag.onlySide&&drag.row)drag.row.classList.add('dragging')}
   const {list}=drag,x=e.clientX,y=e.clientY,line=dropLine();
   // over a list in the sidebar?
@@ -3299,7 +3309,8 @@ document.addEventListener('pointermove',e=>{
 function endDrag(apply){
   const d=drag;drag=null;document.body.classList.remove('dragging-rows');const l=document.getElementById('dropline');if(l)l.hidden=true;
   document.querySelectorAll('.navitem.droptarget').forEach(n=>n.classList.remove('droptarget'));
-  if(!d)return;if(!d.moved||!apply){renderRows();return}
+  if(!d)return;if(!d.moved){if(!d.soft)renderRows();return}
+  dragEndAt=Date.now();if(!apply){renderRows();return}
   if(d.side){const c0=Store.cols.get(d.side);if(c0){const c=clone(c0);const add=d.songs.filter(id=>!hasSong(c,id));c.items=itemsOf(c).concat(add.map(s=>({i:uid(),s})));
       if(add.length)Store.saveCol(c).then(()=>toast(add.length>1?`Προστέθηκαν ${add.length} στη «${c.name}»`:`Προστέθηκε στη «${c.name}»`),()=>toast('Δεν αποθηκεύτηκε.'));else toast(`Η «${c.name}» το έχει ήδη`)}
     renderRows();return}
