@@ -2667,7 +2667,8 @@ function backupModal(){
     <section><h4>Εμφάνιση</h4><div class="seg" role="group" aria-label="Θέμα">${th('dark','Σκούρο')}${th('light','Φωτεινό')}${th('auto','Όπως η συσκευή')}</div></section>
     <section><h4>Σκηνή</h4>
       ${tog('swipe',!!prefs.swipe,'Αλλαγή τραγουδιού με σύρσιμο','Αριστερά ή δεξιά για επόμενο ή προηγούμενο. Κλειστό, για να μην αλλάζει κατά λάθος στο αναλόγιο.')}
-      ${tog('keepAwake',prefs.keepAwake!==false,'Η οθόνη μένει ανοιχτή','Όσο είσαι στη σκηνή')}
+      ${tog('keepAwake',prefs.keepAwake!==false,'Η οθόνη μένει ανοιχτή στη σκηνή','Όσο παίζεις')}
+      ${tog('awakeAlways',!!prefs.awakeAlways,'Η οθόνη μένει πάντα ανοιχτή','Όσο είναι ανοιχτή η εφαρμογή, σε κάθε οθόνη της. Ξοδεύει λίγο περισσότερη μπαταρία.')}
       ${tog('showChords',prefs.showChords!==false,'Ακόρντα στη σκηνή','Κλειστό: μόνο οι στίχοι')}
     </section>
     <section><h4>Σύνδεση</h4>
@@ -2814,9 +2815,13 @@ function go(delta){
 // ---- perf ----
 let wakeLock=null,wakeWarned=false;
 let nsVideo=null;
+// the screen stays on: on stage (Ρυθμίσεις → Σκηνή), or always while the app is open («Πάντα ανοιχτή»)
+const wantAwake=()=>!!prefs.awakeAlways||(S.perf&&prefs.keepAwake!==false);
 async function requestWake(){
-  if(prefs.keepAwake===false)return false;
-  try{if('wakeLock' in navigator&&window.isSecureContext){wakeLock=await navigator.wakeLock.request('screen');return true}}catch(e){}
+  if(!wantAwake())return false;
+  try{if('wakeLock' in navigator&&window.isSecureContext){wakeLock=await navigator.wakeLock.request('screen');
+    // the browser lets go of it when the app goes to the background; it is asked for again when it comes back
+    wakeLock.addEventListener&&wakeLock.addEventListener('release',()=>{wakeLock=null});return true}}catch(e){}
   // fallback for browsers without the Wake Lock API (older iPads): a tiny silent looping video keeps the screen on
   try{
     if(!nsVideo){nsVideo=document.createElement('video');nsVideo.setAttribute('playsinline','');nsVideo.setAttribute('muted','');nsVideo.muted=true;nsVideo.loop=true;nsVideo.setAttribute('aria-hidden','true');nsVideo.style.cssText='position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:0;top:0';nsVideo.src='data:video/mp4;base64,'+NOSLEEP;document.body.appendChild(nsVideo)}
@@ -2825,7 +2830,11 @@ async function requestWake(){
   if(!wakeWarned){wakeWarned=true;setTimeout(()=>toast('Η οθόνη μπορεί να σβήσει. Αύξησε τον χρόνο αδράνειας στις ρυθμίσεις της συσκευής.'),900)}
   return false;
 }
-document.addEventListener('visibilitychange',()=>{if(S.perf&&document.visibilityState==='visible'&&wakeLock===null)requestWake()});
+function releaseWake(){try{wakeLock&&wakeLock.release&&wakeLock.release()}catch(e){}wakeLock=null;try{nsVideo&&nsVideo.pause()}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(wantAwake()&&document.visibilityState==='visible'&&wakeLock===null)requestWake()});
+// older iPads keep the screen on with a silent video, which may only start after a touch: the first touch does it
+document.addEventListener('pointerdown',()=>{if(prefs.awakeAlways&&wakeLock===null&&(!nsVideo||nsVideo.paused))requestWake()},{passive:true});
+if(prefs.awakeAlways)setTimeout(requestWake,0);
 function enterPerf(){
   S.perf=true;document.body.classList.add('perf');document.body.classList.remove('uihidden');
   applyTheme();requestWake();
@@ -2837,7 +2846,7 @@ function exitPerf(){
   const wasCue=S.cueMode;
   if(S.split){S.split=false;document.body.classList.remove('stagesplit');S.songId=null}
   S.perf=false;S.cueMode=false;S.fromCue=null;S.returnTo=null;if(wasCue&&document.body.dataset.size!=='l')setPane('list');document.body.classList.remove('perf','uihidden');
-  try{wakeLock&&wakeLock.release&&wakeLock.release()}catch(e){}wakeLock=null;try{nsVideo&&nsVideo.pause()}catch(e){}
+  if(!prefs.awakeAlways)releaseWake();
   try{document.fullscreenElement&&document.exitFullscreen().catch(()=>{})}catch(e){}
   applyTheme();renderDetail(true);
 }
@@ -3187,6 +3196,7 @@ document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset.pref){prefs[t.dataset.pref]=t.checked;savePrefs(); // device preferences (Ρυθμίσεις, stage ⋯, Aa)
     applyStagePrefs();
+    if(t.dataset.pref==='awakeAlways'){if(t.checked)requestWake();else if(!wantAwake())releaseWake()}
     if(t.dataset.pref==='keepAwake'&&S.perf){if(t.checked)requestWake().then(()=>refreshSheet());else{try{wakeLock&&wakeLock.release&&wakeLock.release()}catch(e){}wakeLock=null;try{nsVideo&&nsVideo.pause()}catch(e){}refreshSheet()}}
     if(t.dataset.pref==='fit'&&S.perf){S.cueMode?renderCueSheet():renderDetail(true);drawPop()}
     return}
