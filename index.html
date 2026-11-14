@@ -943,6 +943,9 @@ html:not([data-eff=dark]) .dlg,html:not([data-eff=dark]) .cmenu,html:not([data-e
 .tcopts .kfield{flex:0 1 160px}
 .tcopts .kfield.open{flex-basis:100%}
 .tcopts .kfbtn{min-height:38px;font-size:15px}
+/* round icon-only buttons (kithara search, YouTube) */
+.btn.iconly{width:42px;height:42px;min-height:42px;padding:0;justify-content:center;border-radius:50%;flex:none}
+.btn.iconly svg.i{width:20px;height:20px}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -1883,6 +1886,8 @@ function renderList(full=true){
   renderRows();
 }
 // kithara.to's own search, with the title (it matches without accents and case)
+const youtubeUrl=s=>'https://www.youtube.com/results?search_query='+encodeURIComponent([s.title,s.artist].filter(Boolean).join(' ').trim());
+const YT_ICON='<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="stroke:none"><rect x="1.5" y="5" width="21" height="14" rx="4.5" fill="#ff0033"/><path d="M10 9.2v5.6l4.8-2.8z" fill="#fff"/></svg>';
 const kitharaUrl=s=>'https://kithara.to/fi?query='+encodeURIComponent(String(s.title||'').replace(/['’΄`]/g,' ').trim().slice(0,40));
 // the list last played on this device, with where it stood (for «Συνέχεια»)
 function lastPlayed(){
@@ -2170,7 +2175,7 @@ function renderDetail(force=false){
     ${s.notes?`<div class="note"><span class="nl">Σημειώσεις</span>${esc(s.notes)}</div>`:''}
     ${!(s.lines||[]).length?`<div class="nolyr">
       <div class="bigkey"><span>Τόνος</span><b class="${itemKey(it,s)?'':'none'}">${esc(nm(itemKey(it,s))||'—')}</b>${it&&it.key&&s.key&&it.key!==s.key?`<small>το τραγούδι είναι σε ${esc(s.key)}</small>`:''}</div>
-      <div class="nolyr-acts"><button class="playbtn" data-act="perf" aria-label="Παίξιμο" title="Παίξιμο">${ic('play')}</button><button class="btn" data-act="edit">${ic('plus','sm')}Πρόσθεσε στίχους</button><a class="btn" href="${kitharaUrl(s)}" target="_blank" rel="noopener">${ic('search','sm')}Βρες στο kithara</a></div>
+      <div class="nolyr-acts"><button class="playbtn" data-act="perf" aria-label="Παίξιμο" title="Παίξιμο">${ic('play')}</button><button class="btn" data-act="edit">${ic('plus','sm')}Πρόσθεσε στίχους</button><a class="btn iconly" href="${kitharaUrl(s)}" target="_blank" rel="noopener" aria-label="Αναζήτηση στο kithara.to" title="Αναζήτηση στο kithara.to">${ic('search')}</a><a class="btn iconly" href="${youtubeUrl(s)}" target="_blank" rel="noopener" aria-label="Αναζήτηση στο YouTube" title="Αναζήτηση στο YouTube">${YT_ICON}</a></div>
       <div class="hint nolyr-hint">Στο kithara.to αντέγραψε το τραγούδι με τα ακόρντα, γύρνα εδώ, πάτα «Πρόσθεσε στίχους» και επικόλλησε.</div>
     </div>`:''}
     ${(s.lines||[]).length?`<div class="tools">
