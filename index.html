@@ -1889,8 +1889,8 @@ function renderRows(){
   if(!col&&S.sec==='all'&&S.browse)drawBrowseBar(arr);
   if(!col&&S.sec==='all'&&!filtered&&!S.browse&&S.sort==='title')top+=categoryTiles();
   if(!col&&S.sec==='all'&&!filtered&&!S.browse&&S.sort==='title'){
-    const rec=[...Store.songs.values()].filter(s=>s.openedAt).sort((a,b)=>b.openedAt-a.openedAt).slice(0,8);
-    if(rec.length)top+=`<div class="slab">Πρόσφατα</div>${rec.map(s=>`<div class="row" data-act="opensong" data-id="${s.id}" role="button" tabindex="0"><div class="main"><div class="tt">${esc(s.title||'Χωρίς τίτλο')}</div><div class="ar">${esc(s.artist||'')}</div></div><span class="keyb ${s.key?'':'none'}">${esc(s.key||'—')}</span><button class="ibtn imenu" data-act="songctx" data-id="${s.id}" aria-label="Επιλογές τραγουδιού: ${esc(s.title||'')}" title="Επιλογές τραγουδιού">${ic('more','sm')}</button></div>`).join('')}<div class="slab">Όλα · ${arr.length}</div>`;
+    // under the category tiles: every song A–Ω («Πρόσφατα» left out: not wanted for now)
+    if(top)top+=`<div class="slab">Όλα · ${arr.length}</div>`;
   }
   el.innerHTML=top+gap('')+arr.map(e=>{
     if(e.sec){num=0;return `<div class="row secrow" data-item="${e.sec.i}">${handle(e.sec.i)}<button class="sechead" data-act="editsec" data-item="${e.sec.i}"><span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}</button>${ud(e.sec.i)}</div>${gap(e.sec.i)}`}
