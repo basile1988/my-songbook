@@ -895,6 +895,7 @@ html:not([data-eff=dark]) .dlg,html:not([data-eff=dark]) .cmenu,html:not([data-e
 /* where the browser can't blur, a solid background (still readable) */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.dlg,.cmenu,.pop{background:var(--raise)!important}}
 @media (hover:hover) and (pointer:fine){.list .row[data-item],.list .row[data-act=open]{cursor:default}body.dragging-rows .row{transition:none}}
+.row.lifted{transform:scale(1.02);background:var(--raise);box-shadow:var(--shadow-hi,0 12px 30px rgba(0,0,0,.4));z-index:3;transition:transform .15s var(--ease-out),box-shadow .15s ease}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -3290,7 +3291,10 @@ document.addEventListener('pointermove',e=>{
   if(!drag.moved){if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<(drag.soft?6:4))return;drag.moved=true;document.body.classList.add('dragging-rows');
     if(drag.soft){try{drag.cap.setPointerCapture(drag.pid)}catch(_){}try{getSelection().removeAllRanges()}catch(_){}}
     const L=drag.list;drag.ids.forEach(i=>{const r=L.querySelector(`.row[data-item="${i}"]`);if(r)r.classList.add('dragging')});if(drag.onlySide&&drag.row)drag.row.classList.add('dragging')}
-  const {list}=drag,x=e.clientX,y=e.clientY,line=dropLine();
+  dragMove(e.clientX,e.clientY);
+});
+function dragMove(x,y){
+  const {list}=drag,line=dropLine();
   // over a list in the sidebar?
   const over=document.elementFromPoint(x,y);const nav=over&&over.closest&&over.closest('#side .navitem[data-sec^="col:"]');
   document.querySelectorAll('.navitem.droptarget').forEach(n=>n!==nav&&n.classList.remove('droptarget'));
@@ -3305,7 +3309,7 @@ document.addEventListener('pointermove',e=>{
   const ly=before?ref.top:ref.bottom;
   line.hidden=!(ly>=lb.top-2&&ly<=lb.bottom+2);line.style.left=(lb.left+8)+'px';line.style.width=(lb.width-16)+'px';line.style.top=(ly-1)+'px';
   if(y<lb.top+48)list.scrollTop-=10;else if(y>lb.bottom-48)list.scrollTop+=10;
-});
+}
 function endDrag(apply){
   const d=drag;drag=null;document.body.classList.remove('dragging-rows');const l=document.getElementById('dropline');if(l)l.hidden=true;
   document.querySelectorAll('.navitem.droptarget').forEach(n=>n.classList.remove('droptarget'));
@@ -3525,22 +3529,45 @@ function menuTarget(t){
   return null;
 }
 // long-press on touch (iPhone/iPad send no contextmenu): 500ms without moving opens the sheet
-const lp={t:0,x:0,y:0,fired:false};
+const lp={t:0,x:0,y:0,fired:false,lift:null};
 document.addEventListener('contextmenu',e=>{
   if(document.getElementById('cmenu')||!$('#modal').hidden){if(menuTarget(e.target))e.preventDefault();return}
   const m=menuTarget(e.target);if(!m)return;e.preventDefault();
   // Android long-press arrives here: the sheet, once
-  if(!fineMouse()){if(!lp.fired){lp.fired=true;clearTimeout(lp.t);openMenu(m[0],m[1],null)}return}
+  if(!fineMouse())return;
   openMenu(m[0],m[1],{x:e.clientX,y:e.clientY});
 });
+/* long-press on touch:
+   a song in a list «lifts» (a short buzz) → drag it without lifting the finger to move it, or let go to get its menu;
+   anything else (a song in «Τραγούδια», a list card…) → its menu right away */
+function liftEnd(){if(lp.lift&&lp.lift.row)lp.lift.row.classList.remove('lifted');lp.lift=null}
 document.addEventListener('touchstart',e=>{
-  lp.fired=false;clearTimeout(lp.t);if(S.perf||e.touches.length!==1)return;
+  lp.fired=false;clearTimeout(lp.t);liftEnd();if(S.perf||e.touches.length!==1)return;
   const m=menuTarget(e.target);if(!m)return;const p=e.touches[0];lp.x=p.clientX;lp.y=p.clientY;
-  lp.t=setTimeout(()=>{lp.fired=true;try{navigator.vibrate&&navigator.vibrate(10)}catch(_){}openMenu(m[0],m[1],null)},500);
+  const row=e.target.closest('#list .row[data-item]:not(.secrow)'),col=colOf(S.sec);
+  const movable=!!(row&&col&&col.ordered&&!S.q&&!S.pick);
+  lp.t=setTimeout(()=>{lp.fired=true;try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}
+    if(movable){lp.lift={row,m,col:col.id};row.classList.add('lifted')}else openMenu(m[0],m[1],null)},450);
 },{passive:true});
-document.addEventListener('touchmove',e=>{const p=e.touches[0];if(p&&Math.hypot(p.clientX-lp.x,p.clientY-lp.y)>10)clearTimeout(lp.t)},{passive:true});
-document.addEventListener('touchend',e=>{clearTimeout(lp.t);if(lp.fired&&e.cancelable)e.preventDefault()},{passive:false});
-document.addEventListener('touchcancel',()=>clearTimeout(lp.t));
+document.addEventListener('touchmove',e=>{
+  const p=e.touches[0];if(!p)return;
+  if(!lp.lift){if(Math.hypot(p.clientX-lp.x,p.clientY-lp.y)>10)clearTimeout(lp.t);return}
+  // a lifted song: the page doesn't scroll, the song follows the finger
+  if(e.cancelable)e.preventDefault();
+  if(!drag){if(Math.hypot(p.clientX-lp.x,p.clientY-lp.y)<8)return;
+    const L=lp.lift,c=Store.cols.get(L.col),id=L.row.dataset.item;
+    const ids=S.sel&&S.sel.has(id)&&S.sel.size>1?itemsOf(c).filter(x=>S.sel.has(x.i)).map(x=>x.i):[id];
+    drag={ids,songs:ids.map(i=>(itemById(c.id,i)||{}).s).filter(Boolean),col:c.id,row:L.row,list:$('#list'),pid:-1,x0:lp.x,y0:lp.y,moved:true,before:undefined,side:null,onlySide:false,touch:true};
+    L.row.classList.remove('lifted');document.body.classList.add('dragging-rows');
+    ids.forEach(i=>{const r=drag.list.querySelector(`.row[data-item="${i}"]`);if(r)r.classList.add('dragging')})}
+  dragMove(p.clientX,p.clientY);
+},{passive:false});
+document.addEventListener('touchend',e=>{
+  clearTimeout(lp.t);
+  if(lp.lift){const L=lp.lift;liftEnd();if(drag&&drag.touch)endDrag(true);else openMenu(L.m[0],L.m[1],null)}
+  if(lp.fired&&e.cancelable)e.preventDefault();
+},{passive:false});
+document.addEventListener('touchcancel',()=>{clearTimeout(lp.t);liftEnd();if(drag&&drag.touch)endDrag(false)});
 // the click right after a long-press must not also open the row
 document.addEventListener('click',e=>{if(lp.fired){lp.fired=false;if(!e.target.closest('#modal')){e.stopPropagation();e.preventDefault()}}},true);
 document.addEventListener('scroll',()=>closeCtx(),true);
