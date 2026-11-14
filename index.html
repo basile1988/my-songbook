@@ -854,6 +854,8 @@ html:not([data-eff=dark]) .tile{background:hsl(var(--h) 55% 86%);color:#16181d}
 .row.picked{background:var(--accent-weak)}
 .browsebar.picking .bcount{flex-basis:100%}
 .browsebar.picking .btn.sm{padding:0 10px}
+@media (max-width:759px){.fgrid .half{grid-column:span 1}}
+.chip.rhy{font-weight:700;color:var(--text)}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -1635,6 +1637,12 @@ function keyShift(from,to){
   let d=((IDX[b.root]-IDX[a.root])%12+12)%12;if(d>6)d-=12;return d;
 }
 const baseKey=s=>s.key||guessKey(s.lines||[]);
+const RHYTHMS=[['Ζεϊμπέκικο','9/8'],['Χασάπικο','2/4'],['Χασαποσέρβικο','2/4'],['Τσιφτετέλι','4/4'],['Καρσιλαμάς','9/8'],['Απτάλικο','9/4'],['Καμηλιέρικο','9/8'],
+  ['Καλαματιανό','7/8'],['Συρτό','2/4'],['Μπάλος','2/4'],['Τσάμικο','3/4'],['Πεντοζάλι','2/4'],['Ρούμπα','4/4'],['Μπαλάντα','4/4'],['Βαλς','3/4'],['Ταγκό','4/4'],['Μπολερό','4/4'],['Ελεύθερο','']];
+const METERS=['2/4','3/4','4/4','5/8','6/8','7/8','9/8','9/4','12/8'];
+const usualMeter=r=>(RHYTHMS.find(x=>x[0]===r)||[])[1]||'';
+// «Ζεϊμπέκικο · 9/8» (either part may be missing)
+const rhythmLine=s=>[s.rhythm,s.timeSig].map(x=>String(x||'').trim()).filter(Boolean).join(' · ');
 const DEFAULT_GENRES=['Λαϊκό','Ρεμπέτικο','Έντεχνο','Ελληνικό rock','Παραδοσιακό','Νησιώτικο'];
 function allGenres(){const s=new Set(DEFAULT_GENRES);for(const x of Store.songs.values())(x.genres||[]).forEach(g=>s.add(g));return [...s]}
 function distinct(field){const s=new Set();for(const x of Store.songs.values()) if(x[field]) s.add(x[field]);return [...s].sort(collator.compare)}
@@ -1744,9 +1752,6 @@ function renderList(full=true){
           ${(()=>{const rh=distinct('rhythm');
             // the rhythm is the category the lists are built on (Ζεϊμπέκικο, Ρούμπα, Τσιφτετέλι…)
             return rh.length?`<select class="sel ${S.f.rhythm?'on':''}" data-f="rhythm" aria-label="Ρυθμός"><option value="">Ρυθμός</option>${rh.map(r=>`<option ${S.f.rhythm===r?'selected':''}>${esc(r)}</option>`).join('')}</select>`:''})()}
-          ${(()=>{const used=genres.filter(g=>[...Store.songs.values()].some(s=>(s.genres||[]).includes(g)));
-            // a filter is offered only when it can find something (the artist is found by typing in the search)
-            return used.length?`<select class="sel ${S.f.genre?'on':''}" data-f="genre" aria-label="Είδος"><option value="">Είδος</option>${used.map(g=>`<option ${S.f.genre===g?'selected':''}>${esc(g)}</option>`).join('')}</select>`:''})()}
           <select class="sel ${S.f.key?'on':''}" data-f="key" aria-label="Τόνος"><option value="">Τόνος</option>${keys.map(k=>`<option ${S.f.key===k?'selected':''}>${k}</option>`).join('')}</select>
           ${!col&&S.sec!=='recent'?`<select class="sel" data-sort aria-label="Ταξινόμηση"><option value="title" ${S.sort==='title'?'selected':''}>Α–Ω τίτλος</option><option value="artist" ${S.sort==='artist'?'selected':''}>Καλλιτέχνης</option><option value="updated" ${S.sort==='updated'?'selected':''}>Τελευταίες αλλαγές</option></select>`:''}
         </div>`}`}
@@ -1999,15 +2004,14 @@ function renderDetail(force=false){
   const hasC0=songHasChords(s);
   if(hasLines&&hasC0&&s.key&&n) chips.push(`<span class="chip key">Αρχικός <b>${esc(s.key)}</b></span>`);
   else if(hasLines&&!hasC0&&itemKey(it,s)) chips.push(`<span class="chip key">Τόνος <b>${esc(itemKey(it,s))}</b></span>`);
-  if(s.rhythm) chips.push(`<span class="chip">Ρυθμός <b>${esc(s.rhythm)}</b></span>`);
-  (s.genres||[]).forEach(g=>chips.push(`<span class="chip">${esc(g)}</span>`));
+  if(rhythmLine(s)) chips.push(`<span class="chip rhy">${esc(rhythmLine(s))}</span>`);
   const hasC=songHasChords(s);
   // on stage: one thin line on top — the way back, the title, the key (tap it to change)
   const shownKey=hasC&&s.key?trKey(s.key,n,flat):itemKey(it,s);
   // one way out, top left, the same on every screen: «‹ Λίστα» (or «‹ Πίσω» for a song played on its own)
   const back=S.returnTo?`<button class="shback" data-act="stageback">${ic('left','sm')}Πίσω</button>`:S.fromCue?`<button class="shback" data-act="cueback">${ic('left','sm')}Λίστα</button>`:`<button class="shback" data-act="perfx" aria-label="Έξοδος από τη σκηνή">${ic('left','sm')}${cx&&cx.col?'Λίστα':'Πίσω'}</button>`;
   d.innerHTML=`<div class="dwrap">
-    <div class="stagehead">${back}<div class="shtitle"><b>${esc(s.title||'Χωρίς τίτλο')}</b>${s.artist?`<span>${esc(s.artist)}</span>`:''}</div>${shownKey?`<button class="shkey" ${hasC?'data-act="stagepop" data-sheet="key"':''} aria-label="Τόνος ${esc(shownKey)}">${esc(shownKey)}</button>`:''}</div>
+    <div class="stagehead">${back}<div class="shtitle"><b>${esc(s.title||'Χωρίς τίτλο')}</b>${s.artist||rhythmLine(s)?`<span>${esc([s.artist,rhythmLine(s)].filter(Boolean).join(' · '))}</span>`:''}</div>${shownKey?`<button class="shkey" ${hasC?'data-act="stagepop" data-sheet="key"':''} aria-label="Τόνος ${esc(shownKey)}">${esc(shownKey)}</button>`:''}</div>
     ${cx&&cx.col?`<div class="ctxbar"><button class="ctxname" data-act="sec" data-sec="col:${cx.col.id}" title="Πίσω στη λίστα">${ic(cx.col.ordered?'listmusic':'folder','sm')}<span>${esc(cx.col.name)}</span></button><span class="pos">${cx.i+1}/${cx.n}</span>${it?`<button class="btn sm ghost ctxedit" data-act="itemmenu" data-item="${it.i}" data-col="${cx.col.id}" title="Τόνος & σημείωση σε αυτή τη λίστα" aria-label="Τόνος & σημείωση σε αυτή τη λίστα">${ic('settings','sm')}<span class="lg">Τόνος & σημείωση σε αυτή τη λίστα</span><span class="sm">Ρύθμιση λίστας</span></button>`:''}</div>`:''}
     <div class="dtop">
       <button class="ibtn back" data-act="back" aria-label="Πίσω">${ic('left')}</button>
@@ -2191,7 +2195,7 @@ function renderCueSheet(){
     const R=d.querySelector('.splitR'),same=R&&R.dataset.song===(it&&it.i);const keepL=d.querySelector('.splitL')?.scrollTop||0,keepR=same?R.scrollTop:0;
     let right='';
     if(s){const n=curShift(s),flat=preferFlat(s,n),hasC=songHasChords(s),k=hasC&&s.key?trKey(s.key,n,flat):itemKey(it,s);
-      right=`<div class="stagehead"><div class="shtitle"><b>${esc(s.title)}</b>${s.artist?`<span>${esc(s.artist)}</span>`:''}</div>${k?`<button class="shkey" ${hasC?'data-act="stagepop" data-sheet="key"':''}>${esc(k)}</button>`:''}</div>
+      right=`<div class="stagehead"><div class="shtitle"><b>${esc(s.title)}</b>${s.artist||rhythmLine(s)?`<span>${esc([s.artist,rhythmLine(s)].filter(Boolean).join(' · '))}</span>`:''}</div>${k?`<button class="shkey" ${hasC?'data-act="stagepop" data-sheet="key"':''}>${esc(k)}</button>`:''}</div>
         ${it.note?`<div class="note inl"><span class="nl">${esc(col.name)}</span>${esc(it.note)}</div>`:''}
         ${(s.lines||[]).length?`<div class="sheet" style="--fs:${prefs.fs}px">${sheetHTML(s,n)}</div>`:`<div class="nolyr"><div class="bigkey"><span>Τόνος</span><b class="${k?'':'none'}">${esc(k||'—')}</b></div><div class="muted">Χωρίς στίχους ακόμα.</div></div>`}`}
     d.innerHTML=`<div class="split ${prefs.stageList===false?'nolist':''}"><div class="splitL">${listHTML}</div><div class="splitR" data-song="${it?it.i:''}">${right}</div></div>`;
@@ -2245,7 +2249,11 @@ function renderEditor(){
       <div class="field span3"><label for="edTitle">Τίτλος</label><input id="edTitle" data-k="title" value="${esc(s.title)}" placeholder="π.χ. Φραγκοσυριανή" autocomplete="off"></div>
       <div class="field span3"><label for="edArtist">Καλλιτέχνης</label><input id="edArtist" data-k="artist" value="${esc(s.artist)}" list="dlArtists" autocomplete="off"><datalist id="dlArtists">${distinct('artist').map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
       <div class="field span2"><label for="edKey">Τόνος</label><select id="edKey" data-k="key"><option value="">—</option>${ALLKEYS.map(k=>`<option ${s.key===k?'selected':''}>${k}</option>`).join('')}</select></div>
-      <div class="field span4"><label for="edRhythm">Ρυθμός</label><input id="edRhythm" data-k="rhythm" value="${esc(s.rhythm)}" list="dlRhythm" placeholder="π.χ. Χασάπικο"><datalist id="dlRhythm">${['Ζεϊμπέκικο','Ρούμπα','Τσιφτετέλι','Χασάπικο','Χασαποσέρβικο','Καμηλιέρικο','Μπαλάντα','Νησιώτικο','Λαϊκοδημοτικό','Καλαματιανό','Συρτό','Μπάλος','Καρσιλαμάς','Βαλς','Ταγκό'].concat(distinct('rhythm')).filter((v,i,a)=>a.indexOf(v)===i).map(r=>`<option value="${esc(r)}">`).join('')}</datalist></div>
+      ${(()=>{const rs=RHYTHMS.map(x=>x[0]).concat(distinct('rhythm')).filter((v,i,a)=>v&&a.indexOf(v)===i);const ms=METERS.concat(distinct('timeSig')).filter((v,i,a)=>v&&a.indexOf(v)===i);
+        const um=usualMeter(s.rhythm);
+        return `<div class="field span2 half"><label for="edRhythm">Ρυθμός</label><select id="edRhythm" data-k="rhythm"><option value="">—</option>${rs.map(r=>`<option ${s.rhythm===r?'selected':''}>${esc(r)}</option>`).join('')}<option value="__other">Άλλος…</option></select></div>
+        <div class="field span2 half"><label for="edMeter">Μέτρο</label><select id="edMeter" data-k="timeSig"><option value="">—</option>${ms.map(m=>`<option ${s.timeSig===m?'selected':''}>${esc(m)}</option>`).join('')}<option value="__other">Άλλο…</option></select>
+          <div class="hint" id="edMeterHint">${um&&s.timeSig!==um?`Συνήθως ${esc(um)}`:''}</div></div>`})()}
       <div class="field span6"><label for="edNotes">Σημειώσεις τραγουδιού</label><input id="edNotes" data-k="notes" value="${esc(s.notes)}" placeholder="π.χ. αργά στην αρχή, κάπο στο 2"></div>
       ${(()=>{const L=E.listIt,c=L&&Store.cols.get(L.colId);if(!c)return '';
         return `<div class="fsec span6 lst">Μόνο στη «${esc(c.name)}» <span>· το τραγούδι στις άλλες λίστες δεν αλλάζει</span></div>
@@ -2301,7 +2309,11 @@ function editorInput(e){
   const k=t.dataset.k;if(!k) return;
   E.dirty=true;edDirty();
   if(k==='key'){E.draft.key=t.value;E.touchedKey=true}
+  else if((k==='rhythm'||k==='timeSig')&&t.value==='__other'){
+    const v=(window.prompt(k==='rhythm'?'Ρυθμός:':'Μέτρο (π.χ. 9/8):','')||'').trim();
+    if(v){if(![...t.options].some(o=>o.value===v)){const o=new Option(v,v);t.add(o,t.options[t.options.length-1])}t.value=v;E.draft[k]=v}else t.value=E.draft[k]||''}
   else E.draft[k]=t.value;
+  if(k==='rhythm'||k==='timeSig'){const h=$('#edMeterHint'),um=usualMeter(E.draft.rhythm);if(h)h.textContent=um&&(E.draft.timeSig||'')!==um?'Συνήθως '+um:''}
 }
 function editorPaste(e){
   const E=S.edit;if(!E||e.target.id!=='edBody') return;
@@ -3401,13 +3413,12 @@ window.addEventListener('resize',closeCtx);
 const tileHue=t=>{let h=0;for(const ch of String(t))h=(h*31+ch.codePointAt(0))>>>0;return h%360};
 function categoryTiles(){
   const by=new Map();let none=0;const g=new Map();
-  for(const s of Store.songs.values()){const r=String(s.rhythm||'').trim();if(r)by.set(r,(by.get(r)||0)+1);else none++;for(const x of s.genres||[])g.set(x,(g.get(x)||0)+1)}
-  if(!by.size&&!g.size)return '';
+  for(const s of Store.songs.values()){const r=String(s.rhythm||'').trim();if(r)by.set(r,(by.get(r)||0)+1);else none++;}
+  if(!by.size)return '';
   const tile=(f,v,label,n)=>`<button class="tile" data-act="browse" data-f="${f}" data-v="${esc(v)}" style="--h:${tileHue(label)}"><b>${esc(label)}</b><span>${n}</span></button>`;
   const rh=[...by].sort((a,b)=>b[1]-a[1]||collator.compare(a[0],b[0]));
-  const gs=[...g].sort((a,b)=>b[1]-a[1]||collator.compare(a[0],b[0]));
   return `<div class="slab">Ρυθμοί</div><div class="tiles">${rh.map(([v,n])=>tile('rhythm',v,v,n)).join('')}${none?tile('rhythm','__none','Χωρίς ρυθμό',none):''}</div>
-    ${gs.length?`<div class="slab">Είδη</div><div class="tiles">${gs.map(([v,n])=>tile('genre',v,v,n)).join('')}</div>`:''}`;
+`;
 }
 // the bar under a category's title: how many, and what to do with them
 function drawBrowseBar(arr){
