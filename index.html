@@ -3231,7 +3231,9 @@ document.addEventListener('pointerdown',e=>{
 document.addEventListener('pointermove',e=>{
   if(!colDrag)return;const [mn,mx]=COLW[colDrag.which];
   // the song column always keeps at least 420px
-  const others=colDrag.which==='side'?($('#listPane').offsetParent?$('#listPane').getBoundingClientRect().width:0):($('#side').offsetParent&&!colDrag.m?$('#side').getBoundingClientRect().width:0);
+  // the list column counts as «other» only when the song column is there too (on the Lists screen it is the stretchy one)
+  const three=!!$('#detail').offsetParent;
+  const others=colDrag.which==='side'?(three&&$('#listPane').offsetParent?$('#listPane').getBoundingClientRect().width:0):($('#side').offsetParent&&!colDrag.m?$('#side').getBoundingClientRect().width:0);
   const room=innerWidth-others-(document.body.dataset.home&&colDrag.which==='side'?320:420);
   const w=Math.round(Math.max(mn,Math.min(mx,room,colDrag.w0+e.clientX-colDrag.x0)));
   if(colDrag.which==='side')prefs.sidew=w;else if(colDrag.m)prefs.listwm=w;else prefs.listw=w;
