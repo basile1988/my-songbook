@@ -135,8 +135,8 @@ body.perf #detail{display:block!important}
 .search .clr{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:34px;height:34px}
 .filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .filters::-webkit-scrollbar{display:none}
-.sel{appearance:none;-webkit-appearance:none;height:32px;border-radius:999px;border:1px solid var(--line2);background:var(--raise) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237d8594' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;padding:0 28px 0 12px;font-size:13.5px;flex:none;max-width:170px}
-.sel.on{border-color:var(--accent);color:var(--accent);background-color:var(--accent-weak)}
+select.sel{appearance:none;-webkit-appearance:none;height:32px;border-radius:999px;border:1px solid var(--line2);background:var(--raise) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237d8594' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;padding:0 28px 0 12px;font-size:13.5px;flex:none;max-width:170px}
+select.sel.on{border-color:var(--accent);color:var(--accent);background-color:var(--accent-weak)}
 .seg{display:inline-flex;border:1px solid var(--line2);border-radius:9px;padding:2px;background:var(--surface);flex:none}
 .seg button{border:0;background:none;border-radius:7px;padding:5px 10px;font-size:13px;color:var(--muted);min-height:30px}
 .seg button.on{background:var(--raise);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
@@ -546,8 +546,8 @@ html[data-eff=dark] #listPane{border-right:1px solid var(--line)}
 @media (hover:hover) and (pointer:fine){.search input:hover{box-shadow:inset 0 0 0 1px var(--muted)}}
 .search input:focus{box-shadow:inset 0 0 0 2px var(--text)}
 .search svg{left:14px}
-.sel{border:0;background-color:var(--raise);box-shadow:inset 0 0 0 1px var(--line2);font-weight:600;height:34px}
-.sel.on{background-color:var(--text);color:var(--bg);box-shadow:none}
+select.sel{border:0;background-color:var(--raise);box-shadow:inset 0 0 0 1px var(--line2);font-weight:600;height:34px}
+select.sel.on{background-color:var(--text);color:var(--bg);box-shadow:none}
 .seg{border:0;border-radius:9999px;background:var(--raise);padding:3px}
 .seg button{border-radius:9999px;font-weight:600}
 .seg button.on{background:var(--text);color:var(--bg);box-shadow:none}
@@ -903,6 +903,16 @@ html:not([data-eff=dark]) .dlg,html:not([data-eff=dark]) .cmenu,html:not([data-e
 .cardgrid .lcard.dropbefore{box-shadow:inset 3px 0 0 var(--accent)}
 .cardgrid .lcard.dropafter{box-shadow:inset -3px 0 0 var(--accent)}
 .lcard.lifted,.frow.lifted{transform:scale(1.02);box-shadow:var(--shadow-hi,0 12px 30px rgba(0,0,0,.4));z-index:3;transition:transform .15s var(--ease-out),box-shadow .15s ease}
+/* editing a list in a narrow column (3 columns on a laptop, or a phone): the title keeps its room */
+#list{container-type:inline-size}
+.list.editing .row .tt{overflow-wrap:anywhere}
+@container (max-width:420px){
+  .list.editing .row{gap:6px;padding-left:8px;padding-right:8px}
+  .list.editing .row .num{width:auto;min-width:14px}
+  .list.editing .row .keyb{min-width:0;padding:3px 6px}
+}
+/* with a mouse the whole row drags, so the handle and ▲▼ can go when the column is narrow */
+@media (hover:hover) and (pointer:fine){@container (max-width:420px){.list.editing .row .handle,.list.editing .row .mvbtns{display:none}}}
 </style>
 </head>
 <body data-size="l" data-pane="list">
