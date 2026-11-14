@@ -2053,6 +2053,7 @@ function renderRows(){
       <div class="nmw">${col&&col.ordered?`<span class="num">${num}</span>`:''}
       <div class="main"><div class="tt">${esc(s.title||'Χωρίς τίτλο')}</div>${it&&it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${esc([s.artist,!col&&inLists.get(s.id)?`σε ${inLists.get(s.id)} λίστ${inLists.get(s.id)===1?'α':'ες'}`:''].filter(Boolean).join(' · '))}${(s.lines||[]).length?`<span class="lymark">${ic('music','sm')}στίχοι</span>`:''}</div></div></div>
       ${it&&col&&!S.reorder?`<button class="keyb kpick ${k?'':'none'} ${it.key&&it.key!==s.key?'own':''}" data-act="keypick" data-col="${col.id}" data-item="${it.i}" aria-label="Τόνος ${esc(nm(k)||'κανένας')} · αλλαγή" title="Αλλαγή τόνου σε αυτή τη λίστα${it.key&&s.key&&it.key!==s.key?' · το τραγούδι είναι σε '+esc(nm(s.key)):''}">${esc(nm(k)||'—')}</button>`
+      :!col&&!picking?`<button class="keyb kpick ${k?'':'none'}" data-act="keypick" data-id="${s.id}" aria-label="Τόνος ${esc(nm(k)||'κανένας')} · αλλαγή" title="Αλλαγή τόνου">${esc(nm(k)||'—')}</button>`
       :`<span class="keyb ${k?'':'none'} ${it&&it.key&&it.key!==s.key?'own':''}" title="${it&&it.key&&s.key&&it.key!==s.key?'Σε αυτή τη λίστα · το τραγούδι είναι σε '+esc(s.key):''}">${esc(nm(k)||'—')}</span>`}
       ${S.reorder?ud(it&&it.i):it?`<button class="ibtn imenu" data-act="itemmenu" data-item="${it.i}" aria-label="Επιλογές τραγουδιού: ${esc(s.title||'')}" title="Επιλογές τραγουδιού">${ic('more','sm')}</button>`:`<button class="ibtn imenu" data-act="songctx" data-id="${s.id}" aria-label="Επιλογές τραγουδιού: ${esc(s.title||'')}" title="Επιλογές τραγουδιού">${ic('more','sm')}</button>`}
     </div>${it?gap(it.i):''}`}).join('');
@@ -2989,14 +2990,19 @@ const A={
     else if(S.songId!==id)openSong(id,[{s:id,it:null}],null,0);
     const s=Store.songs.get(id);if(s)openEditor(s)})},
   // tap the key in a list: a grid of keys; the choice is for this list only (like «Τόνος στη λίστα»)
+  // tap a key: a grid of keys. In a list → for this list only (like «Τόνος στη λίστα»);
+  // in «Τραγούδια» → the song's own key (with chords, they are rewritten in the new key; «Αναίρεση» brings them back)
   keypick(el){
-    const c=Store.cols.get(el.dataset.col),it=itemById(el.dataset.col,el.dataset.item),s=it&&Store.songs.get(it.s);if(!c||!s)return;
-    const cur=itemKey(it,s),D=`data-col="${c.id}" data-item="${it.i}"`;
-    const MAJ=['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'],MIN=['Cm','C#m','Dm','Ebm','Em','Fm','F#m','Gm','G#m','Am','Bbm','Bm'];
-    const b=k=>`<button class="kp ${k===cur?'on':''} ${k===s.key?'orig':''}" data-act="keyset" ${D} data-k="${k}" title="${k===s.key?'Ο τόνος του τραγουδιού':''}">${esc(nm(k))}</button>`;
-    const body=`<div class="kpgrid" role="group" aria-label="Μείζονες">${MAJ.map(b).join('')}</div><div class="kpgrid" role="group" aria-label="Ελάσσονες">${MIN.map(b).join('')}</div>
-      ${it.key&&s.key&&it.key!==s.key?`<button class="mitem" data-act="keyset" ${D} data-k="">${ic('undo')}<span><b>Όπως το τραγούδι · ${esc(nm(s.key))}</b></span></button>`:''}`;
-    const sub=`Μόνο στη «${esc(c.name)}»${s.key?` · το τραγούδι είναι σε ${esc(nm(s.key))}`:''}`;
+    let s,cur,D,sub,orig='';
+    if(el.dataset.id){s=Store.songs.get(el.dataset.id);if(!s)return;cur=s.key||'';D=`data-id="${s.id}"`;
+      sub=songHasChords(s)&&keyParts(baseKey(s))?'Ο τόνος του τραγουδιού · τα ακόρντα μεταφέρονται':'Ο τόνος του τραγουδιού'}
+    else{const c=Store.cols.get(el.dataset.col),it=itemById(el.dataset.col,el.dataset.item);s=it&&Store.songs.get(it.s);if(!c||!s)return;
+      cur=itemKey(it,s);orig=s.key||'';D=`data-col="${c.id}" data-item="${it.i}"`;
+      sub=`Μόνο στη «${esc(c.name)}»${s.key?` · το τραγούδι είναι σε ${esc(nm(s.key))}`:''}`;
+      if(it.key&&s.key&&it.key!==s.key)D+=' data-reset="1"'}
+    const b=k=>`<button class="kp ${k===cur?'on':''} ${k===orig?'orig':''}" data-act="keyset" ${D.replace(' data-reset="1"','')} data-k="${k}" title="${k===orig?'Ο τόνος του τραγουδιού':''}">${esc(nm(k))}</button>`;
+    const body=`<div class="kpgrid" role="group" aria-label="Μείζονες">${KP_MAJ.map(b).join('')}</div><div class="kpgrid" role="group" aria-label="Ελάσσονες">${KP_MIN.map(b).join('')}</div>
+      ${D.includes('data-reset')?`<button class="mitem" data-act="keyset" ${D.replace(' data-reset="1"','')} data-k="">${ic('undo')}<span><b>Όπως το τραγούδι · ${esc(nm(s.key))}</b></span></button>`:''}`;
     closeCtx();
     if(!fineMouse()){openModal(`<div class="mhead"><div class="main"><div class="tt">Τόνος · ${esc(s.title)}</div><div class="ar">${sub}</div></div><button class="ibtn" data-act="closeModal" aria-label="Κλείσιμο">${ic('x')}</button></div><div class="dbody kpbody">${body}</div>`);return}
     const m=document.createElement('div');m.id='cmenu';m.className='cmenu kpmenu';m.setAttribute('role','dialog');m.setAttribute('aria-label','Τόνος');
@@ -3007,8 +3013,19 @@ const A={
   },
   async keyset(el){
     closeCtx();if(!$('#modal').hidden&&$('#modal .kpbody'))closeModal();
+    const k=el.dataset.k;
+    if(el.dataset.id){ // the song's own key
+      const s=Store.songs.get(el.dataset.id);if(!s||!k||k===s.key)return;
+      const prev=clone(s),ns=clone(s),bk=baseKey(s),n=songHasChords(s)&&keyParts(bk)&&keyParts(k)?keyShift(bk,k):0;
+      if(n){const flat=preferFlat(s,n);ns.lines=ns.lines.map(L=>L.k==='l'?Object.assign({},L,{s:L.s.map(([c,t])=>[trChord(c,n,flat),t])}):L);S.tr[s.id]=0;
+        await Store.addVersion(prev).catch(()=>{})}
+      ns.key=k;
+      try{await Store.saveSong(ns)}catch(e){toast('Δεν αποθηκεύτηκε.');return}
+      renderRows();if(S.songId===s.id)renderDetail(true);
+      toast(`${s.title}: ${nm(k)}${n?' · τα ακόρντα μεταφέρθηκαν':''}`,{label:'Αναίρεση',fn:async()=>{const back=clone(prev);S.tr[s.id]=0;await Store.saveSong(back).catch(()=>toast('Δεν αποθηκεύτηκε.'));renderRows();if(S.songId===s.id)renderDetail(true)}});
+      return}
     const c=clone(Store.cols.get(el.dataset.col)||{});const it=itemsOf(c).find(x=>x.i===el.dataset.item);if(!it)return;
-    const s=Store.songs.get(it.s),k=el.dataset.k;const was=itemKey(it,s);
+    const s=Store.songs.get(it.s);const was=itemKey(it,s);
     if(!k||(s&&k===s.key))delete it.key;else it.key=k;
     if(itemKey(it,s)===was)return;
     delete S.tr['i:'+it.i];
