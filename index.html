@@ -1095,7 +1095,7 @@ function keyField(o){
   return `<div class="kfield" data-ph="${esc(o.ph||'—')}"><input type="hidden" ${o.attrs} value="${esc(v)}">`+
     `<button type="button" class="kfbtn ${v?'':'empty'}" data-act="kfopen" aria-expanded="false" aria-label="${esc(o.label||'Τόνος')}">${esc(v?nm(v):(o.ph||'—'))}</button>`+
     `<div class="kfgrid"><div class="kpgrid" role="group" aria-label="Μείζονες">${KP_MAJ.map(b).join('')}</div><div class="kpgrid" role="group" aria-label="Ελάσσονες">${KP_MIN.map(b).join('')}</div>`+
-    `<div class="kfmore"><button type="button" class="btn sm" data-act="kfset" data-k="">${esc(o.noneLabel||'Χωρίς τόνο')}</button><button type="button" class="btn sm" data-act="kfset" data-k="__other">Άλλος…</button></div></div></div>`;
+    `<div class="kfmore"><button type="button" class="btn sm" data-act="kfset" data-k="">${esc(o.noneLabel||'Χωρίς τόνο')}</button></div></div></div>`;
 }
 function kfSync(f){
   if(!f)return;const v=f.querySelector('input').value,btn=f.querySelector('.kfbtn');
@@ -2569,7 +2569,7 @@ function itemModal(colId,iid){
     <div class="dbody">
       <div class="muted" style="font-size:13.5px">Ισχύουν μόνο στη «${esc(c.name)}». Το τραγούδι στη βιβλιοθήκη δεν αλλάζει.</div>
       <div class="field kf"><label>Τόνος σε αυτή τη λίστα</label>${keyField({attrs:'id="iKey"',value:it.key||'',songKey:s.key,ph:s.key?'Όπως το τραγούδι · '+nm(s.key):'—',label:'Τόνος σε αυτή τη λίστα',noneLabel:s.key?'Όπως το τραγούδι · '+nm(s.key):'Χωρίς τόνο'})}
-        <div class="hint">${songHasChords(s)&&baseKey(s)?'Τα ακόρντα θα ανοίγουν μεταφερμένα σε αυτόν τον τόνο.':'Με «Άλλος…» γράφεις και ελεύθερα, π.χ. «Em/Fm».'}</div></div>
+        <div class="hint">${songHasChords(s)&&baseKey(s)?'Τα ακόρντα θα ανοίγουν μεταφερμένα σε αυτόν τον τόνο.':''}</div></div>
       <div class="field"><label for="iNote">Σημείωση σε αυτή τη λίστα</label><textarea id="iNote" rows="3" placeholder="π.χ. Ντουέτο · Μπαίνουμε από το ρεφρέν · Κλείνει και μπαίνει ρούμπα">${esc(it.note||'')}</textarea></div>
     </div>
     <div class="dfoot"><button class="btn" data-act="closeModal">Άκυρο</button><button class="btn primary" data-act="saveItem" data-col="${c.id}" data-item="${it.i}">Αποθήκευση</button></div>`,
@@ -3016,7 +3016,6 @@ const A={
     if(open){f.classList.add('open');el.setAttribute('aria-expanded','true');const g=f.querySelector('.kfgrid');requestAnimationFrame(()=>g.scrollIntoView({block:'nearest'}));
       const on=f.querySelector('.kp.on');if(on)on.focus({preventScroll:true})}},
   kfset(el){const f=el.closest('.kfield'),inp=f.querySelector('input');let k=el.dataset.k;
-    if(k==='__other'){const v=(window.prompt('Τόνος (π.χ. C/Am ή Em/Fm):',inp.value)||'').trim();if(!v)return;k=v.replace(/^H/,'B')}
     inp.value=k;kfSync(f);f.classList.remove('open');f.querySelector('.kfbtn').setAttribute('aria-expanded','false');f.querySelector('.kfbtn').focus({preventScroll:true});
     inp.dispatchEvent(new Event('input',{bubbles:true}));inp.dispatchEvent(new Event('change',{bubbles:true}))},
   async saveItem(el){
