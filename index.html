@@ -896,6 +896,13 @@ html:not([data-eff=dark]) .dlg,html:not([data-eff=dark]) .cmenu,html:not([data-e
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.dlg,.cmenu,.pop{background:var(--raise)!important}}
 @media (hover:hover) and (pointer:fine){.list .row[data-item],.list .row[data-act=open]{cursor:default}body.dragging-rows .row{transition:none}}
 .row.lifted{transform:scale(1.02);background:var(--raise);box-shadow:var(--shadow-hi,0 12px 30px rgba(0,0,0,.4));z-index:3;transition:transform .15s var(--ease-out),box-shadow .15s ease}
+/* lists being reordered: where the dragged one will land */
+.lcard.dragging,.frow.dragging{opacity:.45}
+.lcard.dropbefore,.frow.dropbefore{box-shadow:inset 0 3px 0 var(--accent)}
+.lcard.dropafter,.frow.dropafter{box-shadow:inset 0 -3px 0 var(--accent)}
+.cardgrid .lcard.dropbefore{box-shadow:inset 3px 0 0 var(--accent)}
+.cardgrid .lcard.dropafter{box-shadow:inset -3px 0 0 var(--accent)}
+.lcard.lifted,.frow.lifted{transform:scale(1.02);box-shadow:var(--shadow-hi,0 12px 30px rgba(0,0,0,.4));z-index:3;transition:transform .15s var(--ease-out),box-shadow .15s ease}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -1695,13 +1702,16 @@ function distinct(field){const s=new Set();for(const x of Store.songs.values()) 
 function colTree(opts={}){
   const cols=[...Store.cols.values()].sort((a,b)=>collator.compare(a.name,b.name));
   const by=new Map();cols.forEach(c=>{const p=c.parent&&Store.cols.has(c.parent)?c.parent:'';if(!by.has(p))by.set(p,[]);by.get(p).push(c)});
+  for(const [k,v] of by)if(k)v.sort(byPos);
   // top level: newest season first, archived ones last (same order as the Lists screen)
   if(by.has(''))by.get('').sort((a,b)=>(isArchived(a)-isArchived(b))||(seasonYear(b)-seasonYear(a))||(lastTouch(b)-lastTouch(a))||collator.compare(a.name,b.name));
   const closed=new Set(opts.collapsed?prefs.closed||[]:[]);
   const out=[];const walk=(p,d,seen)=>{(by.get(p)||[]).forEach(c=>{if(seen.has(c.id))return;seen.add(c.id);const kids=(by.get(c.id)||[]).length;out.push({c,d,kids});if(!closed.has(c.id))walk(c.id,d+1,seen)})};
   walk('',0,new Set());return out;
 }
-const childrenOf=id=>[...Store.cols.values()].filter(c=>c.parent===id).sort((a,b)=>collator.compare(a.name,b.name));
+// lists in a folder: in the order they were arranged («pos»), the ones never moved after them A–Ω
+const byPos=(a,b)=>((a.pos??1e9)-(b.pos??1e9))||collator.compare(a.name,b.name);
+const childrenOf=id=>[...Store.cols.values()].filter(c=>c.parent===id).sort(byPos);
 // a folder holds lists, not songs: it gets its own view
 const isFolder=c=>!!c&&(!!c.folder||childrenOf(c.id).length>0&&!songItems(c).length);
 
@@ -1845,7 +1855,7 @@ function renderHome(pane){
   const r=lastPlayed();const closed=new Set(prefs.closed||[]);
   const tops=[...Store.cols.values()].filter(c=>!c.parent||!Store.cols.has(c.parent))
     .sort((a,b)=>(seasonYear(b)-seasonYear(a))||(lastTouch(b)-lastTouch(a))||collator.compare(a.name,b.name));
-  const folders=tops.filter(c=>isFolder(c)&&!isArchived(c)),loose=tops.filter(c=>!isFolder(c)&&!isArchived(c)),arch=tops.filter(isArchived);
+  const folders=tops.filter(c=>isFolder(c)&&!isArchived(c)),loose=tops.filter(c=>!isFolder(c)&&!isArchived(c)).sort(byPos),arch=tops.filter(isArchived);
   // archived folders start folded: for them the remembered token means «opened» instead of «closed»
   const folderBlock=(f,d=0,forceClosed)=>{const kids=childrenOf(f.id),open=forceClosed?closed.has('o:'+f.id):!closed.has(f.id);
     return `<section class="hfold ${isArchived(f)?'arch':''}">
@@ -3285,7 +3295,7 @@ document.addEventListener('pointerdown',e=>{
 });
 // a row that was dragged must not also open when the mouse is let go
 let dragEndAt=0;
-document.addEventListener('click',e=>{if(Date.now()-dragEndAt<350&&e.target.closest('#list,#side')){e.stopPropagation();e.preventDefault()}},true);
+document.addEventListener('click',e=>{if(Date.now()-dragEndAt<350&&e.target.closest('#listPane,#side')){e.stopPropagation();e.preventDefault()}},true);
 document.addEventListener('pointermove',e=>{
   if(!drag||e.pointerId!==drag.pid) return;
   if(!drag.moved){if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<(drag.soft?6:4))return;drag.moved=true;document.body.classList.add('dragging-rows');
@@ -3546,11 +3556,17 @@ document.addEventListener('touchstart',e=>{
   const m=menuTarget(e.target);if(!m)return;const p=e.touches[0];lp.x=p.clientX;lp.y=p.clientY;
   const row=e.target.closest('#list .row[data-item]:not(.secrow)'),col=colOf(S.sec);
   const movable=!!(row&&col&&col.ordered&&!S.q&&!S.pick);
+  const card=!movable&&e.target.closest(CARD_SEL),cardOk=!!(card&&cardSiblings(card).length>1);
   lp.t=setTimeout(()=>{lp.fired=true;try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}
-    if(movable){lp.lift={row,m,col:col.id};row.classList.add('lifted')}else openMenu(m[0],m[1],null)},450);
+    if(movable){lp.lift={row,m,col:col.id};row.classList.add('lifted')}
+    else if(cardOk){lp.liftCard={el:card,m};card.classList.add('lifted')}
+    else openMenu(m[0],m[1],null)},450);
 },{passive:true});
 document.addEventListener('touchmove',e=>{
   const p=e.touches[0];if(!p)return;
+  if(lp.liftCard){if(e.cancelable)e.preventDefault();
+    if(!cdrag){if(Math.hypot(p.clientX-lp.x,p.clientY-lp.y)<8)return;lp.liftCard.el.classList.remove('lifted');cardDragStart(lp.liftCard.el,true)}
+    cardDragMove(p.clientX,p.clientY);return}
   if(!lp.lift){if(Math.hypot(p.clientX-lp.x,p.clientY-lp.y)>10)clearTimeout(lp.t);return}
   // a lifted song: the page doesn't scroll, the song follows the finger
   if(e.cancelable)e.preventDefault();
@@ -3565,9 +3581,10 @@ document.addEventListener('touchmove',e=>{
 document.addEventListener('touchend',e=>{
   clearTimeout(lp.t);
   if(lp.lift){const L=lp.lift;liftEnd();if(drag&&drag.touch)endDrag(true);else openMenu(L.m[0],L.m[1],null)}
+  if(lp.liftCard){const L=lp.liftCard;lp.liftCard=null;L.el.classList.remove('lifted');if(cdrag)cardDragEnd(true);else openMenu(L.m[0],L.m[1],null)}
   if(lp.fired&&e.cancelable)e.preventDefault();
 },{passive:false});
-document.addEventListener('touchcancel',()=>{clearTimeout(lp.t);liftEnd();if(drag&&drag.touch)endDrag(false)});
+document.addEventListener('touchcancel',()=>{clearTimeout(lp.t);liftEnd();if(drag&&drag.touch)endDrag(false);if(lp.liftCard){lp.liftCard.el.classList.remove('lifted');lp.liftCard=null}if(cdrag)cardDragEnd(false)});
 // the click right after a long-press must not also open the row
 document.addEventListener('click',e=>{if(lp.fired){lp.fired=false;if(!e.target.closest('#modal')){e.stopPropagation();e.preventDefault()}}},true);
 document.addEventListener('scroll',()=>closeCtx(),true);
@@ -3606,6 +3623,46 @@ function addToListModal(ids){
     ${lists.map(c=>{const n=ids.filter(id=>hasSong(c,id)).length;return `<button class="mitem" data-act="browseaddto" data-col="${c.id}">${ic('listmusic')}<span><b>${esc(c.name)}</b><small>${songItems(c).length} τραγούδια${n?` · ${n===ids.length?'τα έχει ήδη όλα':`έχει ήδη ${n}`}`:''}</small></span></button>`}).join('')||'<div class="muted">Δεν υπάρχουν λίστες ακόμα.</div>'}
   </div>`);
 }
+
+/* ---- lists inside a folder (and the loose lists): change their order like songs ----
+   mouse: drag the card / row; touch: long-press, then drag (let go without moving = its menu). The new order is kept per list («pos»). */
+const CARD_SEL='.lcard[data-sec^="col:"],.frow[data-sec^="col:"]';
+const cardSiblings=el=>[...el.parentElement.children].filter(x=>x.matches(CARD_SEL));
+let cdrag=null,cpend=null;
+function cardDragStart(el,touch){
+  const sib=cardSiblings(el);if(sib.length<2)return false;
+  cdrag={el,sib,touch,target:null,after:false,box:el.closest('.list')};el.classList.add('dragging');document.body.classList.add('dragging-rows');return true;
+}
+function cardDragMove(x,y){
+  if(!cdrag)return;const others=cdrag.sib.filter(c=>c!==cdrag.el);let best=null,bd=1e9;
+  for(const c of others){const r=c.getBoundingClientRect();const d=Math.hypot(x-(r.left+r.width/2),(y-(r.top+r.height/2))*1.6);if(d<bd){bd=d;best=c}}
+  others.forEach(c=>c.classList.remove('dropbefore','dropafter'));if(!best)return;
+  const r=best.getBoundingClientRect(),sameRow=y>r.top&&y<r.bottom&&r.width<(cdrag.box?cdrag.box.clientWidth*.7:9999);
+  const after=sameRow?x>r.left+r.width/2:y>r.top+r.height/2;
+  best.classList.add(after?'dropafter':'dropbefore');cdrag.target=best;cdrag.after=after;
+  const b=cdrag.box;if(b){const bb=b.getBoundingClientRect();if(y<bb.top+48)b.scrollTop-=10;else if(y>bb.bottom-48)b.scrollTop+=10}
+}
+function cardDragEnd(apply){
+  const d=cdrag;cdrag=null;document.body.classList.remove('dragging-rows');if(!d)return;
+  d.el.classList.remove('dragging');d.sib.forEach(c=>c.classList.remove('dropbefore','dropafter'));dragEndAt=Date.now();
+  if(!apply||!d.target)return;
+  const me=d.el.dataset.sec.slice(4),ids=d.sib.map(c=>c.dataset.sec.slice(4)).filter(i=>i!==me);
+  let k=ids.indexOf(d.target.dataset.sec.slice(4));if(k<0)return;if(d.after)k++;ids.splice(k,0,me);
+  // every list of the folder gets its place (they all land in one commit)
+  ids.forEach((id,n)=>{const c=Store.cols.get(id);if(c&&c.pos!==n*10){const x=clone(c);x.pos=n*10;Store.saveCol(x).catch(()=>toast('Δεν αποθηκεύτηκε η σειρά.'))}});
+}
+document.addEventListener('pointerdown',e=>{
+  if(e.button>0||e.pointerType!=='mouse'||!fineMouse())return;
+  const el=e.target.closest(CARD_SEL);if(!el||e.target.closest('button,a,input'))return;
+  cpend={el,x:e.clientX,y:e.clientY,pid:e.pointerId};
+});
+document.addEventListener('pointermove',e=>{
+  if(cpend&&!cdrag&&e.pointerId===cpend.pid){if(Math.hypot(e.clientX-cpend.x,e.clientY-cpend.y)<6)return;
+    if(cardDragStart(cpend.el,false)){try{cpend.el.setPointerCapture(cpend.pid)}catch(_){}try{getSelection().removeAllRanges()}catch(_){}}else{cpend=null;return}}
+  if(cdrag&&!cdrag.touch)cardDragMove(e.clientX,e.clientY);
+});
+document.addEventListener('pointerup',()=>{if(cdrag&&!cdrag.touch)cardDragEnd(true);cpend=null});
+document.addEventListener('pointercancel',()=>{if(cdrag&&!cdrag.touch)cardDragEnd(false);cpend=null});
 </script>
 </body>
 </html>
