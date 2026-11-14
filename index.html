@@ -2308,14 +2308,14 @@ function openEditor(song,preset){
   if(document.body.dataset.size!=='l') setPane('detail');
   document.body.classList.add('editing');
   renderEditor();
-  setTimeout(()=>{const f=song?null:document.getElementById(preset&&preset.title||document.body.dataset.size==='s'?'edBody':'edTitle');if(f)f.focus({preventScroll:true})},50);
+  setTimeout(()=>{const f=song?null:document.getElementById(preset&&preset.title?'edBody':'edTitle');if(f)f.focus({preventScroll:true})},50);
 }
 function renderEditor(){
   const E=S.edit,s=E.draft,d=$('#detail');
   const genres=allGenres();
   d.innerHTML=`<div class="ed">
     <div class="dtop"><button class="ibtn back" data-act="cancelEdit" aria-label="Πίσω">${ic('left')}</button><h1>${E.id?'Επεξεργασία τραγουδιού':'Νέο τραγούδι'}</h1></div>
-    <div class="edcols ${document.body.dataset.size==='s'?'pastefirst':''}">
+    <div class="edcols">
     <div class="fgrid">
       ${E.listIt?`<div class="fsec span6">Τραγούδι <span>· ισχύουν παντού</span></div>`:''}
       <div class="field span3"><label for="edTitle">Τίτλος</label><input id="edTitle" data-k="title" value="${esc(s.title)}" placeholder="π.χ. Φραγκοσυριανή" autocomplete="off"></div>
@@ -3188,6 +3188,8 @@ document.addEventListener('click',e=>{
   if(el){
     if(el.closest('.handle')) return;
     const f=A[el.dataset.act];
+    // a choice in a menu sheet (phone/tablet): the sheet closes first, whatever the choice does next
+    if(f&&el.classList.contains('mitem')&&el.closest('#modal .menulist[role=menu]'))closeModal();
     if(f){e.preventDefault();f(el,e)}
     return;
   }
