@@ -4,7 +4,8 @@
    - Icons and manifest: saved copy first.
    - Everything else (the GitHub API) is never touched here:
      the app keeps its own copy of the songs and queues changes until it is back online. */
-const CACHE = 'msb-shell-v2'; // v2: new icons
+const CACHE = 'msb-shell-v3'; // v3: the Commissioner font is kept for offline use
+const FONTS = 'msb-fonts-v1';  // Google Fonts (css + files): kept after the first load, so the app looks the same offline
 const SHELL = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon.png'];
 
 self.addEventListener('install', e => {
@@ -13,7 +14,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith('msb-shell-') && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => (k.startsWith('msb-shell-') && k !== CACHE) || (k.startsWith('msb-fonts-') && k !== FONTS)).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -28,6 +29,15 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  // the font: the saved copy first (instant, offline), refreshed in the background
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    e.respondWith(caches.open(FONTS).then(async cache => {
+      const hit = await cache.match(req);
+      const net = fetch(req).then(r => { if (r.ok || r.type === 'opaque') cache.put(req, r.clone()); return r; }).catch(() => hit);
+      return hit || net;
+    }));
+    return;
+  }
   if (url.origin !== location.origin) return;
 
   const scope = new URL(self.registration.scope);

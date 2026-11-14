@@ -8,6 +8,9 @@
 <meta name="color-scheme" content="dark light">
 <title>My Songbook</title>
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700;800&display=swap">
 <link rel="icon" type="image/png" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -507,7 +510,8 @@ html[data-eff=dark],body.perf #detail,body.perf .pbar,body.perf .pnext,body.perf
   --chord:#6fb1ff;--danger:#f3727f;--danger-weak:#3a1d21;--ok:#1ed760;--note:#ffa42b;
   --shadow:0 8px 8px rgba(0,0,0,.3);--shadow-hi:0 8px 24px rgba(0,0,0,.5);
 }
-body{font-family:"Helvetica Neue",Helvetica,Arial,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;line-height:1.4}
+body{font-family:"Commissioner",system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;line-height:1.4}
+button,input,select,textarea{font-family:inherit}
 html[data-eff=dark] #side{border-right:0}
 html[data-eff=dark] #listPane{border-right:1px solid var(--line)}
 
@@ -856,6 +860,40 @@ html:not([data-eff=dark]) .tile{background:hsl(var(--h) 55% 86%);color:#16181d}
 .browsebar.picking .btn.sm{padding:0 10px}
 @media (max-width:759px){.fgrid .half{grid-column:span 1}}
 .chip.rhy{font-weight:700;color:var(--text)}
+/* ---- editing a list: choose, drag, the bar at the bottom ---- */
+.ibtn.edtog.on{background:var(--accent);color:var(--accent-ink)}
+.row .selbox{flex:none;width:24px;height:24px;border-radius:6px;border:2px solid var(--line2);background:none;display:grid;place-items:center;color:transparent;padding:0;cursor:pointer}
+.row .selbox svg.i{width:14px;height:14px}
+.row .selbox.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.row .selbox.pack{width:20px;height:20px;border-radius:5px}
+.row.sel{background:var(--accent-weak)}
+.row.sel .selbox{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.selbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.selbar[hidden]{display:none}
+.selbar .bcount{flex:1 1 100%;font-size:13.5px;font-weight:600}
+@media (min-width:760px){.selbar .bcount{flex:1 1 auto}}
+.selbar .btn.danger{color:var(--danger)}
+/* the handle: on a laptop it shows when the mouse is over the row; on touch, in edit mode, on the right for the thumb */
+@media (hover:hover) and (pointer:fine){.list:not(.editing) .row .handle{opacity:0;transition:opacity .12s ease}.list .row:hover .handle,.list .row .handle:focus-visible{opacity:1}}
+@media (pointer:coarse){.list.editing .row .handle{order:20;margin:0 -4px 0 0;width:40px}.list.editing .row .mvbtns{order:19}}
+.row.dragging{opacity:.45;background:var(--raise)}
+body.dragging-rows,body.dragging-rows *{cursor:grabbing!important;user-select:none!important}
+#dropline{position:fixed;height:2px;border-radius:2px;background:var(--accent);z-index:70;pointer-events:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+#dropline[hidden]{display:none}
+.navitem.droptarget{background:var(--accent)!important;color:var(--accent-ink)!important}
+.navitem.droptarget .cnt{color:var(--accent-ink)}
+/* toast with «Αναίρεση» */
+#toast.act{pointer-events:auto;display:flex;align-items:center;gap:12px}
+#toast .tbtn{border:0;background:none;color:inherit;font:inherit;font-weight:800;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:4px 2px}
+/* ---- liquid glass: dialogs, sheets, menus and stage panels let what is behind show through, blurred ---- */
+.dlg,.cmenu,.pop,.modalghost .dlg{background:color-mix(in srgb,var(--raise) 64%,transparent)!important;-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid rgba(255,255,255,.10);box-shadow:0 24px 64px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.12)}
+html:not([data-eff=dark]) .dlg,html:not([data-eff=dark]) .cmenu,html:not([data-eff=dark]) .modalghost .dlg{background:rgba(255,255,255,.68)!important;border-color:rgba(0,0,0,.08);box-shadow:0 24px 64px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.8)}
+#modal .scrim{background:rgba(0,0,0,.30)}
+.modalghost .scrim{background:rgba(0,0,0,.30)}
+.cmenu .mitem:hover,.dlg .mitem:hover{background:color-mix(in srgb,var(--text) 9%,transparent)}
+/* where the browser can't blur, a solid background (still readable) */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.dlg,.cmenu,.pop{background:var(--raise)!important}}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -935,7 +973,12 @@ const fmtDate=t=>new Date(t).toLocaleString('el-GR',{day:'numeric',month:'short'
 const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 let toastT;
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600)}
+let toastAction=null;
+// toast(msg) or toast(msg,{label:'Αναίρεση',fn}) → a button on it, a little longer on screen
+function toast(msg,act){const t=$('#toast');toastAction=act?act.fn:null;
+  t.innerHTML=esc(msg)+(act?` <button class="tbtn" data-act="toastundo">${esc(act.label)}</button>`:'');t.classList.toggle('act',!!act);
+  t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(hideToast,act?6000:2600)}
+function hideToast(){const t=$('#toast');t.classList.remove('show','act');toastAction=null}
 
 /* =====================================================================
    CHORDS: recognise, transpose
@@ -1735,13 +1778,14 @@ function renderList(full=true){
         ${parent?`<button class="crumb" data-act="sec" data-sec="col:${parent.id}">${ic('left','sm')}${esc(parent.name)}</button>`:col?`<button class="crumb" data-act="sec" data-sec="home">${ic('left','sm')}Λίστες</button>`:S.browse?`<button class="crumb" data-act="browseoff">${ic('left','sm')}Τραγούδια</button>`:''}
         <div class="ltitle">${SIDETOG}
           <h2>${esc(sectionTitle())}</h2>
+          ${col&&col.ordered?`<button class="ibtn edtog ${S.reorder?'on':''}" data-act="${S.reorder?'reorderdone':'reorder'}" aria-pressed="${!!S.reorder}" title="Επεξεργασία λίστας" aria-label="Επεξεργασία λίστας">${ic('pencil')}</button>`:''}
           ${col?`<button class="ibtn" data-act="colmenu" title="Επιλογές λίστας" aria-label="Επιλογές λίστας">${ic('more')}</button>
                  <button class="playbtn" data-act="playcol" ${songItems(col).length?'':'disabled'} aria-label="Παίξιμο" title="Παίξιμο">${ic('play')}</button>`
               :S.browse?'':`<button class="btn primary sm" data-act="newsong">${ic('plus','sm')}Νέο τραγούδι</button>`}
         </div>
         ${!col&&S.browse?`<div class="browsebar" id="browseBar"></div>`:''}
         ${col&&col.notes?notesBox(col):''}
-        ${S.reorder?`<div class="reorderbar">${ic('pencil','sm')}<span>Επεξεργασία: «+» για προσθήκη, ▲▼ ή σύρσιμο για σειρά</span><button class="btn sm primary" data-act="reorderdone">Τέλος</button></div>
+        ${S.reorder?`<div class="reorderbar">${ic('pencil','sm')}<span>Σύρε από το ≡ για σειρά · τσέκαρε για αφαίρεση ή μετακίνηση · «+» για προσθήκη</span><button class="btn sm primary" data-act="reorderdone">Τέλος</button></div>
         ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}</div>`:''}`:`
         ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}</div>`:''}
         <div class="searchrow">
@@ -1756,7 +1800,8 @@ function renderList(full=true){
           ${!col&&S.sec!=='recent'?`<select class="sel" data-sort aria-label="Ταξινόμηση"><option value="title" ${S.sort==='title'?'selected':''}>Α–Ω τίτλος</option><option value="artist" ${S.sort==='artist'?'selected':''}>Καλλιτέχνης</option><option value="updated" ${S.sort==='updated'?'selected':''}>Τελευταίες αλλαγές</option></select>`:''}
         </div>`}`}
       </div>
-      <div class="list" id="list"></div>`;
+      <div class="list" id="list"></div>
+      <div class="selbar" id="selBar" hidden></div>`;
   }
   renderRows();
 }
@@ -1877,15 +1922,23 @@ function renderRows(){
   // in the library each row says in how many lists the song is
   const inLists=new Map();if(!col)for(const c of Store.cols.values())for(const x of itemsOf(c))if(x.s)inLists.set(x.s,(inLists.get(x.s)||0)+1);
   const filtered=S.q||(!col&&(S.f.genre||S.f.rhythm||S.f.key||S.f.artist));
-  const canDrag=col&&col.ordered&&!filtered&&S.reorder;
+  // drag: in an ordered list while editing, and always with a mouse (the handle shows on hover);
+  // in «Τραγούδια» a mouse can drag a song onto a list in the sidebar
+  const fine=fineMouse();
+  const canDrag=col&&col.ordered&&!filtered&&(S.reorder||fine);
+  const songDrag=!col&&fine&&!S.pick;
+  if(!(col&&col.ordered))S.sel=null;
+  const selOn=!!(col&&col.ordered&&(S.reorder||(S.sel&&S.sel.size)));
   const cue=false; // one kind of list: the stage always opens the title–key list
   el.classList.toggle('cue',!!cue);
   if(!arr.some(e=>e.s)&&!(col&&arr.length)){el.innerHTML=emptyList(col,filtered);return}
   const curIt=S.ctx&&S.ctx.colId===(col&&col.id)?ctxEntry()?.it:null;
-  const handle=id=>canDrag?`<button class="handle" data-drag="${id}" aria-label="Μετακίνηση" title="Σύρε για αλλαγή σειράς · Alt+↑/↓">${ic('grip','sm')}</button>`:'';
+  const handle=(id,sid)=>canDrag&&id?`<button class="handle" data-drag="${id}" aria-label="Μετακίνηση" title="Σύρε για αλλαγή σειράς · Alt+↑/↓">${ic('grip','sm')}</button>`
+    :songDrag&&sid?`<button class="handle" data-drag-song="${sid}" aria-label="Σύρε σε λίστα" title="Σύρε σε μια λίστα αριστερά">${ic('grip','sm')}</button>`:'';
+  const selBox=(id,title)=>S.reorder&&id?`<button class="selbox ${S.sel&&S.sel.has(id)?'on':''}" data-act="seltoggle" data-item="${id}" role="checkbox" aria-checked="${!!(S.sel&&S.sel.has(id))}" aria-label="Επιλογή: ${esc(title)}">${ic('check','sm')}</button>`:'';
   let pos=0,num=0;
   // «+ Πρόσθεσε» between rows: on a laptop it shows on hover, on touch in «Επεξεργασία λίστας»
-  const canIns=col&&col.ordered&&!filtered;
+  const canIns=col&&col.ordered&&!filtered&&S.reorder;
   const gap=after=>canIns?`<div class="insgap" data-act="insat" data-after="${after}" role="button" tabindex="-1" aria-label="Πρόσθεσε εδώ"><span>${ic('plus','sm')}Πρόσθεσε εδώ</span></div>`:'';
   const ud=id=>S.reorder&&id?`<span class="mvbtns"><button class="ibtn" data-act="mvup" data-item="${id}" aria-label="Μία θέση πάνω">${ic('up','sm')}</button><button class="ibtn" data-act="mvdn" data-item="${id}" aria-label="Μία θέση κάτω">${ic('down','sm')}</button></span>`:'';
   el.classList.toggle('editing',!!S.reorder);
@@ -1898,18 +1951,20 @@ function renderRows(){
     if(top)top+=`<div class="slab">Όλα · ${arr.length}</div>`;
   }
   el.innerHTML=top+gap('')+arr.map(e=>{
-    if(e.sec){num=0;return `<div class="row secrow" data-item="${e.sec.i}">${handle(e.sec.i)}<button class="sechead" data-act="editsec" data-item="${e.sec.i}"><span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}</button>${ud(e.sec.i)}</div>${gap(e.sec.i)}`}
+    if(e.sec){num=0;return `<div class="row secrow" data-item="${e.sec.i}">${S.reorder?`<button class="selbox pack" data-act="selpack" data-item="${e.sec.i}" aria-label="Επιλογή όλου του πακέτου">${ic('check','sm')}</button>`:''}${handle(e.sec.i)}<button class="sechead" data-act="editsec" data-item="${e.sec.i}"><span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}</button>${ud(e.sec.i)}</div>${gap(e.sec.i)}`}
     const s=e.s,it=e.it,k=itemKey(it,s),p=pos++;num++;
     const on=it?curIt===it.i&&S.songId===s.id:S.songId===s.id;
-    const picking=!col&&S.pick,picked=picking&&S.pick.has(s.id);
-    return `<div class="row ${on&&!picking?'on':''} ${picked?'picked':''}" data-act="${picking?'pickrow':S.reorder?'':'open'}" data-id="${s.id}" data-pos="${p}" ${it?`data-item="${it.i}"`:''} role="${picking?'checkbox':'button'}" ${picking?`aria-checked="${picked}"`:''} tabindex="0">
+    const picking=!col&&S.pick,picked=picking&&S.pick.has(s.id),sel=!!(it&&S.sel&&S.sel.has(it.i));
+    return `<div class="row ${on&&!picking&&!S.reorder?'on':''} ${picked?'picked':''} ${sel?'sel':''}" data-act="${picking?'pickrow':S.reorder&&it?'seltoggle':'open'}" data-id="${s.id}" data-pos="${p}" ${it?`data-item="${it.i}"`:''} role="${picking?'checkbox':'button'}" ${picking?`aria-checked="${picked}"`:''} tabindex="0">
       ${picking?`<span class="pickbox" aria-hidden="true">${picked?ic('check','sm'):''}</span>`:''}
-      ${handle(it?it.i:'')}
+      ${selBox(it&&it.i,s.title||'')}
+      ${handle(it?it.i:'',it?'':s.id)}
       ${col&&col.ordered?`<span class="num">${num}</span>`:''}
       <div class="main"><div class="tt">${esc(s.title||'Χωρίς τίτλο')}</div>${it&&it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${esc([s.artist,!col&&inLists.get(s.id)?`σε ${inLists.get(s.id)} λίστ${inLists.get(s.id)===1?'α':'ες'}`:''].filter(Boolean).join(' · '))}${(s.lines||[]).length?`<span class="lymark">${ic('music','sm')}στίχοι</span>`:''}</div></div>
       <span class="keyb ${k?'':'none'} ${it&&it.key&&it.key!==s.key?'own':''}" title="${it&&it.key&&s.key&&it.key!==s.key?'Σε αυτή τη λίστα · το τραγούδι είναι σε '+esc(s.key):''}">${esc(k||'—')}</span>
       ${S.reorder?ud(it&&it.i):it?`<button class="ibtn imenu" data-act="itemmenu" data-item="${it.i}" aria-label="Επιλογές τραγουδιού: ${esc(s.title||'')}" title="Επιλογές τραγουδιού">${ic('more','sm')}</button>`:`<button class="ibtn imenu" data-act="songctx" data-id="${s.id}" aria-label="Επιλογές τραγουδιού: ${esc(s.title||'')}" title="Επιλογές τραγουδιού">${ic('more','sm')}</button>`}
     </div>${it?gap(it.i):''}`}).join('');
+  drawSelBar(col);
 }
 function emptyList(col,filtered){
   if(filtered){
@@ -2432,19 +2487,21 @@ function itemModal(colId,iid){
     m=>{const h=e=>{if(e.key==='Enter'&&e.target.id==='iKey'){e.preventDefault();m.querySelector('[data-act=saveItem]').click()}};m.addEventListener('keydown',h);return()=>m.removeEventListener('keydown',h)});
 }
 // «Μετακίνηση…»: pick where this song goes — after another song (found by typing) or at the start of a pack
-function moveModal(colId,iid){
-  const c=Store.cols.get(colId),it=itemById(colId,iid),s=it&&Store.songs.get(it.s);if(!c||!s) return;
+function moveModal(colId,iid,group){
+  const c=Store.cols.get(colId),it=itemById(colId,iid),s=it&&Store.songs.get(it.s);if(!c||(!s&&!group)) return;
+  const skip=new Set(group||[iid]);
   const targets=[];let num=0;
-  for(const x of itemsOf(c)){if(x===it)continue;
+  for(const x of itemsOf(c)){if(skip.has(x.i))continue;
     if(x.sec!=null){num=0;targets.push({after:x.i,sec:true,label:secShort(x),hay:norm(x.sec+' '+(x.sub||''))});continue}
     const t=Store.songs.get(x.s);if(!t)continue;num++;targets.push({after:x.i,label:t.title,num,hay:norm(t.title+' '+(t.artist||''))})}
-  const row=t=>`<button class="mvrow ${t.sec?'sec':''}" data-act="moveto" data-col="${colId}" data-item="${iid}" data-after="${t.after}">${t.sec?`${ic('section','sm')}<span>Στην αρχή: <b>${esc(t.label)}</b></span>`:`<span class="n">${t.num}</span><span>μετά από <b>${esc(t.label)}</b></span>`}</button>`;
-  openModal(`${dhead('Μετακίνηση: «'+esc(s.title)+'»')}<div class="dbody" style="gap:8px">
+  const G=group?'data-group="1"':'';
+  const row=t=>`<button class="mvrow ${t.sec?'sec':''}" data-act="moveto" data-col="${colId}" data-item="${iid||''}" ${G} data-after="${t.after}">${t.sec?`${ic('section','sm')}<span>Στην αρχή: <b>${esc(t.label)}</b></span>`:`<span class="n">${t.num}</span><span>μετά από <b>${esc(t.label)}</b></span>`}</button>`;
+  openModal(`${dhead(group?`Μετακίνηση ${group.length} τραγουδιών`:'Μετακίνηση: «'+esc(s.title)+'»')}<div class="dbody" style="gap:8px">
     <div class="search">${ic('search')}<input id="mvQ" type="search" placeholder="Τίτλος ή πακέτο" autocomplete="off" enterkeyhint="search" autofocus aria-label="Βρες πού θα μπει"></div>
     <div id="mvList" class="mvlist"></div></div>`,m=>{
     const draw=()=>{const q=norm(($('#mvQ')||{}).value||'');const f=q?targets.filter(t=>t.hay.includes(q)):targets;
       const first=itemsOf(c)[0],top=!q&&!(first&&first.sec!=null);
-      $('#mvList').innerHTML=(top?`<button class="mvrow sec" data-act="moveto" data-col="${colId}" data-item="${iid}" data-after="">${ic('up','sm')}<span><b>Στην αρχή της λίστας</b></span></button>`:'')+(f.length?f.slice(0,120).map(row).join(''):'<p class="muted" style="margin:8px 12px">Δεν βρέθηκε.</p>')};
+      $('#mvList').innerHTML=(top?`<button class="mvrow sec" data-act="moveto" data-col="${colId}" data-item="${iid||''}" ${G} data-after="">${ic('up','sm')}<span><b>Στην αρχή της λίστας</b></span></button>`:'')+(f.length?f.slice(0,120).map(row).join(''):'<p class="muted" style="margin:8px 12px">Δεν βρέθηκε.</p>')};
     const h=e=>{if(e.target.id==='mvQ')draw()};m.addEventListener('input',h);setTimeout(draw,0);return()=>m.removeEventListener('input',h)});
 }
 // opts.before: a new section starts right before this item (instead of at the end)
@@ -2800,7 +2857,9 @@ const A={
     if(again&&t==='all')setTimeout(()=>{const q=$('#q');if(q)q.focus()},60)},
   resume(){const r=lastPlayed();if(!r)return;S.sec='col:'+r.col.id;renderSide();renderList(true);A.playcol()},
   opensong(el){const id=el.dataset.id;guardEdit(()=>openSong(id,[{s:id,it:null}],null,0))},
-  open(el){const col=colOf(S.sec),id=el.dataset.id,pos=+el.dataset.pos,list=playList();guardEdit(()=>openSong(id,list,col?col.id:null,pos))},
+  open(el,e){const col=colOf(S.sec),id=el.dataset.id,pos=+el.dataset.pos,list=playList();
+    if(e&&(e.ctrlKey||e.metaKey||e.shiftKey)&&col&&col.ordered&&el.dataset.item){selectClick(el.dataset.item,e.shiftKey);return}
+    guardEdit(()=>openSong(id,list,col?col.id:null,pos))},
   itemmenu(el){const colId=el.dataset.col||(colOf(S.sec)||{}).id;openMenu('item',{col:colId,item:el.dataset.item},el)},
   itemedit(el){itemModal(el.dataset.col,el.dataset.item)},
   browse(el){S.browse={f:el.dataset.f,v:el.dataset.v};S.pick=null;S.q='';renderList(true);const l=$('#list');if(l)l.scrollTop=0},
@@ -2844,10 +2903,11 @@ const A={
   mvup(el){flipMove(el.dataset.item,-1)},
   mvdn(el){flipMove(el.dataset.item,1)},
   moveitem(el){moveModal(el.dataset.col,el.dataset.item)},
-  async moveto(el){ // «Μετακίνηση…»: put the item right after the chosen target ('' = top of the list)
-    const c=clone(Store.cols.get(el.dataset.col));let items=itemsOf(c);const it=items.find(x=>x.i===el.dataset.item);if(!it)return;
-    items=items.filter(x=>x!==it);const k=el.dataset.after?items.findIndex(x=>x.i===el.dataset.after):-1;items.splice(k+1,0,it);c.items=items;
-    closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Μετακινήθηκε')},
+  async moveto(el){ // «Μετακίνηση…»: put the item(s) right after the chosen target ('' = top of the list), keeping their order
+    const c=clone(Store.cols.get(el.dataset.col));let items=itemsOf(c);
+    const ids=el.dataset.group?new Set(S.sel||[]):new Set([el.dataset.item]);const moving=items.filter(x=>ids.has(x.i));if(!moving.length)return;
+    items=items.filter(x=>!ids.has(x.i));const k=el.dataset.after?items.findIndex(x=>x.i===el.dataset.after):-1;items.splice(k+1,0,...moving);c.items=items;
+    closeModal();if(el.dataset.group)S.sel=new Set();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast(moving.length>1?`Μετακινήθηκαν ${moving.length}`:'Μετακινήθηκε')},
   editsec(el){const c=colOf(S.sec);if(c)secModal(c.id,el.dataset.item)},
   async saveSec(el){
     const name=$('#sName').value.trim();if(!name){$('#sName').focus();return}
@@ -2970,7 +3030,17 @@ const A={
   songmenu(el){if(S.songId)openMenu('song',{id:S.songId,open:1},el)},
   colmenu(el){const c=colOf(S.sec);if(c)openMenu('col',{col:c.id},el)},
   reorder(el){closeModal();if(el&&el.dataset.col&&S.sec!=='col:'+el.dataset.col){S.sec='col:'+el.dataset.col;renderSide();if(document.body.dataset.size==='s')setPane('list')}S.reorder=true;S.q='';S.f={genre:'',key:'',artist:''};renderList(true)},
-  reorderdone(){S.reorder=false;renderList(true)},
+  reorderdone(){S.reorder=false;S.sel=null;renderList(true)},
+  seltoggle(el,e){selectClick(el.dataset.item,!!(e&&e.shiftKey))},
+  // the pack's box: all its songs (again: none of them)
+  selpack(el){const c=colOf(S.sec);if(!c)return;const its=itemsOf(c);const k=its.findIndex(x=>x.i===el.dataset.item);if(k<0)return;
+    const ids=[];for(let j=k+1;j<its.length&&its[j].sec==null;j++)if(its[j].s)ids.push(its[j].i);
+    S.sel=S.sel||new Set();const all=ids.length&&ids.every(i=>S.sel.has(i));ids.forEach(i=>all?S.sel.delete(i):S.sel.add(i));renderRows()},
+  selall(){const c=colOf(S.sec);if(!c)return;const ids=songItems(c).map(x=>x.i);S.sel=S.sel&&S.sel.size===ids.length?new Set():new Set(ids);renderRows()},
+  selclear(){S.sel=S.reorder?new Set():null;renderRows()},
+  selmove(){const c=colOf(S.sec);if(!c||!S.sel||!S.sel.size)return;const g=itemsOf(c).filter(x=>S.sel.has(x.i)).map(x=>x.i);moveModal(c.id,g[0],g)},
+  selremove(){removeSelected()},
+  toastundo(){const f=toastAction;toastAction=null;hideToast();if(f)f()},
   jumpsec(el){const l=$('#list'),r=l&&l.querySelector(`.secrow[data-item="${el.dataset.item}"]`);if(!r)return;
     l.scrollTop+=r.getBoundingClientRect().top-l.getBoundingClientRect().top-4},
   cuejump(el){const c=Store.cols.get(S.ctx&&S.ctx.colId);if(!c)return;setCue(c.id,Math.min(+el.dataset.i,songItems(c).length-1));renderCueSheet()},
@@ -3116,6 +3186,8 @@ document.addEventListener('paste',editorPaste);
 document.addEventListener('keydown',e=>{
   const t=e.target;const typing=t.matches&&t.matches('input,textarea,select');
   if(t.id==='edNewGenre'&&e.key==='Enter'){e.preventDefault();const v=t.value.trim();if(v){addGenre(v);t.value='';const wrap=$('#edGenres');const b=document.createElement('button');b.type='button';b.className='tog on';b.dataset.act='tgGenre';b.dataset.g=v;b.textContent=v;wrap.insertBefore(b,t)}return}
+  if(e.key==='Escape'&&S.sel&&S.sel.size&&$('#modal').hidden&&!typing){S.sel=S.reorder?new Set():null;renderRows();return}
+  if((e.key==='Delete'||e.key==='Backspace')&&!typing&&$('#modal').hidden&&S.sel&&S.sel.size&&colOf(S.sec)){e.preventDefault();removeSelected();return}
   if(e.key==='Escape'){if(document.getElementById('cmenu')){closeCtx();return}if(popKind){closePop();return}if(!$('#modal').hidden){closeModal();return}if(S.perf&&S.returnTo){A.stageback();return}if(S.perf&&S.fromCue&&!S.cueMode){A.cueback();return}if(S.perf){exitPerf();return}if(S.edit){cancelEditor(false);return}}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&S.edit){e.preventDefault();saveEditor();return}
   const cmx=document.getElementById('cmenu');
@@ -3189,36 +3261,90 @@ function flipMove(id,delta){
     const d=top-e.getBoundingClientRect().top;if(Math.abs(d)>1)e.animate([{transform:`translateY(${d}px)`},{transform:'none'}],{duration:200,easing:'cubic-bezier(0.77, 0, 0.175, 1)'})}
 }
 let drag=null;
+/* ---- drag & drop ----
+   ≡ in a list: move the song (or all the ticked ones, together) to where the green line shows; the list scrolls at its edges.
+   ≡ in «Τραγούδια» (mouse): drop the song on a list in the sidebar to add it there (at the end).
+   A list in the sidebar is a target from a list too: the dragged songs are added there (not moved). */
+function dropLine(){let l=document.getElementById('dropline');if(!l){l=document.createElement('div');l.id='dropline';document.body.appendChild(l)}return l}
 document.addEventListener('pointerdown',e=>{
-  const h=e.target.closest('.handle');if(!h) return;
-  e.preventDefault();const row=h.closest('.row');const list=$('#list');
-  drag={id:h.dataset.drag,row,list,startY:e.clientY,offset:0,pid:e.pointerId};
-  row.classList.add('dragging');h.setPointerCapture(e.pointerId);
+  const h=e.target.closest('.handle');if(!h||e.button>0) return;
+  e.preventDefault();const row=h.closest('.row');const list=$('#list');const col=colOf(S.sec);
+  let ids=[],songs=[];
+  if(h.dataset.drag){ids=S.sel&&S.sel.has(h.dataset.drag)&&S.sel.size>1&&col?itemsOf(col).filter(x=>S.sel.has(x.i)).map(x=>x.i):[h.dataset.drag];
+    songs=col?ids.map(i=>(itemById(col.id,i)||{}).s).filter(Boolean):[]}
+  else if(h.dataset.dragSong){songs=[h.dataset.dragSong]}
+  drag={ids,songs,col:col&&col.id,row,list,pid:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false,before:undefined,side:null,onlySide:!h.dataset.drag};
+  h.setPointerCapture(e.pointerId);
 });
 document.addEventListener('pointermove',e=>{
   if(!drag||e.pointerId!==drag.pid) return;
-  const {row,list}=drag;
-  const rows=[...list.querySelectorAll('.row')].filter(r=>r!==row);
-  const y=e.clientY;
+  if(!drag.moved){if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<4)return;drag.moved=true;document.body.classList.add('dragging-rows');
+    const L=drag.list;drag.ids.forEach(i=>{const r=L.querySelector(`.row[data-item="${i}"]`);if(r)r.classList.add('dragging')});if(drag.onlySide&&drag.row)drag.row.classList.add('dragging')}
+  const {list}=drag,x=e.clientX,y=e.clientY,line=dropLine();
+  // over a list in the sidebar?
+  const over=document.elementFromPoint(x,y);const nav=over&&over.closest&&over.closest('#side .navitem[data-sec^="col:"]');
+  document.querySelectorAll('.navitem.droptarget').forEach(n=>n!==nav&&n.classList.remove('droptarget'));
+  if(nav&&drag.songs.length&&nav.dataset.sec!=='col:'+drag.col&&!isFolder(Store.cols.get(nav.dataset.sec.slice(4)))){nav.classList.add('droptarget');drag.side=nav.dataset.sec.slice(4);line.hidden=true;return}
+  drag.side=null;
+  if(drag.onlySide){line.hidden=true;return}
+  // where in the list: before the first row (song or pack) whose middle is below the pointer
+  const rows=[...list.querySelectorAll('.row[data-item]')].filter(r=>!drag.ids.includes(r.dataset.item));
   let before=null;for(const r of rows){const b=r.getBoundingClientRect();if(y<b.top+b.height/2){before=r;break}}
-  if(before!==row.nextSibling) list.insertBefore(row,before);
-  const lb=list.getBoundingClientRect();if(y<lb.top+40)list.scrollTop-=8;else if(y>lb.bottom-40)list.scrollTop+=8;
+  drag.before=before?before.dataset.item:null;
+  const lb=list.getBoundingClientRect(),ref=before?before.getBoundingClientRect():rows.length?rows[rows.length-1].getBoundingClientRect():lb;
+  const ly=before?ref.top:ref.bottom;
+  line.hidden=!(ly>=lb.top-2&&ly<=lb.bottom+2);line.style.left=(lb.left+8)+'px';line.style.width=(lb.width-16)+'px';line.style.top=(ly-1)+'px';
+  if(y<lb.top+48)list.scrollTop-=10;else if(y>lb.bottom-48)list.scrollTop+=10;
 });
-document.addEventListener('pointerup',e=>{
-  if(!drag||e.pointerId!==drag.pid) return;
-  const {row,list}=drag;row.classList.remove('dragging');
-  const order=[...list.querySelectorAll('.row[data-item]')].map(r=>r.dataset.item);drag=null;
-  const c=colOf(S.sec);if(!c) return;
-  const by=new Map(itemsOf(c).map(x=>[x.i,x]));
-  const n=clone(c);n.items=order.filter(i=>by.has(i)).map(i=>by.get(i)).concat(itemsOf(c).filter(x=>!order.includes(x.i)));
-  if(n.items.map(x=>x.i).join()!==itemsOf(c).map(x=>x.i).join()) Store.saveCol(n).catch(()=>toast('Δεν αποθηκεύτηκε η σειρά.'));
-  else renderRows();
-});
+function endDrag(apply){
+  const d=drag;drag=null;document.body.classList.remove('dragging-rows');const l=document.getElementById('dropline');if(l)l.hidden=true;
+  document.querySelectorAll('.navitem.droptarget').forEach(n=>n.classList.remove('droptarget'));
+  if(!d)return;if(!d.moved||!apply){renderRows();return}
+  if(d.side){const c0=Store.cols.get(d.side);if(c0){const c=clone(c0);const add=d.songs.filter(id=>!hasSong(c,id));c.items=itemsOf(c).concat(add.map(s=>({i:uid(),s})));
+      if(add.length)Store.saveCol(c).then(()=>toast(add.length>1?`Προστέθηκαν ${add.length} στη «${c.name}»`:`Προστέθηκε στη «${c.name}»`),()=>toast('Δεν αποθηκεύτηκε.'));else toast(`Η «${c.name}» το έχει ήδη`)}
+    renderRows();return}
+  if(d.onlySide||d.before===undefined){renderRows();return}
+  const c=Store.cols.get(d.col);if(!c){renderRows();return}
+  const items=itemsOf(c),moving=items.filter(x=>d.ids.includes(x.i)),rest=items.filter(x=>!d.ids.includes(x.i));
+  const k=d.before?rest.findIndex(x=>x.i===d.before):rest.length;rest.splice(k<0?rest.length:k,0,...moving);
+  if(rest.map(x=>x.i).join()===items.map(x=>x.i).join()){renderRows();return}
+  const n=clone(c);n.items=rest;Store.saveCol(n).catch(()=>toast('Δεν αποθηκεύτηκε η σειρά.'));
+}
+document.addEventListener('pointerup',e=>{if(drag&&e.pointerId===drag.pid)endDrag(true)});
 // the browser took the finger away (a call, a system gesture): drop the drag, keep the order as it was
-document.addEventListener('pointercancel',e=>{
-  if(!drag||e.pointerId!==drag.pid) return;
-  drag.row.classList.remove('dragging');drag=null;renderRows();
-});
+document.addEventListener('pointercancel',e=>{if(drag&&e.pointerId===drag.pid)endDrag(false)});
+
+/* ---- choosing many songs in a list: remove them (with «Αναίρεση») or move them together ---- */
+let selAnchor=null;
+function selectClick(id,range){
+  const c=colOf(S.sec);if(!c)return;S.sel=S.sel||new Set();
+  if(range&&selAnchor){const ids=songItems(c).map(x=>x.i),a=ids.indexOf(selAnchor),b=ids.indexOf(id);
+    if(a>=0&&b>=0){for(let j=Math.min(a,b);j<=Math.max(a,b);j++)S.sel.add(ids[j]);renderRows();return}}
+  S.sel.has(id)?S.sel.delete(id):S.sel.add(id);selAnchor=id;renderRows();
+}
+function drawSelBar(col){
+  const el=$('#selBar');if(!el)return;
+  const on=!!(col&&col.ordered&&(S.reorder||(S.sel&&S.sel.size)));el.hidden=!on;if(!on){el.innerHTML='';return}
+  const k=S.sel?S.sel.size:0,n=songItems(col).length;
+  el.innerHTML=`<span class="bcount">${k?`${k} επιλεγμέν${k===1?'ο':'α'}`:'Τσέκαρε τραγούδια'}</span>
+    <button class="btn sm" data-act="selall">${k===n&&n?'Κανένα':'Όλα'}</button>
+    <button class="btn sm" data-act="selmove" ${k?'':'disabled'}>${ic('up','sm')}Μετακίνηση…</button>
+    <button class="btn sm danger" data-act="selremove" ${k?'':'disabled'}>${ic('x','sm')}Αφαίρεση</button>
+    ${!S.reorder?`<button class="ibtn" data-act="selclear" aria-label="Καθαρισμός επιλογής" title="Καθαρισμός επιλογής">${ic('x','sm')}</button>`:''}`;
+}
+// out of this list only (the songs stay in the library); «Αναίρεση» puts them back where they were
+async function removeSelected(){
+  const c0=colOf(S.sec);if(!c0||!S.sel||!S.sel.size)return;
+  const before=itemsOf(c0).map(x=>Object.assign({},x)),gone=new Set(S.sel),n=before.filter(x=>gone.has(x.i)).length;if(!n)return;
+  const c=clone(c0);c.items=before.filter(x=>!gone.has(x.i));S.sel=S.reorder?new Set():null;
+  await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));
+  toast(n>1?`Αφαιρέθηκαν ${n}`:'Αφαιρέθηκε',{label:'Αναίρεση',fn:async()=>{
+    const now=Store.cols.get(c0.id);if(!now)return;const cur=itemsOf(now),have=new Set(cur.map(x=>x.i));
+    // back in their old places, among whatever is there now
+    const out=[];for(const x of before){if(gone.has(x.i)){if(!have.has(x.i))out.push(x)}else{const y=cur.find(z=>z.i===x.i);if(y)out.push(y)}}
+    for(const y of cur)if(!out.some(z=>z.i===y.i))out.push(y);
+    const r=clone(now);r.items=out;await Store.saveCol(r).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Επέστρεψαν')}});
+}
 
 /* =====================================================================
    BOOT
@@ -3339,7 +3465,7 @@ function menuSpec(kind,d){
     return {title:c.name,sub:`${n} τραγούδι${n===1?'':'α'}`,items:[
       ...(n?[it('playsub','play','Παίξιμο',D)]:[]),
       it('pickcol','plus','Πρόσθεσε τραγούδια',D),
-      ...(c.ordered?[it('addsec','section','Νέο πακέτο',D),it('reorder','pencil','Επεξεργασία λίστας',D)]:[]),
+      ...(c.ordered?[it('addsec','section','Νέο πακέτο',D)]:[]),
       '-',
       it('editcol','settings','Ρυθμίσεις λίστας',D),
       it('dupcol','paste','Αντίγραφο λίστας',D),

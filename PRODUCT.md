@@ -42,7 +42,7 @@ Unlike public chord sites (kithara.to), it is a private library shaped by the pl
 
 ## Brand Commitments
 
-The look follows Spotify's design language, at the user's request (2026-11): near-black surfaces (#121212 / #181818 / #1f1f1f), a single green (#1ed760 dark, #117a3e light) for play, active and primary actions only, pill buttons and circular icon buttons, button labels in normal sentence case (2026-11: no ALL CAPS), heavy shadows for floating elements. Dark is the default; light keeps the same shapes. No Spotify name, logo or fonts.
+The look follows Spotify's design language, at the user's request (2026-11): near-black surfaces (#121212 / #181818 / #1f1f1f), a single green (#1ed760 dark, #117a3e light) for play, active and primary actions only, pill buttons and circular icon buttons, button labels in normal sentence case (2026-11: no ALL CAPS), heavy shadows for floating elements. Dialogs, sheets, menus and stage panels are frosted "liquid glass" (translucent with a strong blur). Type is Commissioner (Google Fonts, with Greek), cached by the service worker for offline use, falling back to the system font. Dark is the default; light keeps the same shapes. No Spotify name or logo.
 
 ## Evidence on Hand
 
