@@ -1794,6 +1794,10 @@ function renderList(full=true){
   if(S.sec==='search'||S.sec==='recent')S.sec='all';
   if(S.sec==='home'){renderHome(pane);return}
   if(isFolder(col)){renderFolder(col,pane);return}
+  // the same list drawn again (a change, a deletion, a sync): it stays where it was scrolled, it doesn't jump to the top
+  const view=S.sec+'|'+(S.browse?S.browse.f+'='+S.browse.v:'');
+  listKeepTop=null;if(view===listView){const l=$('#list');if(l)listKeepTop=l.scrollTop}
+  listView=view;
   if(full||!pane.querySelector('.list')||pane.querySelector('.folderlist')){
     const genres=allGenres(),artists=distinct('artist'),keys=ALLKEYS.filter(k=>[...Store.songs.values()].some(s=>s.key===k));
     const parent=col&&col.parent&&Store.cols.get(col.parent);
@@ -1940,6 +1944,15 @@ function renderFolder(col,pane){
       <button class="addsub" data-act="newsubcol" data-parent="${col.id}">${ic('plus','sm')}Νέα λίστα σε αυτόν τον φάκελο</button>
     </div>`;
 }
+var listView='',listKeepTop=null,listOnSong=null; // var: renderList can run before this line
+// the song that is open stays in sight in the list: when the arrows go past the last song showing, the list follows
+// (just enough: the open song becomes the last one showing, or the first going up)
+function keepOnInView(el){
+  const on=el.querySelector('.row.on'),id=S.songId+'|'+(S.ctx?S.ctx.pos:'');
+  if(on&&id!==listOnSong){const r=on.getBoundingClientRect(),b=el.getBoundingClientRect(),pad=8;
+    if(r.top<b.top+pad)el.scrollTop+=r.top-b.top-pad;else if(r.bottom>b.bottom-pad)el.scrollTop+=r.bottom-b.bottom+pad}
+  listOnSong=on?id:null;
+}
 function renderRows(){
   const el=$('#list');if(!el) return;
   const col=colOf(S.sec);
@@ -1992,6 +2005,8 @@ function renderRows(){
       ${S.reorder?ud(it&&it.i):it?`<button class="ibtn imenu" data-act="itemmenu" data-item="${it.i}" aria-label="Επιλογές τραγουδιού: ${esc(s.title||'')}" title="Επιλογές τραγουδιού">${ic('more','sm')}</button>`:`<button class="ibtn imenu" data-act="songctx" data-id="${s.id}" aria-label="Επιλογές τραγουδιού: ${esc(s.title||'')}" title="Επιλογές τραγουδιού">${ic('more','sm')}</button>`}
     </div>${it?gap(it.i):''}`}).join('');
   drawSelBar(col);
+  if(listKeepTop!=null){el.scrollTop=listKeepTop;listKeepTop=null}
+  keepOnInView(el);
 }
 function emptyList(col,filtered){
   if(filtered){
