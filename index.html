@@ -1082,7 +1082,8 @@ function extractMeta(text){
     // kithara's scale guide («Σύντομος οδηγός…», «Βαθμίδα: 1 2 3…», «Συγχορδία: Gm Adim…»)
     if(/^(?:σ[υύ]ντομος οδηγ[οό]ς|βαθμ[ιί]δα\s*:|συγχορδ[ιί]α\s*:)/i.test(l)) continue;
     if((m=l.match(/^(?:ρυθμ[οό]ς|rhythm)\s*[:：-]\s*(.+)$/i))){meta.rhythm=m[1].trim();continue}
-    if((m=l.match(/^(?:κ[αά]πο|capo)\s*[:：-]?\s*(\d+)/i))){meta.capo=m[1];continue}
+    // a «Κάπο: 2» line from kithara is skipped, so it never lands in the lyrics
+    if(/^(?:κ[αά]πο|capo)\s*[:：-]?\s*\d+/i.test(l)) continue;
     if(/^(?:αποστολ[εέ]ας|στ[αά]λθηκε|προβολ[εέ]ς|ψ[ηή]φοι|\(?\d+\s*ψ[ηή]φ)/i.test(l)) continue;
     if(/^\(?\d+\s*(?:votes|ψήφοι)\)?$/i.test(l)) continue;
     if(!meta.title){meta.title=l;continue}
@@ -1947,7 +1948,6 @@ function renderDetail(force=false){
   const hasC0=songHasChords(s);
   if(hasLines&&hasC0&&s.key&&n) chips.push(`<span class="chip key">Αρχικός <b>${esc(s.key)}</b></span>`);
   else if(hasLines&&!hasC0&&itemKey(it,s)) chips.push(`<span class="chip key">Τόνος <b>${esc(itemKey(it,s))}</b></span>`);
-  if(s.capo) chips.push(`<span class="chip">Κάπο <b>${esc(s.capo)}</b></span>`);
   if(s.rhythm) chips.push(`<span class="chip">Ρυθμός <b>${esc(s.rhythm)}</b></span>`);
   (s.genres||[]).forEach(g=>chips.push(`<span class="chip">${esc(g)}</span>`));
   const hasC=songHasChords(s);
@@ -2171,7 +2171,7 @@ function renderAll(){renderSide();renderList(true);renderDetail(true);renderTabb
    EDITOR
    ===================================================================== */
 function openEditor(song,preset){
-  const s=song?clone(song):{id:null,title:(preset&&preset.title)||'',artist:'',key:'',genres:[],rhythm:'',timeSig:'',capo:'',notes:'',lines:[]};
+  const s=song?clone(song):{id:null,title:(preset&&preset.title)||'',artist:'',key:'',genres:[],rhythm:'',timeSig:'',notes:'',lines:[]};
   // intoCol: the list that was open when «Νέο» was pressed (a new song goes there, even if you browse elsewhere meanwhile)
   const oc=colOf(S.sec);
   // listIt: opened from a list → that position's own key and note can be changed here too
@@ -2193,8 +2193,7 @@ function renderEditor(){
       ${E.listIt?`<div class="fsec span6">Τραγούδι <span>· ισχύουν παντού</span></div>`:''}
       <div class="field span3"><label for="edTitle">Τίτλος</label><input id="edTitle" data-k="title" value="${esc(s.title)}" placeholder="π.χ. Φραγκοσυριανή" autocomplete="off"></div>
       <div class="field span3"><label for="edArtist">Καλλιτέχνης</label><input id="edArtist" data-k="artist" value="${esc(s.artist)}" list="dlArtists" autocomplete="off"><datalist id="dlArtists">${distinct('artist').map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
-      <div class="field span1"><label for="edKey">Τόνος</label><select id="edKey" data-k="key"><option value="">—</option>${ALLKEYS.map(k=>`<option ${s.key===k?'selected':''}>${k}</option>`).join('')}</select></div>
-      <div class="field span1"><label for="edCapo">Κάπο</label><input id="edCapo" data-k="capo" value="${esc(s.capo)}" inputmode="numeric" placeholder="—"></div>
+      <div class="field span2"><label for="edKey">Τόνος</label><select id="edKey" data-k="key"><option value="">—</option>${ALLKEYS.map(k=>`<option ${s.key===k?'selected':''}>${k}</option>`).join('')}</select></div>
       <div class="field span4"><label for="edRhythm">Ρυθμός</label><input id="edRhythm" data-k="rhythm" value="${esc(s.rhythm)}" list="dlRhythm" placeholder="π.χ. Χασάπικο"><datalist id="dlRhythm">${['Ζεϊμπέκικο','Ρούμπα','Τσιφτετέλι','Χασάπικο','Χασαποσέρβικο','Καμηλιέρικο','Μπαλάντα','Νησιώτικο','Λαϊκοδημοτικό','Καλαματιανό','Συρτό','Μπάλος','Καρσιλαμάς','Βαλς','Ταγκό'].concat(distinct('rhythm')).filter((v,i,a)=>a.indexOf(v)===i).map(r=>`<option value="${esc(r)}">`).join('')}</datalist></div>
       <div class="field span6"><label for="edNotes">Σημειώσεις τραγουδιού</label><input id="edNotes" data-k="notes" value="${esc(s.notes)}" placeholder="π.χ. αργά στην αρχή, κάπο στο 2"></div>
       ${(()=>{const L=E.listIt,c=L&&Store.cols.get(L.colId);if(!c)return '';
@@ -2264,7 +2263,6 @@ function editorPaste(e){
       if(meta.artist&&!E.draft.artist){E.draft.artist=meta.artist;$('#edArtist').value=meta.artist;filled.push('καλλιτέχνη')}
       if(meta.key&&!E.draft.key&&ALLKEYS.includes(meta.key)){E.draft.key=meta.key;E.touchedKey=true;$('#edKey').value=meta.key;filled.push('τόνο')}
       if(meta.rhythm&&!E.draft.rhythm){E.draft.rhythm=meta.rhythm;$('#edRhythm').value=meta.rhythm;filled.push('ρυθμό')}
-      if(meta.capo&&!E.draft.capo){E.draft.capo=meta.capo;$('#edCapo').value=meta.capo;filled.push('κάπο')}
       if(Object.keys(meta).length){E.text=body;ta.value=body}
       if(filled.length){const f=filled.length>1?filled.slice(0,-1).join(', ')+' και '+filled[filled.length-1]:filled[0];toast('Συμπλήρωσα '+f+' από το κείμενο. Έλεγξέ τα.')}
     }
@@ -2279,7 +2277,7 @@ async function saveEditor(){
   if(!title){err.textContent='Γράψε τίτλο για να αποθηκευτεί.';$('#edTitle').focus();return}
   const r=parseText(E.text);
   const s=Object.assign({},E.draft,{title,artist:(E.draft.artist||'').trim(),lines:r.lines});
-  delete s.tags;delete s.credits; // fields that no longer exist: dropped from a song when it is saved
+  delete s.tags;delete s.credits;delete s.capo; // fields that no longer exist: dropped from a song when it is saved
   if(!s.key&&!E.touchedKey){s.key=guessKey(r.lines)}
   const sel=$('#edKey');if(sel) s.key=sel.value||s.key;
   const isNew=!E.id;
@@ -2490,11 +2488,11 @@ async function versionsModal(songId){
   }catch(e){const el=$('#vList');if(el)el.innerHTML='<div class="muted">Δεν φόρτωσε το ιστορικό. Δοκίμασε ξανά.</div>'}
 }
 function songAsText(s){
-  const head=[s.title,s.artist&&('Καλλιτέχνης: '+s.artist),s.key&&('Τόνος: '+s.key),s.capo&&('Κάπο: '+s.capo),s.rhythm&&('Ρυθμός: '+s.rhythm)].filter(Boolean).join('\n');
+  const head=[s.title,s.artist&&('Καλλιτέχνης: '+s.artist),s.key&&('Τόνος: '+s.key),s.rhythm&&('Ρυθμός: '+s.rhythm)].filter(Boolean).join('\n');
   return head+'\n\n'+(s.notes?'# '+s.notes+'\n\n':'')+linesToText(s.lines)+'\n';
 }
 function songAsChordPro(s){
-  const h=[`{title: ${s.title}}`,s.artist&&`{artist: ${s.artist}}`,s.key&&`{key: ${s.key}}`,s.capo&&`{capo: ${s.capo}}`,s.timeSig&&`{time: ${s.timeSig}}`,s.notes&&`{comment: ${s.notes}}`].filter(Boolean).join('\n');
+  const h=[`{title: ${s.title}}`,s.artist&&`{artist: ${s.artist}}`,s.key&&`{key: ${s.key}}`,s.timeSig&&`{time: ${s.timeSig}}`,s.notes&&`{comment: ${s.notes}}`].filter(Boolean).join('\n');
   return h+'\n\n'+linesToChordPro(s.lines)+'\n';
 }
 const safeName=t=>String(t||'song').replace(/[\\/:*?"<>|]+/g,' ').trim().slice(0,80)||'song';
@@ -2606,7 +2604,7 @@ function lsPlan(d){
         const key=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||'';
         const ly=lyrics[lsLyrKey(part[0].title)];
         const lines=ly?parseText(String(ly)).lines:[];if(lines.length)withLyrics++;
-        song={id:uid(),title:part[0].title,artist,key:ALLKEYS.includes(key)?key:'',genres:[],rhythm:'',timeSig:'',capo:'',notes:'',lines,fav:false,createdAt:now(),updatedAt:now()};
+        song={id:uid(),title:part[0].title,artist,key:ALLKEYS.includes(key)?key:'',genres:[],rhythm:'',timeSig:'',notes:'',lines,fav:false,createdAt:now(),updatedAt:now()};
         newSongs.push(song);
       }
       part.forEach(o=>o.song=song);
@@ -3010,8 +3008,8 @@ const A={
 E                              Am
 γιατί με μάρανες τον πικραμένο   | 2x`;
     const r=parseText(text);
-    const s={id:uid(),title:'Μήλο μου κόκκινο',artist:'Παραδοσιακό',key:'Am',genres:['Παραδοσιακό'],rhythm:'Συρτό',timeSig:'',capo:'',notes:'Δείγμα: σβήσ’ το όποτε θες.',lines:r.lines,fav:false,createdAt:now()};
-    const t={id:uid(),title:'Τραγούδι μόνο με τίτλο',artist:'',key:'',genres:[],rhythm:'',timeSig:'',capo:'',notes:'',lines:[],fav:false,createdAt:now()};
+    const s={id:uid(),title:'Μήλο μου κόκκινο',artist:'Παραδοσιακό',key:'Am',genres:['Παραδοσιακό'],rhythm:'Συρτό',timeSig:'',notes:'Δείγμα: σβήσ’ το όποτε θες.',lines:r.lines,fav:false,createdAt:now()};
+    const t={id:uid(),title:'Τραγούδι μόνο με τίτλο',artist:'',key:'',genres:[],rhythm:'',timeSig:'',notes:'',lines:[],fav:false,createdAt:now()};
     await Store.saveSong(s);await Store.saveSong(t);openSong(s.id,playList(),(colOf(S.sec)||{}).id);toast('Προστέθηκαν δύο δείγματα');
   }
 };
