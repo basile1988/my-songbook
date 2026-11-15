@@ -946,6 +946,22 @@ html:not([data-eff=dark]) .dlg,html:not([data-eff=dark]) .cmenu,html:not([data-e
 /* round icon-only buttons (kithara search, YouTube) */
 .btn.iconly{width:42px;height:42px;min-height:42px;padding:0;justify-content:center;border-radius:50%;flex:none}
 .btn.iconly svg.i{width:20px;height:20px}
+/* artist suggestions under the field */
+.field{position:relative}
+.acbox{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:30;border-radius:10px;padding:4px;background:color-mix(in srgb,var(--raise) 92%,transparent);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border:1px solid var(--line2);box-shadow:0 14px 34px rgba(0,0,0,.35)}
+.acbox[hidden]{display:none}
+.acopt{padding:10px 12px;border-radius:7px;cursor:pointer;font-weight:600}
+.acopt.on{background:color-mix(in srgb,var(--text) 10%,transparent)}
+@media (hover:hover) and (pointer:fine){.acopt:hover{background:color-mix(in srgb,var(--text) 10%,transparent)}}
+/* «Τακτοποίηση καλλιτεχνών» */
+.aflist{display:flex;flex-direction:column;gap:6px}
+.afrow{display:flex;gap:12px;align-items:flex-start;padding:10px;border-radius:10px;background:color-mix(in srgb,var(--text) 5%,transparent)}
+.afrow input[type=checkbox]{width:20px;height:20px;margin-top:2px;accent-color:var(--accent);flex:none}
+.affrom{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13.5px;color:var(--muted)}
+.affrom small{opacity:.7}
+.afto{display:flex;align-items:center;gap:8px;margin-top:6px}
+.afto span{color:var(--accent);font-weight:800}
+.afto input{flex:1;min-width:0;min-height:38px;border:1px solid var(--line2);border-radius:8px;background:var(--raise);padding:0 10px;font-size:16px;font-weight:600;color:var(--text)}
 </style>
 </head>
 <body data-size="l" data-pane="list">
@@ -1017,6 +1033,24 @@ const ic=(n,cls='')=>`<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="tru
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/ς/g,'σ');
+/* sk(): how a word sounds, in plain latin letters — «Χατζηγιάννης», «Χατζηγιαννης», «xatzigiannis», «hatzigianis» all give the same.
+   Used to suggest names and to find songs whatever way they are typed. */
+const GR2L=[['ου','u'],['ει','i'],['οι','i'],['υι','i'],['αι','e'],['αυ','av'],['ευ','ev'],['μπ','b'],['ντ','d'],['γκ','g'],['γγ','g'],['τζ','j'],['τσ','c'],['ξ','ks'],['ψ','ps'],['θ','th'],['χ','h'],
+  ['α','a'],['β','v'],['γ','g'],['δ','d'],['ε','e'],['ζ','z'],['η','i'],['ι','i'],['κ','k'],['λ','l'],['μ','m'],['ν','n'],['ο','o'],['π','p'],['ρ','r'],['σ','s'],['τ','t'],['υ','i'],['φ','f'],['ω','o']];
+function sk(x){
+  // latin first: ch/kh → h, c/q → k (so «c» can stand for τσ below)
+  let t=norm(x).replace(/ch|kh/g,'h').replace(/[cq]/g,'k');
+  for(const [a,b] of GR2L)t=t.split(a).join(b);
+  // greeklish: ou→u, ei/oi/y→i, ai→e, 8→th, 3→ks, w→o, tz→j, ts→c; x: χ at the start (xristos), ξ elsewhere (alexis)
+  t=t.replace(/\bx/g,'h').replace(/x/g,'ks').replace(/8/g,'th').replace(/3/g,'ks').replace(/ou/g,'u').replace(/ei|oi|y/g,'i').replace(/ai/g,'e')
+     .replace(/w/g,'o').replace(/tz/g,'j').replace(/ts/g,'c')
+     // h after a consonant or vowel inside a word is usually η (vasilhs), at the start or before a vowel χ (haris)
+     .replace(/([a-z])h(?![aeiou])/g,'$1i')
+     // b, mp → b; v stays (β); d, nt → d; g, gk → g
+     .replace(/mp/g,'b').replace(/nt/g,'d').replace(/gk|gg/g,'g').replace(/v/g,'b')
+     .replace(/[^a-z0-9 ]+/g,' ').replace(/([a-z])\1+/g,'$1');
+  return t.replace(/\s+/g,' ').trim();
+}
 const uid=()=>(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,10)).replace(/[^a-zA-Z0-9-]/g,'');
 const now=()=>Date.now();
 const clone=o=>JSON.parse(JSON.stringify(o));
@@ -1677,7 +1711,7 @@ function searchKey(s){
   if(c&&c.k===k) return c.v;
   const v=norm([s.title,s.artist,s.rhythm||'',(s.genres||[]).join(' ')].join(' '));
   const ly=norm(songLyrics(s));
-  const o={meta:v,ly};idxCache.set(s.id,{k,v:o});return o;
+  const o={meta:v,ly,sk:' '+sk([s.title,s.artist].join(' '))};idxCache.set(s.id,{k,v:o});return o;
 }
 function colOf(sec){return sec&&sec.startsWith('col:')?Store.cols.get(sec.slice(4)):null}
 /* Collection items
@@ -1720,7 +1754,7 @@ function currentEntries(){
     const words=q.split(/\s+/);
     const scored=[];
     for(const e of arr){const k=searchKey(e.s);const nn=norm(e.it&&e.it.note||'');
-      if(words.every(w=>k.meta.includes(w)||nn.includes(w))) scored.push([0,e]);
+      if(words.every(w=>k.meta.includes(w)||nn.includes(w)||(w.length>1&&k.sk.includes(' '+sk(w))))) scored.push([0,e]);
       else if(k.ly.includes(q)) scored.push([1,e]);}
     arr=scored.sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
   }
@@ -2396,7 +2430,7 @@ function renderEditor(){
     <div class="fgrid">
       ${E.listIt?`<div class="fsec span6">Τραγούδι <span>· ισχύουν παντού</span></div>`:''}
       <div class="field span3"><label for="edTitle">Τίτλος</label><input id="edTitle" data-k="title" value="${esc(s.title)}" placeholder="π.χ. Φραγκοσυριανή" autocomplete="off"></div>
-      <div class="field span3"><label for="edArtist">Καλλιτέχνης</label><input id="edArtist" data-k="artist" value="${esc(s.artist)}" list="dlArtists" autocomplete="off"><datalist id="dlArtists">${distinct('artist').map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
+      <div class="field span3"><label for="edArtist">Καλλιτέχνης</label><input id="edArtist" data-k="artist" value="${esc(s.artist)}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acArtist"><div class="acbox" id="acArtist" role="listbox" hidden></div><datalist id="dlArtists">${distinct('artist').map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
       <div class="field span2 kf"><label>Τόνος</label>${keyField({attrs:'id="edKey" data-k="key"',value:s.key,ph:'—',label:'Τόνος του τραγουδιού',noneLabel:'Χωρίς τόνο'})}</div>
       ${(()=>{const rs=RHYTHMS.map(x=>x[0]).concat(distinct('rhythm')).filter((v,i,a)=>v&&a.indexOf(v)===i);const ms=METERS.concat(distinct('timeSig')).filter((v,i,a)=>v&&a.indexOf(v)===i);
         const um=usualMeter(s.rhythm);
@@ -2759,6 +2793,9 @@ function backupModal(){
         <p class="muted small" id="devCopy">Όλα αποθηκευμένα και σε αυτή τη συσκευή.</p>`
       :`<p class="muted">Δεν είσαι συνδεδεμένος με το GitHub σε αυτή τη συσκευή, οπότε τίποτα δεν αποθηκεύεται ακόμα.</p><button class="btn primary" data-act="ghsetup">${ic('cloud','sm')}Σύνδεση με GitHub</button>`}
     </section>
+    <section><h4>Βιβλιοθήκη</h4><div class="menulist">
+      ${item('artists','music','Τακτοποίηση καλλιτεχνών','Ίδια ονόματα γραμμένα αλλιώς, όνομα πρώτα και μετά επώνυμο')}
+    </div></section>
     <section><h4>Αντίγραφα</h4><div class="menulist">
       ${item('doBackup','download','Λήψη αντιγράφου','Όλα τα τραγούδια και οι λίστες σε ένα αρχείο .json')}
       ${item('doLiveSetlist','listmusic','Εισαγωγή από Live Setlist','Λίστες από αρχείο .html')}
@@ -3032,6 +3069,16 @@ const A={
     await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));
     renderRows();renderDetail(true);if(S.perf&&S.cueMode)renderCueSheet();
     toast(`${s?s.title+': ':''}${nm(itemKey(it,s))||'χωρίς τόνο'} σε αυτή τη λίστα`)},
+  artists(){artistsModal()},
+  async artistsapply(){
+    const map=new Map();
+    artistFix.forEach((g,i)=>{const on=$(`#modal [data-afon="${i}"]`),to=(($(`#modal [data-afto="${i}"]`)||{}).value||'').trim();
+      if(on&&on.checked&&to)for(const [a] of g.vars)if(a!==to)map.set(a,to)});
+    const songs=[...Store.songs.values()].filter(s=>map.has(String(s.artist||'').trim()));
+    closeModal();if(!songs.length){toast('Τίποτα για αλλαγή.');return}
+    let ok=0;for(const s of songs){const n=clone(s);n.artist=map.get(String(s.artist||'').trim());try{await Store.saveSong(n);ok++}catch(e){}}
+    idxCache.clear&&idxCache.clear();renderAll();
+    toast(ok===songs.length?`Διορθώθηκαν ${ok} τραγούδια`:`Διορθώθηκαν ${ok} από ${songs.length} τραγούδια`)},
   kfopen(el){const f=el.closest('.kfield'),open=!f.classList.contains('open');
     document.querySelectorAll('.kfield.open').forEach(x=>{x.classList.remove('open');x.querySelector('.kfbtn').setAttribute('aria-expanded','false')});
     if(open){f.classList.add('open');el.setAttribute('aria-expanded','true');const g=f.querySelector('.kfgrid');requestAnimationFrame(()=>g.scrollIntoView({block:'nearest'}));
@@ -3808,6 +3855,81 @@ document.addEventListener('pointermove',e=>{
 });
 document.addEventListener('pointerup',()=>{if(cdrag&&!cdrag.touch)cardDragEnd(true);cpend=null});
 document.addEventListener('pointercancel',()=>{if(cdrag&&!cdrag.touch)cardDragEnd(false);cpend=null});
+
+/* ---- artists: suggestions while typing, and «Τακτοποίηση καλλιτεχνών» ---- */
+function artistMatches(q){
+  const nq=norm(q).trim(),sq=sk(q);if(!nq)return [];
+  const cnt=new Map();for(const s of Store.songs.values()){const a=String(s.artist||'').trim();if(a)cnt.set(a,(cnt.get(a)||0)+1)}
+  const out=[];
+  for(const [a,n] of cnt){if(a===q.trim())continue;
+    const na=norm(a),sa=' '+sk(a);let r=-1;
+    if(na.startsWith(nq)||na.includes(' '+nq))r=0;else if(sq&&sa.includes(' '+sq))r=1;else if(na.includes(nq))r=2;else if(sq.length>2&&sa.includes(sq))r=3;
+    if(r>=0)out.push([r,-n,a])}
+  return out.sort((x,y)=>x[0]-y[0]||x[1]-y[1]||collator.compare(x[2],y[2])).slice(0,6).map(x=>x[2]);
+}
+let acSel=-1;
+function artistSuggest(inp){
+  const box=$('#acArtist');if(!box)return;const list=artistMatches(inp.value);acSel=-1;
+  if(!list.length||document.activeElement!==inp){box.hidden=true;inp.setAttribute('aria-expanded','false');return}
+  box.innerHTML=list.map((a,i)=>`<div class="acopt" role="option" id="aco${i}" data-v="${esc(a)}">${esc(a)}</div>`).join('');
+  box.hidden=false;inp.setAttribute('aria-expanded','true');
+}
+function artistPick(v){const inp=$('#edArtist'),box=$('#acArtist');if(!inp)return;inp.value=v;if(box)box.hidden=true;inp.setAttribute('aria-expanded','false');
+  inp.dispatchEvent(new Event('input',{bubbles:true}));if(box)box.hidden=true}
+document.addEventListener('input',e=>{if(e.target.id==='edArtist'&&e.isTrusted!==false)artistSuggest(e.target)});
+document.addEventListener('focusin',e=>{if(e.target.id==='edArtist')artistSuggest(e.target)});
+document.addEventListener('focusout',e=>{if(e.target.id==='edArtist')setTimeout(()=>{const b=$('#acArtist');if(b&&document.activeElement!==e.target)b.hidden=true},150)});
+document.addEventListener('pointerdown',e=>{const o=e.target.closest&&e.target.closest('.acopt');if(o){e.preventDefault();artistPick(o.dataset.v)}});
+document.addEventListener('keydown',e=>{
+  if(e.target.id!=='edArtist')return;const box=$('#acArtist');if(!box||box.hidden)return;const opts=[...box.querySelectorAll('.acopt')];
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();acSel=(acSel+(e.key==='ArrowDown'?1:-1)+opts.length)%opts.length;
+    opts.forEach((o,i)=>o.classList.toggle('on',i===acSel));e.target.setAttribute('aria-activedescendant','aco'+acSel)}
+  else if(e.key==='Enter'&&acSel>=0){e.preventDefault();artistPick(opts[acSel].dataset.v)}
+  else if(e.key==='Escape'){e.stopPropagation();box.hidden=true}
+},true);
+
+// first names: to tell «Ρέμος Αντώνης» (surname first) from «Αντώνης Ρέμος»
+const FIRST_NAMES=new Set(('αγγελα αγγελικη αθανασιοσ αλεξανδροσ αλεξησ αλεξια αλκηστισ αννα αννετα αντωνησ αποστολοσ αρησ αρετη βαγγελησ βασιλησ βασω βικυ γιαννησ γιωργοσ γιωτα γλυκερια γρηγορησ δεσποινα δημητρα δημητρησ δημοσ διονυσησ ελενα ελενη ελευθερια ελπιδα ευα ευαγγελια '+
+  'ευαγγελοσ ζωη ηλιασ θαναση θανασησ θεμησ θεοδωροσ θοδωρησ ιορδανησ ιωαννα ιωαννησ καιτη κατερινα κελλυ κλειω κωστασ κωνσταντινοσ λακησ λευτερησ λιτσα λουκασ μαιρη μανωλησ μαρια μαριοσ μαρινελλα μαρκοσ ματουλα μελινα μιχαλησ μπαμπησ '+
+  'νατασα νεφελη νικοσ νικολασ νοτησ οδυσσεασ ορφεασ πανοσ παναγιωτησ πασχαλησ παυλοσ πεγκυ πετροσ πιτσα ριτα σακησ σοφια σπυροσ σταματησ σταυροσ στελιοσ σωτηρησ τακησ τανια τασοσ τζενη τολησ φιλιπποσ φωτεινη φωτησ χαρα χαραλαμποσ χαρησ χαρουλα χρηστοσ χρυσπα').split(' '));
+const isFirstName=w=>FIRST_NAMES.has(norm(w));
+const accents=a=>(a.normalize('NFD').match(/[̀-ͯ]/g)||[]).length;
+const capWords=a=>a.split(' ').map(w=>w&&w[0].toLocaleUpperCase('el')+w.slice(1)).join(' ');
+function niceArtist(a){
+  a=String(a||'').trim().replace(/\s+/g,' ');if(/[.,\/&+]/.test(a))return a;   // «Δ. Μπάκουλης, Μ. Κατσιμίχα»: left as written
+  let w=a.split(' ');
+  if(w.length===2&&isFirstName(w[1])&&!isFirstName(w[0]))w=[w[1],w[0]];
+  return w.join(' ')===w.join(' ').toLowerCase()?capWords(w.join(' ')):w.join(' ');
+}
+// the same artist written in different ways → one group, with the best spelling, first name first
+function artistGroups(){
+  const cnt=new Map();for(const s of Store.songs.values()){const a=String(s.artist||'').trim();if(a)cnt.set(a,(cnt.get(a)||0)+1)}
+  const byKey=new Map();
+  for(const [a,n] of cnt){const k=/[.,\/&+]/.test(a)?'#'+a:sk(a).split(' ').sort().join(' ');if(!byKey.has(k))byKey.set(k,[]);byKey.get(k).push([a,n])}
+  const groups=[...byKey.entries()].map(([k,v])=>({k,toks:k.startsWith('#')?[]:k.split(' '),vars:v}));
+  // only the surname («Βέρτης», «Μαζω»): goes with the one full name it belongs to
+  for(const g of groups.filter(g=>g.toks.length===1&&!g.dead)){const t=g.toks[0];if(isFirstName(g.vars[0][0]))continue;
+    const c=groups.filter(h=>h!==g&&!h.dead&&h.toks.length>1&&h.toks.some(x=>x===t||(t.length>=4&&x.startsWith(t))));
+    if(c.length===1){c[0].vars.push(...g.vars);g.dead=true}}
+  const out=[];
+  for(const g of groups){if(g.dead)continue;
+    const best=[...g.vars].sort((x,y)=>(y[0].split(' ').length-x[0].split(' ').length)||(accents(y[0])-accents(x[0]))||(/^\p{Lu}/u.test(y[0])-/^\p{Lu}/u.test(x[0]))||(y[1]-x[1]))[0][0];
+    const to=niceArtist(best),n=g.vars.reduce((a,v)=>a+v[1],0);
+    if(g.vars.length>1||g.vars[0][0]!==to)out.push({vars:g.vars.sort((x,y)=>y[1]-x[1]),to,n})}
+  return out.sort((a,b)=>collator.compare(a.to,b.to));
+}
+let artistFix=[];
+function artistsModal(){
+  artistFix=artistGroups();
+  const row=(g,i)=>`<div class="afrow"><input type="checkbox" data-afon="${i}" checked aria-label="Διόρθωση ${esc(g.to)}">
+    <div class="main"><div class="affrom">${g.vars.map(([a,n])=>`<span>${esc(a)} <small>${n}</small></span>`).join('')}</div>
+    <div class="afto"><span aria-hidden="true">→</span><input data-afto="${i}" value="${esc(g.to)}" aria-label="Σωστό όνομα" autocomplete="off"></div></div></div>`;
+  openModal(`${dhead('Καλλιτέχνες')}<div class="dbody">
+    ${artistFix.length?`<p class="muted" style="margin:0 0 6px;font-size:13.5px">Ο ίδιος καλλιτέχνης γραμμένος με διαφορετικούς τρόπους, ή με το επώνυμο πρώτα. Δες τι προτείνεται, άλλαξε ό,τι θες και ξετσέκαρε όσα δεν είναι σωστά.</p>
+      <div class="aflist">${artistFix.map(row).join('')}</div>`
+      :`<p class="muted" style="margin:0">Όλα τα ονόματα είναι τακτοποιημένα.</p>`}
+  </div><div class="dfoot"><button class="btn" data-act="closeModal">${artistFix.length?'Άκυρο':'Κλείσιμο'}</button>${artistFix.length?`<button class="btn primary" data-act="artistsapply">Διόρθωση</button>`:''}</div>`);
+}
 </script>
 </body>
 </html>
