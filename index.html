@@ -689,6 +689,15 @@ button,[role=button],.row,.lcard,.chip,.pill,.pbar,.secjump,.keyb,.shkey,#tabbar
 .secjump{scroll-snap-type:x proximity;overscroll-behavior-x:contain;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);padding-right:24px}
 .secjump::-webkit-scrollbar{display:none}
 .secjump button{scroll-snap-align:start}
+.secjump .sjarr{display:none}
+@media (hover:hover) and (pointer:fine){
+  .secjump{-webkit-mask-image:none;mask-image:none;padding-right:0;scroll-snap-type:none}
+  .secjump .sjarr{display:grid;place-items:center;position:sticky;z-index:1;flex:none;width:34px;min-height:0;height:34px;align-self:center;padding:0;border-radius:50%;border:1px solid var(--line2);background:var(--raise);color:var(--text);box-shadow:0 0 0 6px var(--bg),0 2px 8px rgba(0,0,0,.25);visibility:hidden}
+  .secjump .sjarr.l{left:0;order:-1;margin-right:-40px}
+  .secjump .sjarr.r{right:0;margin-left:-40px}
+  .secjump.sjl .sjarr.l,.secjump.sjr .sjarr.r{visibility:visible}
+  .secjump .sjarr:hover{border-color:var(--text);background:var(--raise)}
+}
 /* swipe between songs (when on): the browser keeps vertical scrolling, the app gets the sideways swipe */
 body.perf.swipeon #detail{touch-action:pan-y}
 .btn:active,.ibtn:active,.pround:active,.pnav:active,.playc:active,.shback:active,.shkey:active,.secjump button:active{transform:scale(.96)}
@@ -1029,6 +1038,11 @@ const ICONS={
   monitor:'<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>'
 };
 const NOSLEEP='AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMpbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAB9AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAlN0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAB9AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAfQAAAAAAABAAAAAAHLbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAgABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABdm1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAATZzdGJsAAAAtnN0c2QAAAAAAAAAAQAAAKZhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAALGF2Y0MBQsAK/+EAFWdCwAraewEQAAADABAAAAMAIPEiagEABGjOD8gAAAAQcGFzcAAAAAEAAAABAAAAFGJ0cnQAAAAAAAAKMAAACjAAAAAYc3R0cwAAAAAAAAABAAAAAgAAQAAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAgAAAAEAAAAcc3RzegAAAAAAAAAAAAAAAgAAAoMAAAAJAAAAFHN0Y28AAAAAAAAAAQAAA1kAAABidWR0YQAAAFptZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAAC1pbHN0AAAAJal0b28AAAAdZGF0YQAAAAEAAAAATGF2ZjYwLjE2LjEwMAAAAAhmcmVlAAAClG1kYXQAAAJtBgX//2ncRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTY0IHIzMTA4IDMxZTE5ZjkgLSBILjI2NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDIzIC0gaHR0cDovL3d3dy52aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MCByZWY9MSBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgxOjB4MSBtZT1oZXggc3VibWU9MiBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0wIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MCA4eDhkY3Q9MCBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0wIHRocmVhZHM9MSBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTAgd2VpZ2h0cD0wIGtleWludD0yNTAga2V5aW50X21pbj0xIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9MTAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAADmWIhAW///8PRQABT3+AAAAABUGaIBX1';
+/* section pills: a mouse has no swipe, so there are arrows at the ends and the wheel scrolls them sideways */
+const sjArr=d=>`<button class="sjarr ${d}" data-act="sjgo" data-d="${d}" tabindex="-1" aria-hidden="true">${ic(d==='l'?'left':'right','sm')}</button>`;
+function sjState(j){const m=j.scrollWidth-j.clientWidth;j.classList.toggle('sjl',j.scrollLeft>2);j.classList.toggle('sjr',j.scrollLeft<m-2)}
+let sjQ=0;function sjAll(){sjQ=0;document.querySelectorAll('.secjump').forEach(sjState)}
+const sjSoon=()=>{if(!sjQ)sjQ=requestAnimationFrame(sjAll)};
 const ic=(n,cls='')=>`<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
 
 /* =====================================================================
@@ -1904,8 +1918,8 @@ function renderList(full=true){
         ${!col&&S.browse?`<div class="browsebar" id="browseBar"></div>`:''}
         ${col&&col.notes?notesBox(col):''}
         ${S.reorder?`<div class="reorderbar">${ic('pencil','sm')}<span>Σύρε από το ≡ για σειρά · τσέκαρε για αφαίρεση ή μετακίνηση · «+» για προσθήκη</span><button class="btn sm primary" data-act="reorderdone">Τέλος</button></div>
-        ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}</div>`:''}`:`
-        ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}</div>`:''}
+        ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${sjArr('l')}${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}${sjArr('r')}</div>`:''}`:`
+        ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${sjArr('l')}${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}${sjArr('r')}</div>`:''}
         <div class="searchrow">
           <div class="search">${ic('search')}<input id="q" type="search" placeholder="${col?'Αναζήτηση στη λίστα':'Τίτλος, καλλιτέχνης ή στίχος'}" value="${esc(S.q)}" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση"><button class="ibtn clr" data-act="clearq" aria-label="Καθαρισμός" ${S.q?'':'hidden'}>${ic('x','sm')}</button></div>
           ${col||S.browse?'':(()=>{const nf=['rhythm','genre','key','artist'].filter(k=>S.f[k]).length;return `<button class="ibtn ftoggle ${S.showF||nf?'on':''}" data-act="togglef" aria-expanded="${!!(S.showF||nf)}" aria-label="Φίλτρα" title="Φίλτρα">${ic('settings')}${nf?`<span class="fbadge">${nf}</span>`:''}</button>`})()}
@@ -2372,7 +2386,7 @@ function renderCueSheet(){
   }).join('');
   const listHTML=`<div class="stagehead cuehead"><button class="shback" data-act="perfx" aria-label="Έξοδος από τη σκηνή">${ic('left','sm')}Λίστα</button><div class="shtitle"><b>${esc(col.name)}</b><span>${p} τραγούδια</span></div><span class="shpos">${cur+1}/${p}</span></div>
     ${col.notes?`<div class="note inl" style="margin:0 0 14px"><span class="nl">Σημειώσεις προγράμματος</span>${esc(col.notes)}</div>`:''}
-    ${jumps.length>1?`<div class="secjump stage" role="navigation" aria-label="Πήγαινε σε ενότητα">${jumps.map(([l,i])=>`<button data-act="cuejump" data-i="${i}" class="${cur>=i&&!jumps.some(([,j])=>j>i&&j<=cur)?'on':''}">${esc(l)}</button>`).join('')}</div>`:''}
+    ${jumps.length>1?`<div class="secjump stage" role="navigation" aria-label="Πήγαινε σε ενότητα">${sjArr('l')}${jumps.map(([l,i])=>`<button data-act="cuejump" data-i="${i}" class="${cur>=i&&!jumps.some(([,j])=>j>i&&j<=cur)?'on':''}">${esc(l)}</button>`).join('')}${sjArr('r')}</div>`:''}
     <div class="cuesheet" style="--fs:${prefs.fs}px">${rows}</div>`;
   // tablet / landscape: the list on the left, the current song's lyrics on the right, both always visible
   S.split=window.innerWidth>=900;document.body.classList.toggle('stagesplit',S.split);
@@ -3245,6 +3259,7 @@ const A={
   selmove(){const c=colOf(S.sec);if(!c||!S.sel||!S.sel.size)return;const g=itemsOf(c).filter(x=>S.sel.has(x.i)).map(x=>x.i);moveModal(c.id,g[0],g)},
   selremove(){removeSelected()},
   toastundo(){const f=toastAction;toastAction=null;hideToast();if(f)f()},
+  sjgo(el){const j=el.closest('.secjump');if(j)j.scrollBy({left:(el.dataset.d==='l'?-1:1)*j.clientWidth*.7,behavior:'smooth'})},
   jumpsec(el){const l=$('#list'),r=l&&l.querySelector(`.secrow[data-item="${el.dataset.item}"]`);if(!r)return;
     l.scrollTop+=r.getBoundingClientRect().top-l.getBoundingClientRect().top-4},
   cuejump(el){const c=Store.cols.get(S.ctx&&S.ctx.colId);if(!c)return;setCue(c.id,Math.min(+el.dataset.i,songItems(c).length-1));renderCueSheet()},
@@ -3934,6 +3949,12 @@ function artistsModal(){
       :`<p class="muted" style="margin:0">Όλα τα ονόματα είναι τακτοποιημένα.</p>`}
   </div><div class="dfoot"><button class="btn" data-act="closeModal">${artistFix.length?'Άκυρο':'Κλείσιμο'}</button>${artistFix.length?`<button class="btn primary" data-act="artistsapply">Διόρθωση</button>`:''}</div>`);
 }
+
+document.addEventListener('scroll',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('secjump'))sjState(t)},true);
+document.addEventListener('wheel',e=>{const j=e.target.closest&&e.target.closest('.secjump');if(!j||e.ctrlKey||Math.abs(e.deltaX)>=Math.abs(e.deltaY))return;
+  if(j.scrollWidth<=j.clientWidth+1)return;e.preventDefault();j.scrollLeft+=e.deltaY},{passive:false});
+new MutationObserver(sjSoon).observe(document.body,{childList:true,subtree:true});
+addEventListener('resize',sjSoon);
 </script>
 </body>
 </html>
