@@ -637,6 +637,10 @@ html[data-eff=dark] .radio{background:#181818}
 #tabbar::after{content:'';position:absolute;left:0;right:0;top:100%;height:120px;background:inherit;pointer-events:none} /* iPhone home-screen app: iOS 26 can stop the screen above the real bottom; the bar continues down instead of leaving a black strip */
 #tabbar button{font-weight:600}
 html:has(body[data-size=s]:not([data-pane=detail]):not(.perf)){background:var(--side)} /* what shows below the page on iPhone matches the bar */
+/* iPhone home-screen app (WebKit 301108): with the see-through status bar, iOS gives a page that is no taller than the screen
+   a view that is short by the status-bar height, leaving a grey band at the bottom. A page that asks for that much more gets the whole screen.
+   min() keeps it from scrolling where there is no inset (Android, desktop, opaque status bar). */
+@media (display-mode: standalone){html{min-height:min(100lvh,calc(100% + env(safe-area-inset-top,0px)))}}
 .scrdiag{margin:18px 0 4px;font-size:11px;color:var(--muted);opacity:.7;text-align:center;line-height:1.5}
 #tabbar button.on{color:var(--text)}
 #tabbar button.on svg.i{color:var(--accent)}
@@ -1051,7 +1055,7 @@ function scrDiag(){const el=$('#scrDiag');if(!el)return;const pr=document.create
   pr.style.cssText='position:fixed;left:0;top:0;width:1px;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)';document.body.appendChild(pr);
   const cs=getComputedStyle(pr),h=v=>{pr.style.height=v;return Math.round(pr.getBoundingClientRect().height-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom))};
   const r=[h('100vh'),h('100dvh'),h('100lvh'),h('100svh')],st=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
-  el.textContent=`οθόνη ${screen.width}×${screen.height} · παράθυρο ${innerWidth}×${innerHeight} · vv ${Math.round((window.visualViewport||{}).height||0)} · html ${document.documentElement.clientHeight} · vh/dvh/lvh/svh ${r.join('/')} · safe ${parseFloat(cs.paddingTop)}/${parseFloat(cs.paddingBottom)} · ${st?'εφαρμογή':'browser'} · v58`;pr.remove()}
+  el.textContent=`οθόνη ${screen.width}×${screen.height} · παράθυρο ${innerWidth}×${innerHeight} · vv ${Math.round((window.visualViewport||{}).height||0)} · html ${document.documentElement.clientHeight} · vh/dvh/lvh/svh ${r.join('/')} · safe ${parseFloat(cs.paddingTop)}/${parseFloat(cs.paddingBottom)} · ${st?'εφαρμογή':'browser'} · v59`;pr.remove()}
 const ic=(n,cls='')=>`<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
 
 /* =====================================================================
