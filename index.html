@@ -824,7 +824,7 @@ body.perf .sheet.enter{animation:songin .18s var(--ease-out)}
 @media (hover:hover) and (pointer:fine){.playbtn:not(:disabled):hover{transform:scale(1.06)}}
 /* the logo on phones (top of Λίστες and Τραγούδια) */
 .mbrand{display:none}
-body[data-size=s] .mbrand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;letter-spacing:-.02em;padding:calc(4px + env(safe-area-inset-top,0px)) 0 8px}
+body[data-size=s] .mbrand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;letter-spacing:-.02em;padding:4px 0 8px} /* the pane already leaves room for the status bar */
 .mbrand .logo{width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
 .mbrand .logo svg{width:15px;height:15px}
 /* the list note on a song page is tappable (opens its key & note) */
@@ -1055,7 +1055,7 @@ function scrDiag(){const el=$('#scrDiag');if(!el)return;const pr=document.create
   pr.style.cssText='position:fixed;left:0;top:0;width:1px;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)';document.body.appendChild(pr);
   const cs=getComputedStyle(pr),h=v=>{pr.style.height=v;return Math.round(pr.getBoundingClientRect().height-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom))};
   const r=[h('100vh'),h('100dvh'),h('100lvh'),h('100svh')],st=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
-  el.textContent=`οθόνη ${screen.width}×${screen.height} · παράθυρο ${innerWidth}×${innerHeight} · vv ${Math.round((window.visualViewport||{}).height||0)} · html ${document.documentElement.clientHeight} · vh/dvh/lvh/svh ${r.join('/')} · safe ${parseFloat(cs.paddingTop)}/${parseFloat(cs.paddingBottom)} · ${st?'εφαρμογή':'browser'} · v59`;pr.remove()}
+  el.textContent=`οθόνη ${screen.width}×${screen.height} · παράθυρο ${innerWidth}×${innerHeight} · vv ${Math.round((window.visualViewport||{}).height||0)} · html ${document.documentElement.clientHeight} · vh/dvh/lvh/svh ${r.join('/')} · safe ${parseFloat(cs.paddingTop)}/${parseFloat(cs.paddingBottom)} · ${st?'εφαρμογή':'browser'} · v60`;pr.remove()}
 const ic=(n,cls='')=>`<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
 
 /* =====================================================================
