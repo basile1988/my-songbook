@@ -636,6 +636,8 @@ html[data-eff=dark] .radio{background:#181818}
 #tabbar{background:var(--side);border-top:0}
 #tabbar::after{content:'';position:absolute;left:0;right:0;top:100%;height:120px;background:inherit;pointer-events:none} /* iPhone home-screen app: iOS 26 can stop the screen above the real bottom; the bar continues down instead of leaving a black strip */
 #tabbar button{font-weight:600}
+html:has(body[data-size=s]:not([data-pane=detail]):not(.perf)){background:var(--side)} /* what shows below the page on iPhone matches the bar */
+.scrdiag{margin:18px 0 4px;font-size:11px;color:var(--muted);opacity:.7;text-align:center;line-height:1.5}
 #tabbar button.on{color:var(--text)}
 #tabbar button.on svg.i{color:var(--accent)}
 .reorderbar{border-radius:9999px}
@@ -1044,6 +1046,12 @@ const sjArr=d=>`<button class="sjarr ${d}" data-act="sjgo" data-d="${d}" tabinde
 function sjState(j){const m=j.scrollWidth-j.clientWidth;j.classList.toggle('sjl',j.scrollLeft>2);j.classList.toggle('sjr',j.scrollLeft<m-2)}
 let sjQ=0;function sjAll(){sjQ=0;document.querySelectorAll('.secjump').forEach(sjState)}
 const sjSoon=()=>{if(!sjQ)sjQ=requestAnimationFrame(sjAll)};
+/* screen measures, shown small at the end of Settings: to see what iOS gives a home-screen app */
+function scrDiag(){const el=$('#scrDiag');if(!el)return;const pr=document.createElement('div');
+  pr.style.cssText='position:fixed;left:0;top:0;width:1px;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)';document.body.appendChild(pr);
+  const cs=getComputedStyle(pr),h=v=>{pr.style.height=v;return Math.round(pr.getBoundingClientRect().height-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom))};
+  const r=[h('100vh'),h('100dvh'),h('100lvh'),h('100svh')],st=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  el.textContent=`οθόνη ${screen.width}×${screen.height} · παράθυρο ${innerWidth}×${innerHeight} · vv ${Math.round((window.visualViewport||{}).height||0)} · html ${document.documentElement.clientHeight} · vh/dvh/lvh/svh ${r.join('/')} · safe ${parseFloat(cs.paddingTop)}/${parseFloat(cs.paddingBottom)} · ${st?'εφαρμογή':'browser'} · v58`;pr.remove()}
 const ic=(n,cls='')=>`<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
 
 /* =====================================================================
@@ -2820,7 +2828,9 @@ function backupModal(){
       ${item('doLiveSetlist','listmusic','Εισαγωγή από Live Setlist','Λίστες από αρχείο .html')}
       ${item('doRestore','upload','Επαναφορά από αντίγραφο…','Γράφει πάνω σε ό,τι έχει το ίδιο όνομα αρχείου, ακόμα κι αν είναι νεότερο','danger')}
     </div></section>
+    <p class="scrdiag" id="scrDiag"></p>
   </div><div class="dfoot"><button class="btn" data-act="closeModal">Κλείσιμο</button></div>`);
+  scrDiag();
   // only when the copy on this device could be lost is there anything to say about it
   if(gh) Local.usage().then(()=>{
     const el=$('#devCopy');if(!el) return;
