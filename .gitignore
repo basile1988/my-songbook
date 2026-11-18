@@ -3,3 +3,4 @@ songbook.db-*
 backups/
 __pycache__/
 .claude/
+.qa-out/

@@ -638,6 +638,20 @@ html[data-eff=dark] .radio{background:#181818}
 #tabbar button{font-weight:600}
 /* iPhone keyboard open (html.kb, set from visualViewport): the app fills only what is left above the keyboard,
    so the field being typed in, the lyrics box and «Αποθήκευση» stay in view and nothing jumps behind the keys */
+/* phones: small controls keep their look but get a finger-sized (44px) invisible hit area */
+@media (pointer:coarse){
+  .ibtn,.secjump button,.keyb.kpick,.ibtn.imenu,.selbox,.crumb,.sechead,.btn.sm,.seg button,.lcard .playc,.lcard .cmore{position:relative}
+  .ibtn::after,.secjump button::after,.keyb.kpick::after,.ibtn.imenu::after,.selbox::after,.crumb::after,.sechead::after,.btn.sm::after,.seg button::after,.lcard .playc::after,.lcard .cmore::after{content:'';position:absolute}
+  .ibtn::after{inset:-3px}
+  .secjump button::after{inset:-5px 0}
+  .keyb.kpick::after{inset:-9px -4px}
+  .ibtn.imenu::after{inset:-6px}
+  .selbox::after{inset:-12px}
+  .crumb::after,.sechead::after{inset:-11px 0}
+  .btn.sm::after{inset:-6px 0}
+  .seg button::after{inset:-7px 0}
+  .lcard .playc::after,.lcard .cmore::after{inset:-4px}
+}
 html.kb #app{height:var(--vvh)!important;transform:translateY(var(--vvt,0px))}
 html.kb #tabbar,html.kb .pbar,html.kb .pnext{display:none!important}
 html.kb .edfoot{padding-bottom:10px}
@@ -892,6 +906,8 @@ html:not([data-eff=dark]) .tile{background:hsl(var(--h) 55% 86%);color:#16181d}
 .row.sel .selbox{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .selbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
 .selbar[hidden]{display:none}
+body[data-size=s]:not([data-pane=detail]) .selbar{padding-bottom:10px} /* the tab bar below already clears the home indicator */
+@media (max-width:400px){.selbar{gap:5px;padding-left:10px;padding-right:10px}.selbar .btn{padding-left:10px;padding-right:10px;gap:4px}}
 .selbar .bcount{flex:1 1 100%;font-size:13.5px;font-weight:600}
 @media (min-width:760px){.selbar .bcount{flex:1 1 auto}}
 .selbar .btn.danger{color:var(--danger)}
