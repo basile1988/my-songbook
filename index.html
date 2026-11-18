@@ -636,12 +636,18 @@ html[data-eff=dark] .radio{background:#181818}
 #tabbar{background:var(--side);border-top:0}
 #tabbar::after{content:'';position:absolute;left:0;right:0;top:100%;height:120px;background:inherit;pointer-events:none} /* iPhone home-screen app: iOS 26 can stop the screen above the real bottom; the bar continues down instead of leaving a black strip */
 #tabbar button{font-weight:600}
+/* iPhone keyboard open (html.kb, set from visualViewport): the app fills only what is left above the keyboard,
+   so the field being typed in, the lyrics box and «Αποθήκευση» stay in view and nothing jumps behind the keys */
+html.kb #app{height:var(--vvh)!important;transform:translateY(var(--vvt,0px))}
+html.kb #tabbar,html.kb .pbar,html.kb .pnext{display:none!important}
+html.kb .edfoot{padding-bottom:10px}
+html.kb #modal{inset:auto 0 auto 0;top:var(--vvt,0px);height:var(--vvh)}
+html.kb #modal .dlg{max-height:calc(var(--vvh) - 8px);padding-bottom:0}
 html:has(body[data-size=s]:not([data-pane=detail]):not(.perf)){background:var(--side)} /* what shows below the page on iPhone matches the bar */
 /* iPhone home-screen app (WebKit 301108): with the see-through status bar, iOS gives a page that is no taller than the screen
    a view that is short by the status-bar height, leaving a grey band at the bottom. A page that asks for that much more gets the whole screen.
    min() keeps it from scrolling where there is no inset (Android, desktop, opaque status bar). */
 @media (display-mode: standalone){html{min-height:min(100lvh,calc(100% + env(safe-area-inset-top,0px)))}}
-.scrdiag{margin:18px 0 4px;font-size:11px;color:var(--muted);opacity:.7;text-align:center;line-height:1.5}
 #tabbar button.on{color:var(--text)}
 #tabbar button.on svg.i{color:var(--accent)}
 .reorderbar{border-radius:9999px}
@@ -1050,12 +1056,6 @@ const sjArr=d=>`<button class="sjarr ${d}" data-act="sjgo" data-d="${d}" tabinde
 function sjState(j){const m=j.scrollWidth-j.clientWidth;j.classList.toggle('sjl',j.scrollLeft>2);j.classList.toggle('sjr',j.scrollLeft<m-2)}
 let sjQ=0;function sjAll(){sjQ=0;document.querySelectorAll('.secjump').forEach(sjState)}
 const sjSoon=()=>{if(!sjQ)sjQ=requestAnimationFrame(sjAll)};
-/* screen measures, shown small at the end of Settings: to see what iOS gives a home-screen app */
-function scrDiag(){const el=$('#scrDiag');if(!el)return;const pr=document.createElement('div');
-  pr.style.cssText='position:fixed;left:0;top:0;width:1px;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)';document.body.appendChild(pr);
-  const cs=getComputedStyle(pr),h=v=>{pr.style.height=v;return Math.round(pr.getBoundingClientRect().height-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom))};
-  const r=[h('100vh'),h('100dvh'),h('100lvh'),h('100svh')],st=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
-  el.textContent=`οθόνη ${screen.width}×${screen.height} · παράθυρο ${innerWidth}×${innerHeight} · vv ${Math.round((window.visualViewport||{}).height||0)} · html ${document.documentElement.clientHeight} · vh/dvh/lvh/svh ${r.join('/')} · safe ${parseFloat(cs.paddingTop)}/${parseFloat(cs.paddingBottom)} · ${st?'εφαρμογή':'browser'} · v60`;pr.remove()}
 const ic=(n,cls='')=>`<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
 
 /* =====================================================================
@@ -2832,9 +2832,7 @@ function backupModal(){
       ${item('doLiveSetlist','listmusic','Εισαγωγή από Live Setlist','Λίστες από αρχείο .html')}
       ${item('doRestore','upload','Επαναφορά από αντίγραφο…','Γράφει πάνω σε ό,τι έχει το ίδιο όνομα αρχείου, ακόμα κι αν είναι νεότερο','danger')}
     </div></section>
-    <p class="scrdiag" id="scrDiag"></p>
   </div><div class="dfoot"><button class="btn" data-act="closeModal">Κλείσιμο</button></div>`);
-  scrDiag();
   // only when the copy on this device could be lost is there anything to say about it
   if(gh) Local.usage().then(()=>{
     const el=$('#devCopy');if(!el) return;
@@ -3422,7 +3420,9 @@ document.addEventListener('change',e=>{
 });
 document.addEventListener('paste',editorPaste);
 document.addEventListener('keydown',e=>{
-  const t=e.target;const typing=t.matches&&t.matches('input,textarea,select');
+  const t=e.target;const typing=isTextField(t);
+  // stage: Space on a button that kept focus would press it again (e.g. «previous»); the pedal means «down»
+  if(S.perf&&e.key===' '&&t.closest&&t.closest('button')&&!t.closest('#modal,#pop'))e.preventDefault();
   if(t.id==='edNewGenre'&&e.key==='Enter'){e.preventDefault();const v=t.value.trim();if(v){addGenre(v);t.value='';const wrap=$('#edGenres');const b=document.createElement('button');b.type='button';b.className='tog on';b.dataset.act='tgGenre';b.dataset.g=v;b.textContent=v;wrap.insertBefore(b,t)}return}
   if(e.key==='Escape'&&S.sel&&S.sel.size&&$('#modal').hidden&&!typing){S.sel=S.reorder?new Set():null;renderRows();return}
   if((e.key==='Delete'||e.key==='Backspace')&&!typing&&$('#modal').hidden&&S.sel&&S.sel.size&&colOf(S.sec)){e.preventDefault();removeSelected();return}
@@ -3970,6 +3970,29 @@ document.addEventListener('wheel',e=>{const j=e.target.closest&&e.target.closest
   if(j.scrollWidth<=j.clientWidth+1)return;e.preventDefault();j.scrollLeft+=e.deltaY},{passive:false});
 new MutationObserver(sjSoon).observe(document.body,{childList:true,subtree:true});
 addEventListener('resize',sjSoon);
+
+/* the iPhone keyboard does not shrink the page, it covers it and pans it: follow the visible part instead.
+   Android (interactive-widget=resizes-content) and desktop shrink innerHeight themselves, so html.kb never turns on there */
+const TEXTSEL='textarea,select,[contenteditable=true],input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=color]):not([type=file])';
+const isTextField=t=>!!(t&&t.matches&&t.matches(TEXTSEL));
+(function(){const vv=window.visualViewport;if(!vv)return;const R=document.documentElement;let was=false,q=0;
+  const upd=()=>{q=0;const t=document.activeElement,kb=isTextField(t)&&innerHeight-vv.height>120;
+    if(kb){R.style.setProperty('--vvh',Math.round(vv.height)+'px');R.style.setProperty('--vvt',Math.round(vv.pageTop)+'px')}
+    if(kb!==was){R.classList.toggle('kb',kb);was=kb;
+      if(kb)requestAnimationFrame(()=>{const r=t.getBoundingClientRect(),top=vv.pageTop,h=vv.height;
+        if(r.top<top+8||r.top>top+h-60){const sc=t.closest('#detail,#listPane,.dbody,.dlg,.sidescroll');if(sc)sc.scrollTop+=r.top-top-Math.min(120,h/3)}});
+      else if(scrollY)scrollTo(0,0)}};
+  const soon=()=>{if(!q)q=requestAnimationFrame(upd)};
+  vv.addEventListener('resize',soon);vv.addEventListener('scroll',soon);
+  document.addEventListener('focusin',()=>setTimeout(soon,60));document.addEventListener('focusout',()=>setTimeout(soon,120));
+})();
+/* stage: focus never stays on a control or a field, so a page-turner pedal (keys) always reaches the songs,
+   also after a notification, a call or switching apps */
+function stageRefocus(){if(!S.perf)return;const a=document.activeElement;if(!a||a===document.body)return;
+  if(a.closest&&(a.closest('#modal')&&!$('#modal').hidden||a.closest('#pop')))return;try{a.blur()}catch(e){}}
+addEventListener('focus',()=>setTimeout(stageRefocus,50));addEventListener('pageshow',()=>setTimeout(stageRefocus,50));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(stageRefocus,50)});
+document.addEventListener('click',e=>{if(S.perf&&e.target.closest&&e.target.closest('.pbar button,.pnext,.stagehead button,.secjump button,.cuesheet .row'))setTimeout(()=>{const a=document.activeElement;if(a&&a!==document.body&&!a.matches(TEXTSEL)&&!a.closest('#modal,#pop'))a.blur()},0)});
 </script>
 </body>
 </html>
