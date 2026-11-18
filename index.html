@@ -1107,7 +1107,7 @@ function normChord(tok){
   let t=String(tok).replace(/♯/g,'#').replace(/♭/g,'b');
   let note='';
   const par=t.match(/^\((.+)\)$/); if(par) t=par[1];
-  if(/^H/.test(t)){t='B'+t.slice(1);note='H→B'}
+  if(/^H/.test(t)||/\/H$/.test(t)){t=t.replace(/^H/,'B').replace(/\/H$/,'/B');note='H→B'}
   if(CH_RE.test(t)) return {ok:true,strict:true,c:t,note};
   if(LOOSE_RE.test(t)) return {ok:true,strict:false,c:t,note:'unknown'};
   return {ok:false};
@@ -1138,6 +1138,7 @@ function trChord(ch,n,flat){
 function keyParts(k){const m=String(k||'').match(/^([A-G][#b]?)(m?)$/);return m?{root:m[1],minor:!!m[2]}:null}
 function preferFlat(song,n){
   const kp=keyParts(song.key);
+  if(kp&&!n) return kp.root.includes('b');
   if(kp){const j=((IDX[kp.root]+n)%12+12)%12;return kp.minor?[2,7,0,5,10,3].includes(j):[5,10,3,8,1,6].includes(j)}
   let f=0,s=0;for(const L of song.lines||[]) if(L.k==='l') for(const [c] of L.s){if(/^[A-G]b/.test(c))f++;else if(/^[A-G]#/.test(c))s++}
   return f>s;
@@ -1153,7 +1154,7 @@ function guessKey(lines){
   return '';
 }
 const KEYS=['C','C#','Db','D','Eb','E','F','F#','Gb','G','Ab','A','Bb','B'];
-const ALLKEYS=[...KEYS,...KEYS.map(k=>k+'m')];
+const ALLKEYS=[...KEYS,...KEYS.map(k=>k+'m'),'G#m','D#m','A#m'];
 /* one way to choose a key everywhere: a button that opens the grid of keys (major / minor) in place.
    The value lives in a hidden input, so the forms read it as before; choosing fires input + change. */
 const KP_MAJ=['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'],KP_MIN=['Cm','C#m','Dm','Ebm','Em','Fm','F#m','Gm','G#m','Am','Bbm','Bm'];
@@ -1182,7 +1183,7 @@ const SEC_RE=new RegExp('^\\s*(?:'+SEC_WORDS+')[\\s\\d.]{0,6}:?\\s*$','i');
 function matchSection(l){
   const t=l.trim();
   const b=t.match(/^\[([^\]]+)\]$/);
-  if(b){ if(normChord(b[1].trim()).ok) return null; return b[1].trim() }
+  if(b){ const x=b[1].trim(); if(!SEC_RE.test(x)&&normChord(x).strict) return null; return x }
   const cp=t.match(/^\{(?:c|comment|ci|soc|start_of_chorus|sov|start_of_verse)(?::\s*(.*))?\}$/i);
   if(cp) return (cp[1]||'Ρεφρέν').trim();
   if(SEC_RE.test(t)) return t.replace(/:\s*$/,'');
@@ -1191,7 +1192,8 @@ function matchSection(l){
 function hasInline(l){
   const m=[...l.matchAll(/\[([^\]]+)\]/g)]; if(!m.length) return false;
   if(matchSection(l)) return false;
-  return m.every(x=>normChord(x[1].trim()).ok);
+  const ch=m.filter(x=>!FILLER_RE.test(x[1].trim())&&!/^[xχ×]?\s?\d+\s?[xχ×]?$/i.test(x[1].trim()));
+  return ch.length>0&&ch.every(x=>normChord(x[1].trim()).ok);
 }
 const REP_RE=/\s*(?:\|\s*)?[(\[]?\s*(?:[xχ×]\s*(\d{1,2})|(\d{1,2})\s*[xχ×])\s*[)\]]?\s*\|?\s*$/i;
 function stripRep(text){
@@ -1286,7 +1288,7 @@ function linesToChordPro(lines){
   }).join('\n');
 }
 // metadata lines that kithara-like pages put above a song
-function extractMeta(text){
+function extractMeta(text,has={}){
   const raw=String(text||'').split(/\r?\n/);
   const first=raw.findIndex(l=>isChordLine(l)||hasInline(l));
   if(first<=0||first>20) return {meta:{},body:text};
@@ -1297,7 +1299,7 @@ function extractMeta(text){
     // kithara: «Μουσική/Στίχοι: Α/Β» is not kept, so it never ends up in the lyrics; the performer stays in artist
     if(/^(?:μουσικ[ηή]\s*(?:\/|και|&)?\s*στ[ιί]χοι|μουσικ[ηή]|στ[ιί]χοι|σ[υύ]νθεση|στιχουργ[οό]ς|συνθ[εέ]της)\s*[:：-]\s*.+$/i.test(l)) continue;
     if((m=l.match(/^(?:ερμηνε[ιί]α|ερμηνευτ[ηή]ς|καλλιτ[εέ]χνης|artist|by)\s*[:：-]\s*(.+)$/i))){ if(!meta.artist) meta.artist=m[1].trim(); continue }
-    if((m=l.match(/^(?:τ[οό]νος|key)\s*[:：-]\s*([A-H][#b]?m?)/i))){meta.key=m[1].replace(/^H/,'B');continue}
+    if((m=l.match(/^(?:τ[οό]νος|key)\s*[:：-]\s*([A-H][#b]?(?:m(?!aj))?)/i))){meta.key=m[1].replace(/^H/,'B');continue}
     // kithara: «▼ G μινόρε (*)» / «D ματζόρε»
     if((m=l.match(/^[▼▾▶►•*\s]*([A-H])([#b♯♭]?)\s*(μιν[οό]ρε|minor|ματζ[οό]ρε|major)(?![\wά-ώ])/i))){
       if(!meta.key) meta.key=m[1].replace(/^H/,'B')+m[2].replace('♯','#').replace('♭','b')+(/^(μιν|min)/i.test(m[3])?'m':'');continue}
@@ -1308,8 +1310,9 @@ function extractMeta(text){
     if(/^(?:κ[αά]πο|capo)\s*[:：-]?\s*\d+/i.test(l)) continue;
     if(/^(?:αποστολ[εέ]ας|στ[αά]λθηκε|προβολ[εέ]ς|ψ[ηή]φοι|\(?\d+\s*ψ[ηή]φ)/i.test(l)) continue;
     if(/^\(?\d+\s*(?:votes|ψήφοι)\)?$/i.test(l)) continue;
-    if(!meta.title){meta.title=l;continue}
-    if(!meta.artist&&l.length<60&&!/[.!?;]$/.test(l)){meta.artist=l;continue}
+    if(matchSection(l)){keep.push(raw[i]);continue}
+    if(!meta.title&&!has.title){meta.title=l;continue}
+    if(!meta.artist&&!has.artist&&meta.title&&l.length<60&&!/[.!?;]$/.test(l)){meta.artist=l;continue}
     keep.push(raw[i]);
   }
   return {meta,body:[...keep,...raw.slice(first)].join('\n')};
@@ -1476,7 +1479,7 @@ const Local={
   saveOutbox(outbox){
     if(!this.db){lsSet(this.lsOutKey(),outbox);return Promise.resolve()}
     const t=this.db.transaction('meta','readwrite');t.objectStore('meta').put(outbox,'outbox');
-    return this.done(t).then(()=>{try{localStorage.removeItem(this.lsOutKey())}catch(e){}}).catch(e=>console.warn(e));
+    return this.done(t).then(()=>{try{localStorage.removeItem(this.lsOutKey())}catch(e){}}).catch(e=>{console.warn(e);if(!this._outWarned){this._outWarned=true;toast('Δεν χωράνε οι αλλαγές σε αυτή τη συσκευή. Μείνε συνδεδεμένος μέχρι να ανέβουν.')}});
   },
   async clear(){
     try{localStorage.removeItem(this.lsKey());localStorage.removeItem(this.lsOutKey())}catch(e){}
@@ -1508,7 +1511,7 @@ const Store={
     this.mode='github';this.status='cache';
     this.gh={head:null,shas:{},etag:null,committing:false,timer:0}; // ready before anything is awaited: a save may come in meanwhile
     await Local.open(GH.cfg.owner+'/'+GH.cfg.repo);
-    const L=await Local.load();
+    let L;try{L=await Local.load()}catch(e){console.warn(e);L={items:[],head:null,shas:{},outbox:[]}}
     this.gh.head=L.head;this.gh.shas=L.shas;
     this.songs=new Map();this.cols=new Map();
     for(const [p,obj] of L.items){const m=p.match(FILE_RE);if(m)(m[1]==='songs'?this.songs:this.cols).set(m[2],obj)}
@@ -1546,12 +1549,12 @@ const Store={
   async _ghSync(full){
     const g=this.gh;
     try{
+      const seq=g.flushSeq||0; // a commit of ours landing while we read would make this snapshot stale
       const ref=await GH.api('GET','/git/ref/heads/'+encodeURIComponent(GH.cfg.branch),null,{etag:full?null:g.etag});
       if(ref.notModified){this._ghStatus();return true}
       // the ETag is kept only once this sync has fully succeeded: a half-done sync must be retried, not skipped as "not modified"
       const etag=ref._etag,head=ref.object.sha;
       if(!full&&head===g.head){g.etag=etag;this._ghStatus();return true}
-      const seq=g.flushSeq||0; // a commit of ours landing while we read would make this snapshot stale
       const tree=await GH.api('GET','/git/trees/'+head+'?recursive=1');
       const remote={};for(const e of tree.tree||[]) if(e.type==='blob'&&FILE_RE.test(e.path)) remote[e.path]=e.sha;
       const busyNow=()=>new Set(this.outbox.map(o=>o.p+'.json')); // asked again at every step: saves can happen meanwhile
@@ -1560,7 +1563,8 @@ const Store={
       const got=[];
       await GH.pool(want,8,async p=>{
         const b=await GH.api('GET','/git/blobs/'+remote[p]);
-        const obj=JSON.parse(GH.dec(b.content));obj.id=p.match(FILE_RE)[2];got.push([p,obj]);
+        let obj;try{obj=JSON.parse(GH.dec(b.content))}catch(err){console.warn('skipped broken file',p);g.shas[p]=remote[p];return}
+        obj.id=p.match(FILE_RE)[2];got.push([p,obj]);
         if(this.progress){this.progress.done++;if(this.progress.done%25===0)this.onChange('status')}
       });
       if((g.flushSeq||0)!==seq){this.progress=null;setTimeout(()=>this._ghSync(false),300);return true} // read before our own commit: read again
@@ -1577,11 +1581,12 @@ const Store={
       if(changed||full||was==='loading')this.onChange('all');else if(was!==this.status)this.onChange('status');
       return true;
     }catch(e){
+      const first=!(this.loaded&&this.loaded.songs&&this.loaded.cols);
       this.progress=null;this.loaded={songs:true,cols:true};g.etag=null;
       if(e.status===404||e.status===409){ // 409: the repo has no commits yet
         try{await GH.api('GET','');this.status='ghempty'}catch(e2){this._ghFail(e2);return false}
-        this.onChange('all');return false}
-      this._ghFail(e);this.onChange('all');return false;
+        this.onChange(first?'all':'status');return false}
+      this._ghFail(e);this.onChange(first?'all':'status');return false;
     }
   },
   _ghStatus(quiet){const was=this.status;this.status=this.outbox.length?'pending':'live';if(!quiet&&was!==this.status)this.onChange('status')},
@@ -1607,7 +1612,7 @@ const Store={
           else if(exists.has(path)){entries.push({path,mode:'100644',type:'blob',sha:null});written[path]=null}
         }
         if(entries.length){
-          const nt=await GH.api('POST','/git/trees',{base_tree:commit.tree.sha,tree:entries});
+          const nt=await GH.api('POST','/git/trees',{base_tree:commit.tree.sha,tree:entries},{timeout:120000});
           const nc=await GH.api('POST','/git/commits',{message:this._ghMessage(ops),tree:nt.sha,parents:[head]});
           try{await GH.api('PATCH','/git/refs/heads/'+encodeURIComponent(GH.cfg.branch),{sha:nc.sha})}
           catch(e){if(e.status===422||e.status===409)continue;throw e} // another device committed in between: rebuild on top of it
@@ -1662,8 +1667,9 @@ const Store={
   async addVersion(){}, // every save is a commit, so git already keeps the earlier version
   async listVersions(songId){return this.mode==='github'?this._ghVersions(songId):[]},
   async importAll(data){
-    const songs=(data.songs||[]).filter(s=>s&&s.id&&s.title!=null);
-    const cols=(data.collections||[]).filter(c=>c&&c.id&&c.name);
+    const okId=x=>{x.id=String(x.id);if(!/^[A-Za-z0-9-]{1,64}$/.test(x.id))x.id=uid();return x};
+    const songs=(data.songs||[]).filter(s=>s&&s.id&&s.title!=null).map(okId);
+    const cols=(data.collections||[]).filter(c=>c&&c.id&&c.name).map(okId);
     for(const s of songs)this.songs.set(s.id,s);for(const c of cols)this.cols.set(c.id,c);
     this.onChange('all');
     if(this.mode==='github'){
@@ -1785,7 +1791,7 @@ function currentEntries(){
     const words=q.split(/\s+/);
     const scored=[];
     for(const e of arr){const k=searchKey(e.s);const nn=norm(e.it&&e.it.note||'');
-      if(words.every(w=>k.meta.includes(w)||nn.includes(w)||(w.length>1&&k.sk.includes(' '+sk(w))))) scored.push([0,e]);
+      if(words.every(w=>k.meta.includes(w)||nn.includes(w)||(w.length>1&&sk(w).trim()&&k.sk.includes(' '+sk(w).trim())))) scored.push([0,e]);
       else if(k.ly.includes(q)) scored.push([1,e]);}
     arr=scored.sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
   }
@@ -2084,6 +2090,7 @@ function renderRows(){
   const canDrag=col&&col.ordered&&!filtered&&(S.reorder||fine);
   const songDrag=!col&&fine&&!S.pick;
   if(!(col&&col.ordered))S.sel=null;
+  if(S.sel&&col){const ok=new Set(itemsOf(col).map(x=>x.i));for(const x of [...S.sel])if(!ok.has(x))S.sel.delete(x)} // removed or synced away
   const selOn=!!(col&&col.ordered&&(S.reorder||(S.sel&&S.sel.size)));
   const cue=false; // one kind of list: the stage always opens the title–key list
   el.classList.toggle('cue',!!cue);
@@ -2146,7 +2153,8 @@ function ctxEntry(){return S.ctx?S.ctx.list[S.ctx.pos]||null:null}
 // the open song's list changed (moved, added, synced from another device): follow the list's new order
 function syncCtx(){
   if(!S.ctx||!S.ctx.colId)return;const c=Store.cols.get(S.ctx.colId);if(!c)return;
-  const cur=ctxEntry();if(!cur||!cur.it)return;const sl=songItems(c),p=sl.findIndex(x=>x.i===cur.it);if(p<0)return;
+  const cur=ctxEntry();if(!cur||!cur.it)return;const sl=songItems(c),p=sl.findIndex(x=>x.i===cur.it);
+  if(p<0){if(sl.length)S.ctx={...S.ctx,list:sl.map(x=>({s:x.s,it:x.i})),pos:Math.max(0,Math.min(S.ctx.pos,sl.length-1))};return}
   S.ctx={...S.ctx,list:sl.map(x=>({s:x.s,it:x.i})),pos:p};
 }
 function itemById(colId,iid){const c=colId&&Store.cols.get(colId);return c&&iid?itemsOf(c).find(x=>x.i===iid)||null:null}
@@ -2278,10 +2286,12 @@ function fitStage(sh){
   }
   fitFs=fs;
 }
-let fitT=0;window.addEventListener('resize',()=>{clearTimeout(fitT);fitT=setTimeout(()=>{if(S.perf){fitStage(document.querySelector('#detail .sheet'));drawPop()}},150)});
+let fitT=0;window.addEventListener('resize',()=>{clearTimeout(fitT);fitT=setTimeout(()=>{if(S.perf){if(S.cueMode&&(window.innerWidth>=900)!==!!S.split){renderCueSheet();return}fitStage(document.querySelector('#detail .sheet'));drawPop()}},150)});
+/* the stage bar is rewritten only when it changes: a button swapped under a finger loses the tap */
+const setPb=(el,h)=>{if(el._h!==h){el.innerHTML=h;el._h=h}};
 function renderPbar(){
   const pb=$('#pbar'),pn=$('#pnext');
-  if(!S.perf){pb.innerHTML='';pn.classList.remove('show');return}
+  if(!S.perf){setPb(pb,'');pn.classList.remove('show');return}
   // stage bar: big labelled prev/next at the ends, a few labelled controls in the middle
   // sub: what is next/previous («Ήλιε Μου · G»), so the player sees it without leaving the lyrics
   // prev/next: arrow only (the list shows what comes next); the name stays as a tooltip and for screen readers
@@ -2301,22 +2311,22 @@ function renderPbar(){
   if(S.split){ // tablet: the list and the lyrics share the stage, so one bar for both
     const col=Store.cols.get(S.ctx&&S.ctx.colId);const list=col?songItems(col):[];const cur=col?S.cueIdx[col.id]||0:0;
     const s=list[cur]&&Store.songs.get(list[cur].s);const nx=list[cur+1],ns=nx&&Store.songs.get(nx.s);
-    pb.innerHTML=`${nav('cue','prev','Προηγ.',cur>0)}<div class="pmid">${lst}${srch}${s&&(s.lines||[]).length?aa:''}${s&&songHasChords(s)?kb:''}${more}</div>
-      ${nav('cue','next','Επόμ.',cur<list.length-1,ns?ns.title+(itemKey(nx,ns)?' · '+itemKey(nx,ns):''):'')}`;
+    setPb(pb,`${nav('cue','prev','Προηγ.',cur>0)}<div class="pmid">${lst}${srch}${s&&(s.lines||[]).length?aa:''}${s&&songHasChords(s)?kb:''}${more}</div>
+      ${nav('cue','next','Επόμ.',cur<list.length-1,ns?ns.title+(itemKey(nx,ns)?' · '+itemKey(nx,ns):''):'')}`);
     return;
   }
   if(S.cueMode){
     const col=Store.cols.get(S.ctx&&S.ctx.colId);const list=col?songItems(col):[];const cur=col?S.cueIdx[col.id]||0:0;
     const nx=list[cur+1],ns=nx&&Store.songs.get(nx.s);
-    pb.innerHTML=`${nav('cue','prev','Προηγ.',cur>0)}<div class="pmid">${srch}${more}</div>
-      ${nav('cue','next','Επόμ.',cur<list.length-1,ns?ns.title+(itemKey(nx,ns)?' · '+itemKey(nx,ns):''):'')}`;
+    setPb(pb,`${nav('cue','prev','Προηγ.',cur>0)}<div class="pmid">${srch}${more}</div>
+      ${nav('cue','next','Επόμ.',cur<list.length-1,ns?ns.title+(itemKey(nx,ns)?' · '+itemKey(nx,ns):''):'')}`);
     return;
   }
-  const s=Store.songs.get(S.songId);if(!s){pb.innerHTML=`<div class="pmid">${rb('perfx',ic('x'),'Έξοδος')}</div>`;return} // song gone (deleted elsewhere): only the way out
+  const s=Store.songs.get(S.songId);if(!s){setPb(pb,`<div class="pmid">${rb('perfx',ic('x'),'Έξοδος')}</div>`);return} // song gone (deleted elsewhere): only the way out
   const cx=ctxInfo();const hasLines=(s.lines||[]).length>0;
-  pb.innerHTML=`${S.returnTo?`<button class="pnav back ret" data-act="stageback">${ic('left')}<span class="pnl"><span>Πίσω</span><small>στη λίστα</small></span></button>`:nav('prev','prev','Προηγ.',cx&&cx.prev)}
+  setPb(pb,`${S.returnTo?`<button class="pnav back ret" data-act="stageback">${ic('left')}<span class="pnl"><span>Πίσω</span><small>στη λίστα</small></span></button>`:nav('prev','prev','Προηγ.',cx&&cx.prev)}
     <div class="pmid">${S.returnTo?'':lst}${hasLines?aa:''}${songHasChords(s)?kb:''}${more}</div>
-    ${S.returnTo?'':nav('next','next','Επόμ.',cx&&cx.next,cx&&cx.next?cx.next.title+(cx.nextKey?' · '+cx.nextKey:''):'')}`;
+    ${S.returnTo?'':nav('next','next','Επόμ.',cx&&cx.next,cx&&cx.next?cx.next.title+(cx.nextKey?' · '+cx.nextKey:''):'')}`);
 }
 // an open stage panel (or sheet) shows the new value right away
 function refreshSheet(){drawPop();const sh=document.querySelector('#modal [data-sheet]');if(sh)stageSheet(sh.dataset.sheet)}
@@ -2535,18 +2545,19 @@ function editorPaste(e){
   setTimeout(()=>{
     const ta=$('#edBody');E.text=ta.value;E.dirty=true;edDirty();
     if(wasEmpty){
-      const {meta,body}=extractMeta(E.text);const filled=[];
+      const {meta,body}=extractMeta(E.text,{title:!!(E.draft.title||'').trim(),artist:!!(E.draft.artist||'').trim()});const filled=[];
       if(meta.title&&!E.draft.title){E.draft.title=meta.title;$('#edTitle').value=meta.title;filled.push('τίτλο')}
       if(meta.artist&&!E.draft.artist){E.draft.artist=meta.artist;$('#edArtist').value=meta.artist;filled.push('καλλιτέχνη')}
       if(meta.key&&!E.draft.key&&ALLKEYS.includes(meta.key)){E.draft.key=meta.key;E.touchedKey=true;$('#edKey').value=meta.key;kfSync($('#edKey').closest('.kfield'));filled.push('τόνο')}
-      if(meta.rhythm&&!E.draft.rhythm){E.draft.rhythm=meta.rhythm;$('#edRhythm').value=meta.rhythm;filled.push('ρυθμό')}
+      if(meta.rhythm&&!E.draft.rhythm){E.draft.rhythm=meta.rhythm;const rs=$('#edRhythm');if(rs&&![...rs.options].some(o=>o.value===meta.rhythm))rs.add(new Option(meta.rhythm,meta.rhythm),rs.options[rs.options.length-1]);rs.value=meta.rhythm;filled.push('ρυθμό')}
       if(Object.keys(meta).length){E.text=body;ta.value=body}
       if(filled.length){const f=filled.length>1?filled.slice(0,-1).join(', ')+' και '+filled[filled.length-1]:filled[0];toast('Συμπλήρωσα '+f+' από το κείμενο. Έλεγξέ τα.')}
     }
     updatePreview();
   },0);
 }
-async function saveEditor(){
+async function saveEditor(){const E=S.edit;if(!E||E.saving)return;E.saving=true;try{await saveEditor0()}finally{E.saving=false}}
+async function saveEditor0(){
   const E=S.edit;if(!E) return;
   const err=$('#edErr');
   const ng=$('#edNewGenre');if(ng&&ng.value.trim()) addGenre(ng.value.trim());
@@ -2746,7 +2757,7 @@ function pickModal(colId,opts={}){
       m.addEventListener('input',onIn);m.addEventListener('change',onCh);
       pickModal.save=async()=>{const c=clone(Store.cols.get(colId));const keep=itemsOf(c).filter(x=>x.sec!=null||sel.has(x.s));
         const add=order.filter(id=>!keep.some(x=>x.s===id)).map(s=>({i:uid(),s}));
-        if(here){const k=opts.after?keep.findIndex(x=>x.i===opts.after):-1;keep.splice(k+1,0,...add);c.items=keep} // right at the «+» that was tapped
+        if(here){let k=-1;if(opts.after){const orig=itemsOf(c);let j=orig.findIndex(x=>x.i===opts.after);while(j>=0&&k<0){k=keep.findIndex(x=>x.i===orig[j].i);j--}}keep.splice(k+1,0,...add);c.items=keep} // right at the «+» that was tapped
         else c.items=keep.concat(add);
         closeModal();await Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast(order.length?`Προστέθηκαν ${order.length}`:'Η λίστα ενημερώθηκε')};
       setTimeout(draw,0);
@@ -2895,7 +2906,7 @@ function lsPlan(d){
   const cols=[];let positions=0,replaced=0,k=0;
   for(const sh of d.shows){
     const fid=lsId('ls-',sh.id);if(Store.cols.has(fid))replaced++;
-    cols.push({id:fid,name:String(sh.name||'Εμφάνιση').trim(),ordered:false,mode:'cue',parent:null,items:[],notes:'',createdAt:now()});
+    cols.push({id:fid,name:String(sh.name||'').trim()||'Εμφάνιση',ordered:false,mode:'cue',parent:null,items:[],notes:'',createdAt:now()});
     for(const pr of sh.programs||[]){
       const id=lsId('ls-',pr.id);if(Store.cols.has(id))replaced++;
       const packs=pr.packs||[];const items=[];
@@ -2960,7 +2971,7 @@ function openSong(id,list,colId,pos){
 function go(delta){
   if(!ctxInfo()) return;
   const p=ctxStep(delta>0?1:-1);if(p<0) return;
-  openSong(S.ctx.list[p].s,null,null,p);
+  openSong(S.ctx.list[p].s,null,null,p);if(popKind)drawPop();
 }
 // ---- perf ----
 let wakeLock=null,wakeWarned=false;
@@ -2983,7 +2994,7 @@ async function requestWake(){
 function releaseWake(){try{wakeLock&&wakeLock.release&&wakeLock.release()}catch(e){}wakeLock=null;try{nsVideo&&nsVideo.pause()}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(wantAwake()&&document.visibilityState==='visible'&&wakeLock===null)requestWake()});
 // older iPads keep the screen on with a silent video, which may only start after a touch: the first touch does it
-document.addEventListener('pointerdown',()=>{if(prefs.awakeAlways&&wakeLock===null&&(!nsVideo||nsVideo.paused))requestWake()},{passive:true});
+document.addEventListener('pointerdown',()=>{if(wantAwake()&&wakeLock===null&&(!nsVideo||nsVideo.paused))requestWake()},{passive:true});
 if(prefs.awakeAlways)setTimeout(requestWake,0);
 function enterPerf(){
   S.perf=true;document.body.classList.add('perf');document.body.classList.remove('uihidden');
@@ -3007,12 +3018,12 @@ function setCue(colId,i){
 function cueMove(d){
   const col=Store.cols.get(S.ctx&&S.ctx.colId);if(!col) return;
   const n=songItems(col).length;
-  setCue(col.id,Math.max(0,Math.min(n-1,(S.cueIdx[col.id]||0)+d)));renderCueSheet();
+  setCue(col.id,Math.max(0,Math.min(n-1,(S.cueIdx[col.id]||0)+d)));renderCueSheet();if(popKind)drawPop();
 }
 
 const A={
   sidetoggle(){document.body.classList.toggle('sideopen')},
-  sec(el){S.sec=el.dataset.sec;S.reorder=false;S.browse=null;S.pick=null;document.body.classList.remove('sideopen');
+  sec(el){if(S.sec!==el.dataset.sec){S.sel=null;selAnchor=null}S.sec=el.dataset.sec;S.reorder=false;S.browse=null;S.pick=null;document.body.classList.remove('sideopen');
     // the open song stops following the old list's order (its «Επόμενο», position, arrow keys)
     // another list or view: the song from before closes (unless it is being edited or played)
     if(!S.perf&&!S.edit&&S.songId&&!(S.ctx&&S.ctx.colId&&S.sec==='col:'+S.ctx.colId)){S.songId=null;S.ctx=null;renderDetail(true)}
@@ -3023,7 +3034,7 @@ const A={
   tab(el){const t={home:'home',search:'all',songs:'all'}[el.dataset.t]||'home';
     const again=S.sec===t&&document.body.dataset.pane==='list';
     if(again&&t==='all'&&S.browse){S.browse=null;S.pick=null;renderList(true);return}
-    if(!again){S.sec=t;S.q='';S.reorder=false;S.browse=null;S.pick=null;renderSide();renderList(true)}
+    if(!again){S.sec=t;S.q='';S.reorder=false;S.sel=null;selAnchor=null;S.browse=null;S.pick=null;renderSide();renderList(true)}
     setPane('list');
     if(again&&t==='all')setTimeout(()=>{const q=$('#q');if(q)q.focus()},60)},
   resume(){const r=lastPlayed();if(!r)return;S.sec='col:'+r.col.id;renderSide();renderList(true);A.playcol()},
@@ -3198,7 +3209,7 @@ const A={
   tocol(el){toColModal((el&&el.dataset.id)||S.songId)},
   tcCreate(el){const inp=$('#tcNew');const name=inp.value.trim();if(!name){inp.focus();return}const c={id:uid(),name,ordered:true,mode:'full',parent:null,items:[{i:uid(),s:el.dataset.id}],createdAt:now()};Store.saveCol(c);closeModal();toColModal(el.dataset.id);toast('Δημιουργήθηκε η «'+name+'»')},
   versions(el){versionsModal((el&&el.dataset.id)||S.songId)},
-  async restoreV(el){const v=(versionsModal.cache||[]).find(x=>x.id===el.dataset.vid);const s=Store.songs.get(S.songId);if(!v||!s)return;await Store.addVersion(s).catch(()=>{});const ns=Object.assign(clone(v.data),{id:s.id,fav:s.fav,openedAt:s.openedAt});closeModal();await Store.saveSong(ns);toast('Επαναφέρθηκε η έκδοση της '+fmtDate(v.savedAt))},
+  async restoreV(el){if(restoreV.busy)return;const v=(versionsModal.cache||[]).find(x=>x.id===el.dataset.vid);const s=Store.songs.get(S.songId);if(!v||!s)return;restoreV.busy=1;setTimeout(()=>restoreV.busy=0,1500);delete S.tr[s.id];await Store.addVersion(s).catch(()=>{});const ns=Object.assign(clone(v.data),{id:s.id,fav:s.fav,openedAt:s.openedAt});closeModal();await Store.saveSong(ns);toast('Επαναφέρθηκε η έκδοση της '+fmtDate(v.savedAt))},
   exportsong(el){exportSongModal((el&&el.dataset.id)||S.songId)},
   async exp(el){const s=Store.songs.get(S.songId);if(!s)return;const f=el.dataset.f;
     if(f==='copy'){try{await navigator.clipboard.writeText(songAsText(s));toast('Αντιγράφηκε')}catch(e){saveFile(safeName(s.title)+'.txt',songAsText(s))}return}
@@ -3277,7 +3288,7 @@ const A={
     l.scrollTop+=r.getBoundingClientRect().top-l.getBoundingClientRect().top-4},
   cuejump(el){const c=Store.cols.get(S.ctx&&S.ctx.colId);if(!c)return;setCue(c.id,Math.min(+el.dataset.i,songItems(c).length-1));renderCueSheet()},
   newsubcol(el){colModal(null,{parent:el.dataset.parent})},
-  playsub(el){S.sec='col:'+el.dataset.col;S.q='';S.f={genre:'',key:'',artist:''};S.reorder=false;renderAll();if(document.body.dataset.size==='s')setPane('list');A.playcol()},
+  playsub(el){S.sel=null;selAnchor=null;S.sec='col:'+el.dataset.col;S.q='';S.f={genre:'',key:'',artist:''};S.reorder=false;renderAll();if(document.body.dataset.size==='s')setPane('list');A.playcol()},
   foldtoggle(el){const id=el.dataset.id;const s=new Set(prefs.closed||[]);s.has(id)?s.delete(id):s.add(id);prefs.closed=[...s];savePrefs();renderSide();if(S.sec==='home')renderList(true)},
   editcol(el){const c=(el&&el.dataset.col&&Store.cols.get(el.dataset.col))||colOf(S.sec);if(c)colModal(c)},
   async saveColModal(el){
@@ -3319,7 +3330,7 @@ const A={
     S.ctx={list:sl.map(x=>({s:x.s,it:x.i})),colId:c.id,pos:0};S.fromCue=null;S.returnTo=null;S.edit=null;S.cueMode=true;S.songId=null;
     S.cueIdx[c.id]=S.cueIdx[c.id]||0;if(document.body.dataset.size!=='l')setPane('detail');enterPerf();renderCueSheet()},
   // stage list: tapping a song makes it current; if it has lyrics they open, and «Λίστα» comes back here
-  cuepick(el){const c=Store.cols.get(S.ctx.colId);setCue(c.id,+el.dataset.i);if(S.split){renderCueSheet();return} // tablet: the lyrics are already on the right
+  cuepick(el){const c=S.ctx&&Store.cols.get(S.ctx.colId);if(!c)return;setCue(c.id,+el.dataset.i);if(S.split){renderCueSheet();return} // tablet: the lyrics are already on the right
     const it=songItems(c)[+el.dataset.i],s=it&&Store.songs.get(it.s);
     if(s&&(s.lines||[]).length){A.cueopen();return}renderCueSheet()},
   cueopen(){const c=Store.cols.get(S.ctx&&S.ctx.colId);if(!c)return;const list=songItems(c).map(x=>({s:x.s,it:x.i}));const i=S.cueIdx[c.id]||0;if(!list[i])return;
@@ -3398,7 +3409,7 @@ document.addEventListener('click',e=>{
     if(f){e.preventDefault();f(el,e)}
     return;
   }
-  if(S.perf&&e.target.closest('#detail')&&!e.target.closest('button')) document.body.classList.toggle('uihidden');
+  if(S.perf&&!S.cueMode&&e.target.closest('#detail')&&!e.target.closest('button')) document.body.classList.toggle('uihidden');
 });
 document.addEventListener('input',e=>{
   if(e.target.id==='q'){S.q=e.target.value;renderRows();return}
@@ -3429,7 +3440,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){if(document.getElementById('cmenu')){closeCtx();return}if(popKind){closePop();return}if(!$('#modal').hidden){closeModal();return}if(S.perf&&S.returnTo){A.stageback();return}if(S.perf&&S.fromCue&&!S.cueMode){A.cueback();return}if(S.perf){exitPerf();return}if(S.edit){cancelEditor(false);return}}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&S.edit){e.preventDefault();saveEditor();return}
   const cmx=document.getElementById('cmenu');
-  if(cmx&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();const b=[...cmx.querySelectorAll('.mitem')];const k=b.indexOf(document.activeElement);b[(k+(e.key==='ArrowDown'?1:-1)+b.length)%b.length].focus();return}
+  if(cmx&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();const b=[...cmx.querySelectorAll('.mitem,.kp')];if(!b.length)return;const k=b.indexOf(document.activeElement);b[(k+(e.key==='ArrowDown'?1:-1)+b.length)%b.length].focus();return}
   if(typing||!$('#modal').hidden) return;
   if(e.key==='/'){const q=$('#q');if(q&&q.offsetParent){e.preventDefault();q.focus()}return}
   // drag keyboard reorder
@@ -3622,7 +3633,7 @@ Store.onLocal=()=>{
   renderAll();
   if(perf) enterPerf(); // back on stage (fullscreen may need a tap, the rest is there)
 };
-Store.init().then(()=>{
+Store.init().catch(e=>{console.warn(e);toast('Κάτι πήγε στραβά στο άνοιγμα. Δοκίμασε ανανέωση.')}).then(()=>{
   stateReady=true;
   renderAll();
   if(Store.mode==='setup')ghModal();
@@ -3767,6 +3778,7 @@ function menuTarget(t){
 // long-press on touch (iPhone/iPad send no contextmenu): 500ms without moving opens the sheet
 const lp={t:0,x:0,y:0,fired:false,lift:null};
 document.addEventListener('contextmenu',e=>{
+  if(document.getElementById('cmenu')&&fineMouse()&&$('#modal').hidden&&menuTarget(e.target))closeCtx();
   if(document.getElementById('cmenu')||!$('#modal').hidden){if(menuTarget(e.target))e.preventDefault();return}
   const m=menuTarget(e.target);if(!m)return;e.preventDefault();
   // Android long-press arrives here: the sheet, once
@@ -3778,7 +3790,7 @@ document.addEventListener('contextmenu',e=>{
    anything else (a song in «Τραγούδια», a list card…) → its menu right away */
 function liftEnd(){if(lp.lift&&lp.lift.row)lp.lift.row.classList.remove('lifted');lp.lift=null}
 document.addEventListener('touchstart',e=>{
-  lp.fired=false;clearTimeout(lp.t);liftEnd();if(S.perf||e.touches.length!==1)return;
+  lp.fired=false;clearTimeout(lp.t);liftEnd();if(S.perf||e.touches.length!==1||(e.target.closest&&e.target.closest('.handle')))return;
   const m=menuTarget(e.target);if(!m)return;const p=e.touches[0];lp.x=p.clientX;lp.y=p.clientY;
   const row=e.target.closest('#list .row[data-item]:not(.secrow)'),col=colOf(S.sec);
   const movable=!!(row&&col&&col.ordered&&!S.q&&!S.pick);

@@ -4,7 +4,7 @@
    - Icons and manifest: saved copy first.
    - Everything else (the GitHub API) is never touched here:
      the app keeps its own copy of the songs and queues changes until it is back online. */
-const CACHE = 'msb-shell-v3'; // v3: the Commissioner font is kept for offline use
+const CACHE = 'msb-shell-v4'; // v3: the Commissioner font is kept for offline use
 const FONTS = 'msb-fonts-v1';  // Google Fonts (css + files): kept after the first load, so the app looks the same offline
 const SHELL = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon.png'];
 
@@ -47,9 +47,11 @@ self.addEventListener('fetch', e => {
       const cache = await caches.open(CACHE);
       try {
         const r = await fromNetwork(req, 3000);
-        if (r.ok) cache.put('./', r.clone());
+        if (r.ok && !r.redirected) cache.put('./', r.clone()); // never keep a wifi sign-in page as the app
         return r;
       } catch (err) {
+        // slow network: open the saved copy now, but still keep the new version when it arrives
+        e.waitUntil(fetch(req, { cache: 'no-store' }).then(r => { if (r.ok && !r.redirected) return cache.put('./', r); }).catch(() => {}));
         const saved = await cache.match('./');
         if (saved) return saved;
         throw err;
