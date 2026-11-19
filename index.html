@@ -1752,7 +1752,9 @@ function layout(){
   // turning a tablet or phone on stage switches between one and two columns
   if(S.perf&&S.cueMode&&(w>=760)!==!!S.split) renderCueSheet();
 }
-function setPane(p){document.body.dataset.pane=p;renderTabbar()}
+function setPane(p){document.body.dataset.pane=p;renderTabbar();
+  if(p==='list')requestAnimationFrame(()=>{const l=$('#list'),m=listMem[listView];if(l&&m!=null&&Math.abs(l.scrollTop-m)>2)l.scrollTop=m})}
+document.addEventListener('scroll',e=>{const t=e.target;if(t&&t.id==='list'&&t.offsetParent)listMem[listView]=t.scrollTop},true);
 window.addEventListener('resize',layout);
 
 /* =====================================================================
@@ -1932,7 +1934,8 @@ function renderList(full=true){
   if(isFolder(col)){renderFolder(col,pane);return}
   // the same list drawn again (a change, a deletion, a sync): it stays where it was scrolled, it doesn't jump to the top
   const view=S.sec+'|'+(S.browse?S.browse.f+'='+S.browse.v:'');
-  listKeepTop=null;if(view===listView){const l=$('#list');if(l)listKeepTop=l.scrollTop}
+  // on a phone the list is hidden while a song is open: a hidden list reads 0, so its last position is remembered instead
+  listKeepTop=null;if(view===listView){const l=$('#list');if(l)listKeepTop=l.offsetParent?l.scrollTop:(listMem[view]!=null?listMem[view]:l.scrollTop)}else delete listMem[view];
   listView=view;
   if(full||!pane.querySelector('.list')||pane.querySelector('.folderlist')){
     const genres=allGenres(),artists=distinct('artist'),keys=ALLKEYS.filter(k=>[...Store.songs.values()].some(s=>s.key===k));
@@ -2082,7 +2085,7 @@ function renderFolder(col,pane){
       <button class="addsub" data-act="newsubcol" data-parent="${col.id}">${ic('plus','sm')}Νέα λίστα σε αυτόν τον φάκελο</button>
     </div>`;
 }
-var listView='',listKeepTop=null,listOnSong=null; // var: renderList can run before this line
+var listView='',listKeepTop=null,listOnSong=null,listMem={}; // var: renderList can run before this line
 // the song that is open stays in sight in the list: when the arrows go past the last song showing, the list follows
 // (just enough: the open song becomes the last one showing, or the first going up)
 function keepOnInView(el){
