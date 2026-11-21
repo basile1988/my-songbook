@@ -725,6 +725,11 @@ button,[role=button],.row,.lcard,.chip,.pill,.pbar,.secjump,.keyb,.shkey,#tabbar
   .secjump.sjl .sjarr.l,.secjump.sjr .sjarr.r{visibility:visible}
   .secjump .sjarr:hover{border-color:var(--text);background:var(--raise)}
 }
+/* phone: the strip only moves sideways (no small up-down wobble while swiping it) */
+.secjump{overflow-y:hidden;touch-action:pan-x}
+/* computer and tablet: every pack in view, in rows (what doesn't fit goes to the next line), no sideways scroll */
+body:not([data-size=s]) .secjump{flex-wrap:wrap;overflow:visible;-webkit-mask-image:none;mask-image:none;padding-right:0;scroll-snap-type:none;touch-action:auto;row-gap:6px}
+body:not([data-size=s]) .secjump .sjarr{display:none!important}
 /* swipe between songs (when on): the browser keeps vertical scrolling, the app gets the sideways swipe */
 body.perf.swipeon #detail{touch-action:pan-y}
 .btn:active,.ibtn:active,.pround:active,.pnav:active,.playc:active,.shback:active,.shkey:active,.secjump button:active{transform:scale(.96)}
