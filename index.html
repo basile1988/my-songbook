@@ -911,6 +911,13 @@ html:not([data-eff=dark]) .tile{background:hsl(var(--h) 55% 86%);color:#16181d}
 .row.sel .selbox{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .selbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
 .selbar[hidden]{display:none}
+/* pack headers inside a list: a clear band, so the packs stand apart from the songs */
+#list .secrow{margin:18px 0 6px;padding:10px 12px;border-radius:10px;border-top:0!important;background:color-mix(in srgb,var(--accent) 11%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
+#list .secrow:first-child{margin-top:4px}
+#list .secrow .sechead .sn{color:var(--accent);font-size:14.5px;font-weight:800;letter-spacing:.06em}
+#list .secrow .sechead .ss{color:var(--text);opacity:.75;font-size:12.5px}
+#list .secrow .sechead .sc{margin-left:auto;min-width:24px;padding:0 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 22%,transparent);color:var(--accent);font-size:12px;font-weight:800;line-height:20px;text-align:center}
+@media (hover:hover) and (pointer:fine){#list .secrow:hover{background:color-mix(in srgb,var(--accent) 16%,transparent)}}
 .row .inpack{display:inline-block;margin-right:6px;padding:0 6px;border-radius:5px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-weight:700;font-size:11.5px;line-height:18px;white-space:nowrap}
 .row .gotob{flex:none;color:var(--accent)}
 input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display:none} /* the app has its own ✕ */
@@ -2138,6 +2145,7 @@ function renderRows(){
     :songDrag&&sid?`<button class="handle" data-drag-song="${sid}" aria-label="Σύρε σε λίστα" title="Σύρε σε μια λίστα αριστερά">${ic('grip','sm')}</button>`:'';
   const selBox=(id,title)=>S.reorder&&id?`<button class="selbox ${S.sel&&S.sel.has(id)?'on':''}" data-act="seltoggle" data-item="${id}" role="checkbox" aria-checked="${!!(S.sel&&S.sel.has(id))}" aria-label="Επιλογή: ${esc(title)}">${ic('check','sm')}</button>`:'';
   let pos=0,num=0;
+  const packN=new Map();if(col&&col.ordered){let cur=null;for(const x of itemsOf(col)){if(x.sec!=null){cur=x.i;packN.set(cur,0)}else if(x.s&&cur)packN.set(cur,packN.get(cur)+1)}}
   // searching inside a list: each result says its pack and place, and has a button that goes there
   const where=new Map();
   if(S.q&&col&&col.ordered){let sec=null,n=0;for(const x of itemsOf(col)){if(x.sec!=null){sec=x;n=0;continue}if(x.s){n++;where.set(x.i,(sec?secShort(sec)+' · ':'')+'#'+n)}}}
@@ -2155,7 +2163,7 @@ function renderRows(){
     if(top)top+=`<div class="slab">Όλα · ${arr.length}</div>`;
   }
   el.innerHTML=top+gap('')+arr.map(e=>{
-    if(e.sec){num=0;return `<div class="row secrow" data-item="${e.sec.i}">${S.reorder?`<button class="selbox pack" data-act="selpack" data-item="${e.sec.i}" aria-label="Επιλογή όλου του πακέτου">${ic('check','sm')}</button>`:''}${handle(e.sec.i)}<button class="sechead" data-act="editsec" data-item="${e.sec.i}"><span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}</button>${ud(e.sec.i)}</div>${gap(e.sec.i)}`}
+    if(e.sec){num=0;return `<div class="row secrow" data-item="${e.sec.i}">${S.reorder?`<button class="selbox pack" data-act="selpack" data-item="${e.sec.i}" aria-label="Επιλογή όλου του πακέτου">${ic('check','sm')}</button>`:''}${handle(e.sec.i)}<button class="sechead" data-act="editsec" data-item="${e.sec.i}"><span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}${packN.has(e.sec.i)?`<span class="sc">${packN.get(e.sec.i)}</span>`:''}</button>${ud(e.sec.i)}</div>${gap(e.sec.i)}`}
     const s=e.s,it=e.it,k=itemKey(it,s),p=pos++;num++;
     const on=it?curIt===it.i&&S.songId===s.id:S.songId===s.id;
     const picking=!col&&S.pick,picked=picking&&S.pick.has(s.id),sel=!!(it&&S.sel&&S.sel.has(it.i));
@@ -3532,7 +3540,18 @@ $('#detail').addEventListener('touchstart',e=>{if(!S.perf)return;const p=e.chang
 // swipe left/right on stage changes song only if turned on in Settings (on a music stand it fires by accident)
 $('#detail').addEventListener('touchend',e=>{if(!S.perf||!prefs.swipe)return;const p=e.changedTouches[0];const dx=p.clientX-tx,dy=p.clientY-ty;if(Date.now()-tt<600&&Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*1.6){S.cueMode?cueMove(dx<0?1:-1):go(dx<0?1:-1)}},{passive:true});
 // ---- drag to reorder ----
+function packIds(c,secId){const it=itemsOf(c),i=it.findIndex(x=>x.i===secId);if(i<0||it[i].sec==null)return null;
+  const out=[it[i].i];for(let j=i+1;j<it.length&&it[j].sec==null;j++)out.push(it[j].i);return out}
 function moveItem(id,delta,quiet){
+  { // a pack moves whole: above the previous pack or below the next one, never in between songs
+    const c0=colOf(S.sec),blk=c0&&packIds(c0,id);
+    if(blk){const n=clone(c0),items=itemsOf(n),i=items.findIndex(x=>x.i===id),moving=items.splice(i,blk.length);let k;
+      if(delta<0){if(i===0)return false;k=i-1;while(k>0&&items[k].sec==null)k--}
+      else{if(i>=items.length)return false;k=i+1;while(k<items.length&&items[k].sec==null)k++}
+      items.splice(k,0,...moving);n.items=items;
+      const fh=()=>{if(quiet)return;const h=document.querySelector(`.handle[data-drag="${id}"]`);h&&h.focus()};
+      Store.saveCol(n).then(fh,()=>toast('Δεν αποθηκεύτηκε.'));setTimeout(fh,30);return true}
+  }
   const c=colOf(S.sec);if(!c) return false;const n=clone(c);const items=itemsOf(n);const i=items.findIndex(x=>x.i===id);const j=i+delta;if(i<0||j<0||j>=items.length) return false;
   const [moved]=items.splice(i,1);items.splice(j,0,moved);
   // keyboard (Alt+↑/↓) keeps focus on the drag handle; ▲▼ taps (quiet) handle focus and scroll themselves
@@ -3575,7 +3594,8 @@ document.addEventListener('pointerdown',e=>{
   if(h.dataset.drag){ids=S.sel&&S.sel.has(h.dataset.drag)&&S.sel.size>1&&col?itemsOf(col).filter(x=>S.sel.has(x.i)).map(x=>x.i):[h.dataset.drag];
     songs=col?ids.map(i=>(itemById(col.id,i)||{}).s).filter(Boolean):[]}
   else if(h.dataset.dragSong){songs=[h.dataset.dragSong]}
-  drag={ids,songs,col:col&&col.id,row,list,pid:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false,before:undefined,side:null,onlySide:!h.dataset.drag,soft,cap:h};
+  const pk=col&&h.dataset.drag&&packIds(col,h.dataset.drag);if(pk){ids=pk;songs=ids.map(i=>(itemById(col.id,i)||{}).s).filter(Boolean)}
+  drag={ids,songs,pack:!!pk,col:col&&col.id,row,list,pid:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false,before:undefined,side:null,onlySide:!h.dataset.drag,soft,cap:h};
   if(!soft)h.setPointerCapture(e.pointerId);
 });
 // a row that was dragged must not also open when the mouse is let go
@@ -3597,10 +3617,11 @@ function dragMove(x,y){
   drag.side=null;
   if(drag.onlySide){line.hidden=true;return}
   // where in the list: before the first row (song or pack) whose middle is below the pointer
-  const rows=[...list.querySelectorAll('.row[data-item]')].filter(r=>!drag.ids.includes(r.dataset.item));
+  const rows=[...list.querySelectorAll(drag.pack?'.row.secrow[data-item]':'.row[data-item]')].filter(r=>!drag.ids.includes(r.dataset.item));
   let before=null;for(const r of rows){const b=r.getBoundingClientRect();if(y<b.top+b.height/2){before=r;break}}
   drag.before=before?before.dataset.item:null;
-  const lb=list.getBoundingClientRect(),ref=before?before.getBoundingClientRect():rows.length?rows[rows.length-1].getBoundingClientRect():lb;
+  const allRows=drag.pack?[...list.querySelectorAll('.row[data-item]')]:rows; // a pack at the end: the line goes under the last song
+  const lb=list.getBoundingClientRect(),ref=before?before.getBoundingClientRect():allRows.length?allRows[allRows.length-1].getBoundingClientRect():lb;
   const ly=before?ref.top:ref.bottom;
   line.hidden=!(ly>=lb.top-2&&ly<=lb.bottom+2);line.style.left=(lb.left+8)+'px';line.style.width=(lb.width-16)+'px';line.style.top=(ly-1)+'px';
   if(y<lb.top+48)list.scrollTop-=10;else if(y>lb.bottom-48)list.scrollTop+=10;
