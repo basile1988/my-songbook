@@ -914,6 +914,11 @@ html:not([data-eff=dark]) .tile{background:hsl(var(--h) 55% 86%);color:#16181d}
 /* pack headers inside a list: a clear band, so the packs stand apart from the songs */
 #list .secrow{margin:18px 0 6px;padding:10px 12px;border-radius:10px;border-top:0!important;background:color-mix(in srgb,var(--accent) 11%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
 #list .secrow:first-child{margin-top:4px}
+#list .secrow .sechead .fch{display:inline-grid;place-items:center;width:18px;margin-right:2px;color:var(--accent);transition:transform .18s ease;align-self:center}
+#list .secrow.folded .sechead .fch{transform:rotate(-90deg)}
+#list .secrow.folded{margin-bottom:2px}
+#list .secrow.folded+.secrow{margin-top:8px}
+.secjump .sjall{display:inline-flex;align-items:center;gap:4px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
 #list .secrow .sechead .sn{color:var(--accent);font-size:14.5px;font-weight:800;letter-spacing:.06em}
 #list .secrow .sechead .ss{color:var(--text);opacity:.75;font-size:12.5px}
 #list .secrow .sechead .sc{margin-left:auto;min-width:24px;padding:0 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 22%,transparent);color:var(--accent);font-size:12px;font-weight:800;line-height:20px;text-align:center}
@@ -1122,6 +1127,10 @@ const now=()=>Date.now();
 const clone=o=>JSON.parse(JSON.stringify(o));
 const collator=new Intl.Collator('el',{sensitivity:'base',numeric:true});
 const fmtDate=t=>new Date(t).toLocaleString('el-GR',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+/* packs closed like an accordion: per list, remembered on this device */
+const FOLD_KEY='msb-folded';let folded=null;
+const foldSet=colId=>{if(!folded){try{folded=JSON.parse(localStorage.getItem(FOLD_KEY)||'{}')}catch(e){folded={}}}return new Set(folded[colId]||[])};
+function foldSave(colId,set){foldSet(colId);if(set.size)folded[colId]=[...set];else delete folded[colId];try{localStorage.setItem(FOLD_KEY,JSON.stringify(folded))}catch(e){}}
 const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 let toastT;
@@ -1975,8 +1984,8 @@ function renderList(full=true){
         ${!col&&S.browse?`<div class="browsebar" id="browseBar"></div>`:''}
         ${col&&col.notes?notesBox(col):''}
         ${S.reorder?`<div class="reorderbar">${ic('pencil','sm')}<span>Σύρε από το ≡ για σειρά · τσέκαρε για αφαίρεση ή μετακίνηση · «+» για προσθήκη</span><button class="btn sm primary" data-act="reorderdone">Τέλος</button></div>
-        ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${sjArr('l')}${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}${sjArr('r')}</div>`:''}`:`
-        ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${sjArr('l')}${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}${sjArr('r')}</div>`:''}
+        ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${sjArr('l')}${S.q?'':'<button class="sjall" data-act="secfoldall"></button>'}${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}${sjArr('r')}</div>`:''}`:`
+        ${secs.length>1?`<div class="secjump" role="navigation" aria-label="Πήγαινε σε ενότητα">${sjArr('l')}${S.q?'':'<button class="sjall" data-act="secfoldall"></button>'}${secs.map(x=>`<button data-act="jumpsec" data-item="${x.i}">${esc(secShort(x))}</button>`).join('')}${sjArr('r')}</div>`:''}
         <div class="searchrow">
           <div class="search">${ic('search')}<input id="q" type="search" placeholder="${col?'Αναζήτηση στη λίστα':'Τίτλος, καλλιτέχνης ή στίχος'}" value="${esc(S.q)}" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση"><button class="ibtn clr" data-act="clearq" aria-label="Καθαρισμός" ${S.q?'':'hidden'}>${ic('x','sm')}</button></div>
           ${col||S.browse?'':(()=>{const nf=['rhythm','genre','key','artist'].filter(k=>S.f[k]).length;return `<button class="ibtn ftoggle ${S.showF||nf?'on':''}" data-act="togglef" aria-expanded="${!!(S.showF||nf)}" aria-label="Φίλτρα" title="Φίλτρα">${ic('settings')}${nf?`<span class="fbadge">${nf}</span>`:''}</button>`})()}
@@ -2144,7 +2153,8 @@ function renderRows(){
   const handle=(id,sid)=>canDrag&&id?`<button class="handle" data-drag="${id}" aria-label="Μετακίνηση" title="Σύρε για αλλαγή σειράς · Alt+↑/↓">${ic('grip','sm')}</button>`
     :songDrag&&sid?`<button class="handle" data-drag-song="${sid}" aria-label="Σύρε σε λίστα" title="Σύρε σε μια λίστα αριστερά">${ic('grip','sm')}</button>`:'';
   const selBox=(id,title)=>S.reorder&&id?`<button class="selbox ${S.sel&&S.sel.has(id)?'on':''}" data-act="seltoggle" data-item="${id}" role="checkbox" aria-checked="${!!(S.sel&&S.sel.has(id))}" aria-label="Επιλογή: ${esc(title)}">${ic('check','sm')}</button>`:'';
-  let pos=0,num=0;
+  let pos=0,num=0,hide=false;
+  const fold=col&&col.ordered&&!filtered?foldSet(col.id):new Set();
   const packN=new Map();if(col&&col.ordered){let cur=null;for(const x of itemsOf(col)){if(x.sec!=null){cur=x.i;packN.set(cur,0)}else if(x.s&&cur)packN.set(cur,packN.get(cur)+1)}}
   // searching inside a list: each result says its pack and place, and has a button that goes there
   const where=new Map();
@@ -2163,7 +2173,8 @@ function renderRows(){
     if(top)top+=`<div class="slab">Όλα · ${arr.length}</div>`;
   }
   el.innerHTML=top+gap('')+arr.map(e=>{
-    if(e.sec){num=0;return `<div class="row secrow" data-item="${e.sec.i}">${S.reorder?`<button class="selbox pack" data-act="selpack" data-item="${e.sec.i}" aria-label="Επιλογή όλου του πακέτου">${ic('check','sm')}</button>`:''}${handle(e.sec.i)}<button class="sechead" data-act="editsec" data-item="${e.sec.i}"><span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}${packN.has(e.sec.i)?`<span class="sc">${packN.get(e.sec.i)}</span>`:''}</button>${ud(e.sec.i)}</div>${gap(e.sec.i)}`}
+    if(e.sec){num=0;hide=fold.has(e.sec.i);return `<div class="row secrow ${hide?'folded':''}" data-item="${e.sec.i}">${S.reorder?`<button class="selbox pack" data-act="selpack" data-item="${e.sec.i}" aria-label="Επιλογή όλου του πακέτου">${ic('check','sm')}</button>`:''}${handle(e.sec.i)}<button class="sechead" data-act="${S.reorder?'editsec':'secfold'}" data-item="${e.sec.i}" ${S.reorder?'':`aria-expanded="${!hide}"`}>${col&&col.ordered&&!filtered&&!S.reorder?`<span class="fch" aria-hidden="true">${ic('down','sm')}</span>`:''}<span class="sn">${esc(e.sec.sec||'Ενότητα')}</span>${e.sec.sub?`<span class="ss">${esc(e.sec.sub)}</span>`:''}${packN.has(e.sec.i)?`<span class="sc">${packN.get(e.sec.i)}</span>`:''}</button>${ud(e.sec.i)}</div>${gap(e.sec.i)}`}
+    if(hide&&e.it){pos++;num++;return ''}
     const s=e.s,it=e.it,k=itemKey(it,s),p=pos++;num++;
     const on=it?curIt===it.i&&S.songId===s.id:S.songId===s.id;
     const picking=!col&&S.pick,picked=picking&&S.pick.has(s.id),sel=!!(it&&S.sel&&S.sel.has(it.i));
@@ -2180,6 +2191,8 @@ function renderRows(){
       ${S.reorder?ud(it&&it.i):it?`<button class="ibtn imenu" data-act="itemmenu" data-item="${it.i}" aria-label="Επιλογές τραγουδιού: ${esc(s.title||'')}" title="Επιλογές τραγουδιού">${ic('more','sm')}</button>`:`<button class="ibtn imenu" data-act="songctx" data-id="${s.id}" aria-label="Επιλογές τραγουδιού: ${esc(s.title||'')}" title="Επιλογές τραγουδιού">${ic('more','sm')}</button>`}
     </div>${it?gap(it.i):''}`}).join('');
   drawSelBar(col);
+  const fa=document.querySelector('#listPane .sjall');if(fa&&col){const n=itemsOf(col).filter(x=>x.sec!=null).length,all=foldSet(col.id).size>=n&&n>0;
+    fa.hidden=!!S.q;fa.dataset.open=all?'1':'';fa.innerHTML=`${ic(all?'down':'up','sm')}${all?'Άνοιγμα όλων':'Κλείσιμο όλων'}`;fa.setAttribute('aria-label',all?'Άνοιγμα όλων των πακέτων':'Κλείσιμο όλων των πακέτων')}
   if(listKeepTop!=null){el.scrollTop=listKeepTop;listKeepTop=null}
   if(listAnchor){const r=el.querySelector('.row'+listAnchor.k);if(r)el.scrollTop+=r.getBoundingClientRect().top-listAnchor.off;listAnchor=null}
   keepOnInView(el);
@@ -3215,7 +3228,7 @@ const A={
   back(){if(S.perf){exitPerf();return}setPane('list');renderRows()},
   newsong(el){const t=el&&el.dataset?el.dataset.title:'';guardEdit(()=>openEditor(null,{title:t}))},
   // from a search result to its place in the whole list: search cleared, the row in the middle, a short highlight
-  gotoitem(el){const iid=el.dataset.item;S.q='';const q=$('#q');if(q){q.value='';q.blur()}renderRows();
+  gotoitem(el){const iid=el.dataset.item;{const c=colOf(S.sec);if(c){const it=itemsOf(c);let sec=null;for(const x of it){if(x.sec!=null)sec=x.i;if(x.i===iid)break}const f=foldSet(c.id);if(sec&&f.has(sec)){f.delete(sec);foldSave(c.id,f)}}}S.q='';const q=$('#q');if(q){q.value='';q.blur()}renderRows();
     const l=$('#list'),r=l&&l.querySelector(`.row[data-item="${iid}"]:not(.secrow)`);if(!r)return;
     const a=r.getBoundingClientRect(),b=l.getBoundingClientRect();l.scrollTop+=a.top-b.top-(l.clientHeight-a.height)/2;
     r.classList.remove('flash');void r.offsetWidth;r.classList.add('flash');setTimeout(()=>r.classList.remove('flash'),2200)},
@@ -3340,7 +3353,12 @@ const A={
   selremove(){removeSelected()},
   toastundo(){const f=toastAction;toastAction=null;hideToast();if(f)f()},
   sjgo(el){const j=el.closest('.secjump');if(j)j.scrollBy({left:(el.dataset.d==='l'?-1:1)*j.clientWidth*.7,behavior:'smooth'})},
-  jumpsec(el){const l=$('#list'),r=l&&l.querySelector(`.secrow[data-item="${el.dataset.item}"]`);if(!r)return;
+  secfold(el){const c=colOf(S.sec);if(!c)return;const f=foldSet(c.id),id=el.dataset.item;f.has(id)?f.delete(id):f.add(id);foldSave(c.id,f);
+    const l=$('#list'),r=l&&l.querySelector(`.secrow[data-item="${id}"]`),top=r&&r.getBoundingClientRect().top;renderRows();
+    const r2=l&&$('#list').querySelector(`.secrow[data-item="${id}"]`);if(r2&&top!=null)$('#list').scrollTop+=r2.getBoundingClientRect().top-top}, // the header stays under the finger
+  secfoldall(el){const c=colOf(S.sec);if(!c)return;const ids=itemsOf(c).filter(x=>x.sec!=null).map(x=>x.i);foldSave(c.id,el.dataset.open?new Set():new Set(ids));renderRows();const l=$('#list');if(l&&!el.dataset.open)l.scrollTop=0},
+  jumpsec(el){{const c=colOf(S.sec),f=c&&foldSet(c.id);if(f&&f.has(el.dataset.item)){f.delete(el.dataset.item);foldSave(c.id,f);renderRows()}} // a closed pack opens when you jump to it
+    const l=$('#list'),r=l&&l.querySelector(`.secrow[data-item="${el.dataset.item}"]`);if(!r)return;
     l.scrollTop+=r.getBoundingClientRect().top-l.getBoundingClientRect().top-4},
   cuejump(el){const c=Store.cols.get(S.ctx&&S.ctx.colId);if(!c)return;setCue(c.id,Math.min(+el.dataset.i,songItems(c).length-1));renderCueSheet()},
   newsubcol(el){colModal(null,{parent:el.dataset.parent})},
