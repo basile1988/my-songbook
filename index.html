@@ -923,6 +923,12 @@ html:not([data-eff=dark]) .tile{background:hsl(var(--h) 55% 86%);color:#16181d}
 #list .secrow .sechead .ss{color:var(--text);opacity:.75;font-size:12.5px}
 #list .secrow .sechead .sc{margin-left:auto;min-width:24px;padding:0 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 22%,transparent);color:var(--accent);font-size:12px;font-weight:800;line-height:20px;text-align:center}
 @media (hover:hover) and (pointer:fine){#list .secrow:hover{background:color-mix(in srgb,var(--accent) 16%,transparent)}}
+/* swipe back from the screen edge: a round arrow follows the finger */
+#backhint{position:fixed;top:50%;z-index:70;width:44px;height:44px;margin-top:-22px;border-radius:50%;display:grid;place-items:center;
+  background:var(--raise);color:var(--text);border:1px solid var(--line2);box-shadow:var(--shadow);pointer-events:none;opacity:0}
+#backhint.ready{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+#backhint svg{width:20px;height:20px}
+body.swiping #listPane,body.swiping #detail{box-shadow:0 0 40px rgba(0,0,0,.45)}
 .row .inpack{display:inline-block;margin-right:6px;padding:0 6px;border-radius:5px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-weight:700;font-size:11.5px;line-height:18px;white-space:nowrap}
 .row .gotob{flex:none;color:var(--accent)}
 input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display:none} /* the app has its own ✕ */
@@ -4112,6 +4118,59 @@ document.addEventListener('click',e=>{if(S.perf&&e.target.closest&&e.target.clos
 
 /* search inside a list, one result: Enter goes to its place in the list */
 document.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.target.id!=='q'||e.isComposing)return;const b=[...document.querySelectorAll('#list .gotob')];if(b.length===1){e.preventDefault();A.gotoitem(b[0])}});
+
+/* ---- back: one meaning everywhere (edge swipe, Android back, the browser's back) ----
+   modal → closes; editor → cancel (asks if there are changes); stage → back to the list of the night / out of the stage;
+   phone with a song open → the list; a list → its folder (or «Λίστες»); a filter/browse → off */
+function goBack(fromSystem){
+  if(document.getElementById('cmenu')){closeCtx();return true}
+  if(typeof popKind!=='undefined'&&popKind){closePop();return true}
+  if(!$('#modal').hidden){closeModal();return true}
+  if(S.edit){A.cancelEdit();return true}
+  if(S.perf){if(!fromSystem)return false; // on stage only the system back leaves (a stray edge swipe must not)
+    if(S.returnTo){A.stageback();return true}if(S.fromCue&&!S.cueMode){A.cueback();return true}A.perfx();return true}
+  const size=document.body.dataset.size;
+  if(size==='s'&&document.body.dataset.pane==='detail'){A.back();return true}
+  if(S.browse){A.browseoff();return true}
+  const col=colOf(S.sec);
+  if(col){const par=col.parent&&Store.cols.get(col.parent);A.sec({dataset:{sec:par?'col:'+par.id:'home'}});return true}
+  return false;
+}
+// the browser's own back (Android gesture/button, iPhone Safari edge swipe) comes here instead of leaving the app
+const HGUARD={msb:1};
+function backGuard(){try{if(!(history.state&&history.state.msb))history.pushState(HGUARD,'')}catch(e){}}
+addEventListener('popstate',()=>{if(goBack(true))backGuard()});
+document.addEventListener('pointerdown',backGuard,{once:true,passive:true});
+document.addEventListener('click',()=>setTimeout(backGuard,0),true);
+
+// edge swipe: from the left edge to the right, or from the right edge to the left; the screen follows the finger
+(function(){
+  const EDGE=26;let g=null,hint=null;
+  const target=()=>S.edit||document.body.dataset.pane==='detail'||document.body.dataset.size!=='s'&&S.songId?$('#detail'):$('#listPane');
+  const can=()=>!S.perf&&$('#modal').hidden&&!document.getElementById('cmenu')&&!drag&&(S.edit||document.body.dataset.size==='s'&&document.body.dataset.pane==='detail'||!!S.browse||!!colOf(S.sec));
+  document.addEventListener('touchstart',e=>{g=null;if(e.touches.length!==1)return;const t=e.touches[0],W=innerWidth;
+    const side=t.clientX<=EDGE?1:t.clientX>=W-EDGE?-1:0;if(!side||!can())return;
+    if(e.target.closest&&e.target.closest('input[type=range],.kfgrid'))return;
+    g={side,x0:t.clientX,y0:t.clientY,t0:Date.now(),lock:null,dx:0,el:target()}},{passive:true});
+  document.addEventListener('touchmove',e=>{if(!g)return;const t=e.touches[0],dx=(t.clientX-g.x0)*g.side,dy=t.clientY-g.y0;
+    if(!g.lock){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;g.lock=Math.abs(dx)>Math.abs(dy)*1.2&&dx>0?'x':'y';
+      if(g.lock==='x'){clearTimeout(lp.t);document.body.classList.add('swiping');if(!hint){hint=document.createElement('div');hint.id='backhint';hint.setAttribute('aria-hidden','true');document.body.appendChild(hint)}
+        hint.innerHTML=ic(g.side>0?'left':'right');hint.style.left=g.side>0?'6px':'';hint.style.right=g.side>0?'':'6px'}}
+    if(g.lock!=='x'){g=null;return}
+    if(e.cancelable)e.preventDefault(); // the page does not scroll while the screen is being pulled
+    g.dx=Math.max(0,dx);const W=innerWidth,k=Math.min(1,g.dx/(W*.3));
+    if(g.el){g.el.style.transition='none';g.el.style.transform=`translateX(${g.side*g.dx*.85}px)`}
+    hint.style.opacity=String(Math.min(1,g.dx/40));hint.style.transform=`translateX(${g.side*Math.min(g.dx*.35,56)}px) scale(${.7+.3*k})`;hint.classList.toggle('ready',k>=1)},{passive:false});
+  const end=commitOk=>{const G=g;g=null;if(!G||G.lock!=='x')return;document.body.classList.remove('swiping');
+    const el=G.el,W=innerWidth,v=G.dx/Math.max(1,Date.now()-G.t0),go=commitOk&&(G.dx>W*.3||v>.6&&G.dx>50);
+    if(hint){hint.style.transition='opacity .15s';hint.style.opacity='0';setTimeout(()=>{if(hint){hint.style.transition='';hint.classList.remove('ready')}},160)}
+    const clear=()=>{if(el){el.style.transition='';el.style.transform=''}};
+    if(!go||reduceMotion()){if(el&&!go){el.style.transition='transform .2s cubic-bezier(.2,.8,.2,1)';el.style.transform='';setTimeout(clear,220)}else clear();if(go)goBack(false);return}
+    el.style.transition='transform .16s ease-in';el.style.transform=`translateX(${G.side*W}px)`;
+    setTimeout(()=>{clear();if(!goBack(false))return;const n=target();if(n&&n.animate)n.animate([{transform:`translateX(${-G.side*W*.25}px)`,opacity:.6},{transform:'none',opacity:1}],{duration:200,easing:'cubic-bezier(0.23, 1, 0.32, 1)'})},160)};
+  document.addEventListener('touchend',()=>end(true),{passive:true});
+  document.addEventListener('touchcancel',()=>end(false),{passive:true});
+})();
 </script>
 </body>
 </html>
