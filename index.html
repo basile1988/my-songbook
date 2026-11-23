@@ -867,6 +867,10 @@ body[data-size=s] .mbrand{display:flex;align-items:center;gap:8px;font-weight:80
 .colsplit::after{content:"";position:absolute;top:0;bottom:0;left:3px;width:2px;border-radius:2px;background:transparent;transition:background .12s ease}
 .colsplit:hover::after,.colsplit.on::after{background:var(--muted)}
 .colsplit.on::after{background:var(--text)}
+.colsplit.touch{width:20px;cursor:default}
+.colsplit.touch::after{left:5px;background:var(--line)}
+.colsplit.touch::before{content:"";position:absolute;top:50%;left:3px;width:8px;height:44px;margin-top:-22px;border-radius:8px;background:var(--line2);box-shadow:0 0 0 3px var(--bg)}
+.colsplit.touch.on::before{background:var(--accent)}
 body.colresizing,body.colresizing *{cursor:col-resize!important;user-select:none!important}
 body.colresizing #app{pointer-events:none}
 /* ---- menus: floating at the cursor / beside ⋯ on a laptop, a sheet on touch ---- */
@@ -3777,18 +3781,20 @@ function applyColWidths(){
   prefs.listwm?r.setProperty('--listwm',prefs.listwm+'px'):r.removeProperty('--listwm');
 }
 function placeSplitters(){
+  // with a mouse a thin line; on a tablet (touch) a wider strip with a visible grip, so a finger can drag it too
   const fine=matchMedia('(hover:hover) and (pointer:fine)').matches,size=document.body.dataset.size;
-  const on=fine&&!S.perf&&!document.body.classList.contains('editing')&&(size==='l'||size==='m');
+  const on=!S.perf&&!document.body.classList.contains('editing')&&(size==='l'||size==='m');
   for(const el of document.querySelectorAll('.colsplit')){
     const which=el.dataset.split,pane=which==='side'?$('#side'):$('#listPane');
     const vis=on&&pane&&pane.offsetParent!==null&&getComputedStyle(pane).position!=='fixed'&&(which==='side'||$('#detail').offsetParent!==null);
     el.hidden=!vis;if(!vis)continue;
-    const r=pane.getBoundingClientRect();el.style.left=(r.right-4)+'px';
+    const r=pane.getBoundingClientRect();el.classList.toggle('touch',!fine);el.style.left=(r.right-(fine?4:6))+'px';
   }
 }
 let colDrag=null;
 document.addEventListener('pointerdown',e=>{
   const el=e.target.closest('.colsplit');if(!el)return;e.preventDefault();
+  if(e.pointerType!=='mouse'){const t=Date.now();if(t-(el._tap||0)<320){el._tap=0;el.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));return}el._tap=t}
   const which=el.dataset.split,pane=which==='side'?$('#side'):$('#listPane');
   colDrag={which,el,x0:e.clientX,w0:pane.getBoundingClientRect().width,m:document.body.dataset.size==='m'};
   el.setPointerCapture(e.pointerId);document.body.classList.add('colresizing');el.classList.add('on');
