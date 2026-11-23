@@ -948,6 +948,13 @@ body.swiping #listPane,body.swiping #detail{box-shadow:0 0 40px rgba(0,0,0,.45)}
 @media (orientation:landscape) and (max-height:500px){#splash .spin{flex-direction:row;gap:16px}#splash .splogo{width:clamp(64px,18vh,96px)}}
 @media (prefers-reduced-motion:reduce){#splash .splogo,#splash .spname{animation:spfade .4s ease forwards;transform:none}#splash .splogo::after{display:none}}
 @keyframes spfade{to{opacity:1}}
+/* stage on a phone: the header alone clears the status bar (the page did it a second time → a big empty band) */
+body.perf:not(.stagesplit) #detail{padding-top:0}
+/* the pack pills stay under the stage header while the songs scroll (never hidden behind it) */
+body.perf .secjump.stage{top:var(--shh,0px)}
+/* phones: the «< folder» link a little lower, out of the status-bar shade, and fully sharp */
+body[data-size=s] #listPane{padding-top:calc(env(safe-area-inset-top,0px) + 10px)}
+body[data-size=s] .crumb{color:var(--text);opacity:.85;font-size:14px;padding:4px 8px 4px 0;margin:0 0 2px}
 .row .inpack{display:inline-block;margin-right:6px;padding:0 6px;border-radius:5px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-weight:700;font-size:11.5px;line-height:18px;white-space:nowrap}
 .row .gotob{flex:none;color:var(--accent)}
 input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display:none} /* the app has its own ✕ */
@@ -2525,6 +2532,7 @@ function renderCueSheet(){
     const el=d.querySelector('.row.cur');
     if(el){const r=el.getBoundingClientRect(),b=d.getBoundingClientRect();d.scrollTop+=r.top-b.top-(d.clientHeight-r.height)/2}
   }
+  {const sh=d.querySelector('.stagehead');if(sh)document.documentElement.style.setProperty('--shh',sh.offsetHeight+'px')}
   const on=d.querySelector('.secjump .on');if(on){const j=on.parentElement;j.scrollLeft+=on.getBoundingClientRect().left-j.getBoundingClientRect().left-(j.clientWidth-on.offsetWidth)/2}
   renderPbar();
 }
