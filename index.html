@@ -911,6 +911,12 @@ html:not([data-eff=dark]) .tile{background:hsl(var(--h) 55% 86%);color:#16181d}
 .row.sel .selbox{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .selbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
 .selbar[hidden]{display:none}
+.row .inpack{display:inline-block;margin-right:6px;padding:0 6px;border-radius:5px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-weight:700;font-size:11.5px;line-height:18px;white-space:nowrap}
+.row .gotob{flex:none;color:var(--accent)}
+input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display:none} /* the app has its own ✕ */
+.row.flash{animation:rowflash 2.1s ease-out}
+@keyframes rowflash{0%,35%{background:color-mix(in srgb,var(--accent) 28%,transparent)}100%{background:transparent}}
+@media (prefers-reduced-motion:reduce){.row.flash{animation:none;outline:2px solid var(--accent);outline-offset:-2px}}
 body[data-size=s]:not([data-pane=detail]) .selbar{padding-bottom:10px} /* the tab bar below already clears the home indicator */
 @media (max-width:400px){.selbar{gap:5px;padding-left:10px;padding-right:10px}.selbar .btn{padding-left:10px;padding-right:10px;gap:4px}}
 .selbar .bcount{flex:1 1 100%;font-size:13.5px;font-weight:600}
@@ -1066,6 +1072,7 @@ const ICONS={
   settings:'<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
   cloud:'<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
   up:'<path d="m18 15-6-6-6 6"/>',
+  locate:'<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
   down:'<path d="m6 9 6 6 6-6"/>',
   more:'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
   section:'<path d="M4 6h16"/><path d="M4 12h10"/><path d="M4 18h7"/>',
@@ -2124,6 +2131,9 @@ function renderRows(){
     :songDrag&&sid?`<button class="handle" data-drag-song="${sid}" aria-label="Σύρε σε λίστα" title="Σύρε σε μια λίστα αριστερά">${ic('grip','sm')}</button>`:'';
   const selBox=(id,title)=>S.reorder&&id?`<button class="selbox ${S.sel&&S.sel.has(id)?'on':''}" data-act="seltoggle" data-item="${id}" role="checkbox" aria-checked="${!!(S.sel&&S.sel.has(id))}" aria-label="Επιλογή: ${esc(title)}">${ic('check','sm')}</button>`:'';
   let pos=0,num=0;
+  // searching inside a list: each result says its pack and place, and has a button that goes there
+  const where=new Map();
+  if(S.q&&col&&col.ordered){let sec=null,n=0;for(const x of itemsOf(col)){if(x.sec!=null){sec=x;n=0;continue}if(x.s){n++;where.set(x.i,(sec?secShort(sec)+' · ':'')+'#'+n)}}}
   // «+ Πρόσθεσε» between rows: on a laptop it shows on hover, on touch in «Επεξεργασία λίστας»
   const canIns=col&&col.ordered&&!filtered&&S.reorder;
   const gap=after=>canIns?`<div class="insgap" data-act="insat" data-after="${after}" role="button" tabindex="-1" aria-label="Πρόσθεσε εδώ"><span>${ic('plus','sm')}Πρόσθεσε εδώ</span></div>`:'';
@@ -2147,7 +2157,8 @@ function renderRows(){
       ${selBox(it&&it.i,s.title||'')}
       ${handle(it?it.i:'',it?'':s.id)}
       <div class="nmw">${col&&col.ordered?`<span class="num">${num}</span>`:''}
-      <div class="main"><div class="tt">${esc(s.title||'Χωρίς τίτλο')}</div>${it&&it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${esc([s.artist,!col&&inLists.get(s.id)?`σε ${inLists.get(s.id)} λίστ${inLists.get(s.id)===1?'α':'ες'}`:''].filter(Boolean).join(' · '))}${(s.lines||[]).length?`<span class="lymark">${ic('music','sm')}στίχοι</span>`:''}</div></div></div>
+      <div class="main"><div class="tt">${esc(s.title||'Χωρίς τίτλο')}</div>${it&&it.note?`<div class="inote">${esc(it.note)}</div>`:''}<div class="ar">${it&&where.has(it.i)?`<span class="inpack">${esc(where.get(it.i))}</span>`:''}${esc([s.artist,!col&&inLists.get(s.id)?`σε ${inLists.get(s.id)} λίστ${inLists.get(s.id)===1?'α':'ες'}`:''].filter(Boolean).join(' · '))}${(s.lines||[]).length?`<span class="lymark">${ic('music','sm')}στίχοι</span>`:''}</div></div></div>
+      ${it&&where.has(it.i)?`<button class="ibtn gotob" data-act="gotoitem" data-item="${it.i}" aria-label="Πήγαινε στη θέση του στη λίστα" title="Πήγαινε στη θέση του στη λίστα">${ic('locate','sm')}</button>`:''}
       ${it&&col&&!S.reorder?`<button class="keyb kpick ${k?'':'none'} ${it.key&&it.key!==s.key?'own':''}" data-act="keypick" data-col="${col.id}" data-item="${it.i}" aria-label="Τόνος ${esc(nm(k)||'κανένας')} · αλλαγή" title="Αλλαγή τόνου σε αυτή τη λίστα${it.key&&s.key&&it.key!==s.key?' · το τραγούδι είναι σε '+esc(nm(s.key)):''}">${esc(nm(k)||'—')}</button>`
       :!col&&!picking?`<button class="keyb kpick ${k?'':'none'}" data-act="keypick" data-id="${s.id}" aria-label="Τόνος ${esc(nm(k)||'κανένας')} · αλλαγή" title="Αλλαγή τόνου">${esc(nm(k)||'—')}</button>`
       :`<span class="keyb ${k?'':'none'} ${it&&it.key&&it.key!==s.key?'own':''}" title="${it&&it.key&&s.key&&it.key!==s.key?'Σε αυτή τη λίστα · το τραγούδι είναι σε '+esc(s.key):''}">${esc(nm(k)||'—')}</span>`}
@@ -3187,6 +3198,11 @@ const A={
   delSec(el){const c=clone(Store.cols.get(el.dataset.col));c.items=itemsOf(c).filter(x=>x.i!==el.dataset.item);closeModal();Store.saveCol(c).catch(()=>toast('Δεν αποθηκεύτηκε.'));toast('Η ενότητα σβήστηκε · τα τραγούδια της έμειναν')},
   back(){if(S.perf){exitPerf();return}setPane('list');renderRows()},
   newsong(el){const t=el&&el.dataset?el.dataset.title:'';guardEdit(()=>openEditor(null,{title:t}))},
+  // from a search result to its place in the whole list: search cleared, the row in the middle, a short highlight
+  gotoitem(el){const iid=el.dataset.item;S.q='';const q=$('#q');if(q){q.value='';q.blur()}renderRows();
+    const l=$('#list'),r=l&&l.querySelector(`.row[data-item="${iid}"]:not(.secrow)`);if(!r)return;
+    const a=r.getBoundingClientRect(),b=l.getBoundingClientRect();l.scrollTop+=a.top-b.top-(l.clientHeight-a.height)/2;
+    r.classList.remove('flash');void r.offsetWidth;r.classList.add('flash');setTimeout(()=>r.classList.remove('flash'),2200)},
   clearq(){S.q='';const q=$('#q');if(q){q.value='';q.focus()}renderRows()},
   clearall(){S.q='';S.f={genre:'',key:'',artist:''};renderList(true)},
   togglef(){S.showF=!S.showF;renderList(true)},
@@ -4029,6 +4045,9 @@ function stageRefocus(){if(!S.perf)return;const a=document.activeElement;if(!a||
 addEventListener('focus',()=>setTimeout(stageRefocus,50));addEventListener('pageshow',()=>setTimeout(stageRefocus,50));
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(stageRefocus,50)});
 document.addEventListener('click',e=>{if(S.perf&&e.target.closest&&e.target.closest('.pbar button,.pnext,.stagehead button,.secjump button,.cuesheet .row'))setTimeout(()=>{const a=document.activeElement;if(a&&a!==document.body&&!a.matches(TEXTSEL)&&!a.closest('#modal,#pop'))a.blur()},0)});
+
+/* search inside a list, one result: Enter goes to its place in the list */
+document.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.target.id!=='q'||e.isComposing)return;const b=[...document.querySelectorAll('#list .gotob')];if(b.length===1){e.preventDefault();A.gotoitem(b[0])}});
 </script>
 </body>
 </html>
