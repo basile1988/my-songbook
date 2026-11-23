@@ -929,6 +929,25 @@ html:not([data-eff=dark]) .tile{background:hsl(var(--h) 55% 86%);color:#16181d}
 #backhint.ready{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 #backhint svg{width:20px;height:20px}
 body.swiping #listPane,body.swiping #detail{box-shadow:0 0 40px rgba(0,0,0,.45)}
+/* splash: logo in the middle, a soft fade/zoom with one slow pulse, then it fades into the app.
+   Same dark as the installed app's launch colour, so there is no flash. If the script fails it still goes away by itself. */
+#splash{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#121212;color:#fff;
+  padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);animation:spgone .35s ease 4s forwards}
+#splash .spin{display:flex;flex-direction:column;align-items:center;gap:clamp(14px,2.4vh,22px)}
+#splash .splogo{position:relative;width:clamp(84px,24vw,128px);aspect-ratio:1;border-radius:50%;background:#1ed760;color:#0b1f12;display:grid;place-items:center;
+  opacity:0;transform:scale(.82);animation:spin .7s cubic-bezier(.2,.8,.2,1) .05s forwards,sppulse 1.6s ease-in-out .75s 1}
+#splash .splogo::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid #1ed760;opacity:0;animation:spring 1.4s ease-out .7s 1}
+#splash .splogo svg{width:46%;height:46%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#splash .spname{font:800 clamp(20px,5.6vw,30px)/1.1 "Commissioner",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:-.02em;opacity:0;transform:translateY(6px);animation:spin .6s cubic-bezier(.2,.8,.2,1) .3s forwards}
+#splash.out{animation:spout .4s ease forwards;pointer-events:none}
+@keyframes spin{to{opacity:1;transform:none}}
+@keyframes sppulse{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@keyframes spring{0%{opacity:.55;transform:scale(1)}100%{opacity:0;transform:scale(1.55)}}
+@keyframes spout{to{opacity:0;transform:scale(1.03);visibility:hidden}}
+@keyframes spgone{to{opacity:0;visibility:hidden;pointer-events:none}}
+@media (orientation:landscape) and (max-height:500px){#splash .spin{flex-direction:row;gap:16px}#splash .splogo{width:clamp(64px,18vh,96px)}}
+@media (prefers-reduced-motion:reduce){#splash .splogo,#splash .spname{animation:spfade .4s ease forwards;transform:none}#splash .splogo::after{display:none}}
+@keyframes spfade{to{opacity:1}}
 .row .inpack{display:inline-block;margin-right:6px;padding:0 6px;border-radius:5px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-weight:700;font-size:11.5px;line-height:18px;white-space:nowrap}
 .row .gotob{flex:none;color:var(--accent)}
 input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display:none} /* the app has its own ✕ */
@@ -1036,6 +1055,7 @@ html:not([data-eff=dark]) .dlg,html:not([data-eff=dark]) .cmenu,html:not([data-e
 </style>
 </head>
 <body data-size="l" data-pane="list">
+<div id="splash" aria-hidden="true"><div class="spin"><div class="splogo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="spname">My Songbook</div></div></div>
 <div class="colsplit" data-split="side" role="separator" aria-orientation="vertical" aria-label="Πλάτος πλαϊνής στήλης" tabindex="-1" hidden></div>
 <div class="colsplit" data-split="list" role="separator" aria-orientation="vertical" aria-label="Πλάτος λίστας" tabindex="-1" hidden></div>
 <div id="app">
@@ -1764,7 +1784,10 @@ function restoreState(){
   if(st.cueMode&&S.ctx&&S.ctx.colId){S.cueMode=true;S.songId=null}
   else if(st.songId&&Store.songs.has(st.songId)) S.songId=st.songId;
   if(st.pane&&document.body.dataset.size!=='l') document.body.dataset.pane=(S.songId||S.cueMode)&&st.pane==='detail'?'detail':st.pane==='detail'?'list':st.pane;
-  return !!st.perf&&(S.cueMode||!!S.songId);
+  // a phone opens on «Λίστες»; only a stage left in the last 3 hours comes back (the app closed in the middle of a night)
+  const stage=!!st.perf&&(S.cueMode||!!S.songId)&&Date.now()-(st.at||0)<3*3600e3;
+  if(document.body.dataset.size==='s'&&!stage){S.sec='home';S.songId=null;S.cueMode=false;S.returnTo=null;S.fromCue=null;document.body.dataset.pane='list'}
+  return stage;
 }
 
 /* =====================================================================
@@ -4132,6 +4155,8 @@ function goBack(fromSystem){
   const size=document.body.dataset.size;
   if(size==='s'&&document.body.dataset.pane==='detail'){A.back();return true}
   if(S.browse){A.browseoff();return true}
+  if(S.q){S.q='';const q=$('#q');if(q){q.value='';q.blur()}renderRows();return true}
+  if(size==='s'&&S.sec==='all'){A.tab({dataset:{t:'home'}});return true}
   const col=colOf(S.sec);
   if(col){const par=col.parent&&Store.cols.get(col.parent);A.sec({dataset:{sec:par?'col:'+par.id:'home'}});return true}
   return false;
@@ -4147,7 +4172,7 @@ document.addEventListener('click',()=>setTimeout(backGuard,0),true);
 (function(){
   const EDGE=26;let g=null,hint=null;
   const target=()=>S.edit||document.body.dataset.pane==='detail'||document.body.dataset.size!=='s'&&S.songId?$('#detail'):$('#listPane');
-  const can=()=>!S.perf&&$('#modal').hidden&&!document.getElementById('cmenu')&&!drag&&(S.edit||document.body.dataset.size==='s'&&document.body.dataset.pane==='detail'||!!S.browse||!!colOf(S.sec));
+  const can=()=>!S.perf&&$('#modal').hidden&&!document.getElementById('cmenu')&&!drag&&(S.edit||document.body.dataset.size==='s'&&(document.body.dataset.pane==='detail'||S.sec==='all')||!!S.browse||!!S.q||!!colOf(S.sec));
   document.addEventListener('touchstart',e=>{g=null;if(e.touches.length!==1)return;const t=e.touches[0],W=innerWidth;
     const side=t.clientX<=EDGE?1:t.clientX>=W-EDGE?-1:0;if(!side||!can())return;
     if(e.target.closest&&e.target.closest('input[type=range],.kfgrid'))return;
@@ -4170,6 +4195,13 @@ document.addEventListener('click',()=>setTimeout(backGuard,0),true);
     setTimeout(()=>{clear();if(!goBack(false))return;const n=target();if(n&&n.animate)n.animate([{transform:`translateX(${-G.side*W*.25}px)`,opacity:.6},{transform:'none',opacity:1}],{duration:200,easing:'cubic-bezier(0.23, 1, 0.32, 1)'})},160)};
   document.addEventListener('touchend',()=>end(true),{passive:true});
   document.addEventListener('touchcancel',()=>end(false),{passive:true});
+})();
+
+/* splash: about 1.7 s on phones and tablets (a touch screen), shorter with a mouse; then it fades into the app */
+(function(){const el=document.getElementById('splash');if(!el)return;
+  const t0=(performance&&performance.timing&&performance.timing.navigationStart)||Date.now(),min=matchMedia('(pointer:coarse)').matches?1700:900;
+  const go=()=>{el.classList.add('out');setTimeout(()=>el.remove(),450)};
+  const wait=Math.max(0,min-(Date.now()-t0));setTimeout(()=>{if(document.fonts&&document.fonts.status!=='loaded')Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,500))]).then(go);else go()},wait);
 })();
 </script>
 </body>
