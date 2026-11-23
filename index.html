@@ -3796,6 +3796,21 @@ function menuSpec(kind,d){
       '-',
       it('rmItem','x','Αφαίρεση από τη λίστα',D,'danger')]};
   }
+  if(kind==='pack'){
+    const c=Store.cols.get(d.col),x=itemById(d.col,d.item);if(!c||!x||x.sec==null)return null;
+    const ids=packIds(c,x.i)||[x.i],songs=ids.slice(1).filter(i=>(itemById(c.id,i)||{}).s),all=itemsOf(c).filter(y=>y.sec!=null),k=all.findIndex(y=>y.i===x.i);
+    const closed=foldSet(c.id).has(x.i),D={col:c.id,item:x.i};
+    return {title:secShort(x),sub:songs.length?`${songs.length} τραγούδι${songs.length===1?'':'α'}`:'Χωρίς τραγούδια',items:[
+      ...(songs.length?[it('playfrom','play','Παίξιμο από εδώ',{col:c.id,item:songs[0]})]:[]),
+      it('editsec','pencil','Μετονομασία…',{item:x.i}),
+      it('insat','plus','Πρόσθεσε τραγούδια εδώ',{after:ids[ids.length-1]}),
+      it('secfold',closed?'down':'up',closed?'Άνοιγμα πακέτου':'Κλείσιμο πακέτου',{item:x.i}),
+      ...(k>0||k<all.length-1?['-']:[]),
+      ...(k>0?[it('mvup','up','Μετακίνηση πάνω από το «'+secShort(all[k-1])+'»',{item:x.i})]:[]),
+      ...(k<all.length-1?[it('mvdn','down','Μετακίνηση κάτω από το «'+secShort(all[k+1])+'»',{item:x.i})]:[]),
+      '-',
+      it('delSec','trash','Διαγραφή πακέτου (τα τραγούδια μένουν)',D,'danger')]};
+  }
   if(kind==='song'){
     const s=Store.songs.get(d.id);if(!s)return null;
     return {title:s.title,sub:[s.artist,s.key].filter(Boolean).join(' · '),items:[
@@ -3855,6 +3870,8 @@ function openMenu(kind,d,at){
 // what was right-clicked / long-pressed
 function menuTarget(t){
   if(!t||!t.closest||S.perf||t.closest('#modal,#cmenu,.sheet,input,textarea,select'))return null;
+  const pk=t.closest('#list .secrow[data-item]');
+  if(pk){const col=colOf(S.sec);return col?['pack',{col:col.id,item:pk.dataset.item}]:null} // a pack: right-click / long-press
   const row=t.closest('#list .row:not(.secrow)');
   if(row){const col=colOf(S.sec);if(col&&row.dataset.item)return ['item',{col:col.id,item:row.dataset.item}];if(row.dataset.id)return ['song',{id:row.dataset.id}];return null}
   const card=t.closest('.lcard[data-sec^="col:"],.frow[data-sec^="col:"],.navitem[data-sec^="col:"]');
